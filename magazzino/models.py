@@ -232,9 +232,10 @@ class TipoOperazione(models.TextChoices):
     SPOSTAMENTO = "spostamento", "Spostamento"
     SCARTO = "scarto", "Scarto"
     RETTIFICA = "rettifica", "Correzione conteggio"
+    VENDITA = "vendita", "Venduto in cassa"
 
 
-TIPI_CON_SERVIZIO = [TipoOperazione.CUCINA, TipoOperazione.RESO]
+TIPI_CON_SERVIZIO = [TipoOperazione.CUCINA, TipoOperazione.RESO, TipoOperazione.VENDITA]
 TIPI_CON_ALLEGATI = [TipoOperazione.INVENTARIO, TipoOperazione.ACQUISTO]
 
 

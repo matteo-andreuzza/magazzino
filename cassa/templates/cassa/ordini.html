@@ -1,0 +1,42 @@
+{% extends "cassa/base.html" %}
+{% load cassa_tags %}
+{% block titolo %}Ordini · {{ servizio }}{% endblock %}
+{% block contenuto %}
+  {% include "cassa/_serata_nav.html" with attiva="ordini" %}
+  <h1>Ordini</h1>
+  <p class="tenue">{{ elenco|length }} ordin{{ elenco|length|pluralize:"e,i" }}{% if n_annullati %}, di cui {{ n_annullati }} annullat{{ n_annullati|pluralize:"o,i" }}{% endif %}.</p>
+  <div class="azioni">
+    <a class="pulsante secondario" href="{% url 'cassa:ordini_csv' servizio.pk %}">Scarica per Excel</a>
+  </div>
+  {% if elenco %}
+    <div data-filtro-elenco>
+      <div class="filtri">
+        <input type="search" data-cerca placeholder="Cerca per numero, tavolo o nome…" aria-label="Cerca ordine" autocomplete="off">
+      </div>
+      <div class="scheda">
+        <ul class="elenco">
+          {% for o in elenco %}
+            <li data-voce data-nome="{{ o.numero }} {{ o.tavolo }} {{ o.nome }}">
+              <div class="voce">
+                <a class="voce-nome" href="{% url 'cassa:ordine' o.pk %}">N. {{ o.numero }}{% if o.tavolo %} · Tavolo {{ o.tavolo }}{% endif %}{% if o.nome %} · {{ o.nome }}{% endif %}</a>
+                <span class="num{% if o.annullato %} barrato{% endif %}">{{ o.totale|euro }}</span>
+              </div>
+              <div class="tenue piccolo">
+                {{ o.ora }} · {{ o.get_pagamento_display }}{% if o.postazione == "bar" %} · cassa bar{% endif %}
+                · {% for r in o.righe.all %}{{ r.quantita }} {{ r.descrizione }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              </div>
+              <div class="etichette">
+                {% if o.annullato %}<span class="etichetta pericolo">annullato</span>{% endif %}
+                {% if o.stato_stampe == "errore" %}<span class="etichetta pericolo">errore di stampa</span>
+                {% elif o.stato_stampe == "coda" %}<span class="etichetta avviso">in stampa</span>
+                {% elif o.stato_stampe == "ok" %}<span class="etichetta ok">stampato</span>{% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% else %}
+    <p class="tenue">Ancora nessun ordine in questa serata.</p>
+  {% endif %}
+{% endblock %}

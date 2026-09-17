@@ -1,0 +1,113 @@
+{% extends "cassa/base.html" %}
+{% load cassa_tags magazzino_tags %}
+{% block titolo %}Statistiche della cassa{% endblock %}
+{% block contenuto %}
+  <h1>Statistiche della sagra</h1>
+  {% if dati.serate %}
+    {% with t=dati.totale %}
+      <p class="tenue">{{ dati.serate|length }} serat{{ dati.serate|length|pluralize:"a,e" }} con ordini.</p>
+      <div class="azioni">
+        <a class="pulsante secondario" href="{% url 'cassa:statistiche_csv' %}">Scarica per Excel</a>
+        <button type="button" class="pulsante secondario" onclick="window.print()">Stampa</button>
+      </div>
+      <section class="kpi" aria-label="Totali della sagra">
+        <div class="kpi-eroe">
+          <span class="kpi-etichetta">Incassato in tutto</span>
+          <span class="kpi-valore-eroe">{{ t.incassato|euro }}</span>
+        </div>
+        <div class="kpi-tessere">
+          <div class="kpi-tessera"><span class="kpi-etichetta">Contanti</span><span class="kpi-valore">{{ t.contanti|euro }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Carta / bancomat</span><span class="kpi-valore">{{ t.carta|euro }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Ordini</span><span class="kpi-valore">{{ t.ordini }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Coperti</span><span class="kpi-valore">{% if t.coperti %}{{ t.coperti }}{% else %}—{% endif %}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Scontrino medio</span><span class="kpi-valore">{% if t.scontrino_medio is not None %}{{ t.scontrino_medio|euro }}{% else %}—{% endif %}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Omaggi</span><span class="kpi-valore">{{ t.omaggi|euro }}</span></div>
+        </div>
+      </section>
+
+      <figure class="grafico-scheda">
+        <figcaption><strong>Incasso per serata</strong> <span class="tenue piccolo">Contanti e carta; i numeri sono nella tabella sotto.</span></figcaption>
+        {{ grafico_incassi }}
+      </figure>
+
+      <h2>Per serata</h2>
+      <div class="scorrimento">
+        <table class="tabella">
+          <thead><tr><th>Serata</th><th class="num">Ordini</th><th class="num">Coperti</th><th class="num">Contanti</th><th class="num">Carta</th><th class="num">Incassato</th><th class="num">Omaggi</th><th class="num">Medio</th></tr></thead>
+          <tbody>
+            {% for r in dati.serate %}
+              <tr>
+                <td><a href="{% url 'cassa:report' r.servizio.pk %}">{{ r.servizio }}</a></td>
+                <td class="num">{{ r.ordini }}</td>
+                <td class="num">{{ r.coperti|default:"—" }}</td>
+                <td class="num">{{ r.contanti|euro }}</td>
+                <td class="num">{{ r.carta|euro }}</td>
+                <td class="num"><strong>{{ r.incassato|euro }}</strong></td>
+                <td class="num">{{ r.omaggi|euro }}</td>
+                <td class="num">{% if r.scontrino_medio is not None %}{{ r.scontrino_medio|euro }}{% else %}—{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><td>Totale</td><td class="num">{{ t.ordini }}</td><td class="num">{{ t.coperti|default:"—" }}</td><td class="num">{{ t.contanti|euro }}</td><td class="num">{{ t.carta|euro }}</td><td class="num">{{ t.incassato|euro }}</td><td class="num">{{ t.omaggi|euro }}</td><td class="num">{% if t.scontrino_medio is not None %}{{ t.scontrino_medio|euro }}{% endif %}</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <figure class="grafico-scheda">
+        <figcaption><strong>Più venduti in tutta la sagra</strong></figcaption>
+        {{ grafico_articoli }}
+      </figure>
+
+      <h2>Venduto per articolo e serata</h2>
+      <div class="scorrimento">
+        <table class="tabella">
+          <thead>
+            <tr>
+              <th class="sticky-col">Articolo</th>
+              {% for s in dati.servizi %}<th class="num">{% if s.nome %}{{ s.nome }}<br>{% endif %}{{ s.get_tipo_display }} {{ s.data|date:"D j/m" }}</th>{% endfor %}
+              <th class="num">Totale</th>
+              <th class="num">Incasso</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in dati.articoli %}
+              <tr>
+                <td class="sticky-col">{{ r.articolo.nome }}</td>
+                {% for v in r.valori %}<td class="num">{% if v %}{{ v }}{% else %}<span class="tenue">—</span>{% endif %}</td>{% endfor %}
+                <td class="num"><strong>{{ r.quantita }}</strong></td>
+                <td class="num">{{ r.importo|euro }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Consumo per porzione</h2>
+      {% if dati.consumi %}
+        <p class="tenue piccolo">Uscito dal magazzino per la cucina in tutte le serate, diviso per le porzioni vendute dei piatti che usano il prodotto. Utile per gli ordini della prossima sagra.</p>
+        <div class="scorrimento">
+          <table class="tabella compatta">
+            <thead><tr><th>Prodotto</th><th class="num">Usato</th><th class="num">Porzioni</th><th class="num">Per porzione</th><th>Piatti</th></tr></thead>
+            <tbody>
+              {% for c in dati.consumi %}
+                <tr>
+                  <td><a href="{% url 'prodotto_dettaglio' c.prodotto.pk %}">{{ c.prodotto.nome }}</a></td>
+                  <td class="num">{{ c.usato|qta:c.prodotto.unita }}</td>
+                  <td class="num">{{ c.porzioni }}</td>
+                  <td class="num"><strong>{{ c.per_porzione|qta:c.prodotto.unita }}</strong></td>
+                  <td class="piccolo tenue">{{ c.piatti|join:", " }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="tenue piccolo">Servono gli articoli del listino collegati ai piatti del menu e i prelievi «Metti a cucinare» delle serate.</p>
+      {% endif %}
+      <p><a href="{% url 'riepilogo' %}">Consumi del magazzino per serata →</a></p>
+    {% endwith %}
+  {% else %}
+    <p class="tenue">Non ci sono ancora ordini.</p>
+  {% endif %}
+{% endblock %}

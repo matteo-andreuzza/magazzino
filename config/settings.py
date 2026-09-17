@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "magazzino",
+    "cassa",
 ]
 
 MIDDLEWARE = [
@@ -91,6 +92,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "magazzino.context_processors.app",
+                "cassa.context_processors.cassa",
             ],
         },
     },
@@ -156,6 +158,9 @@ LOGOUT_REDIRECT_URL = "login"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 SESSION_COOKIE_SECURE = env_bool("DJANGO_COOKIE_SICURI", False)
 CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+# In cloud l'app sta dietro un proxy HTTPS (vedi docker-compose.cloud.yml).
+if env_bool("DJANGO_DIETRO_PROXY_HTTPS"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 APP_NOME = os.environ.get("APP_NOME", "Magazzino Sagra")
 

@@ -1,0 +1,31 @@
+{% extends "cassa/base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'cassa:listino' %}">Listino</a></p>
+  <h1>{{ titolo }}</h1>
+  {% if venduto %}
+    <p class="box-avviso piccolo">Questo articolo è già stato venduto: invece di cancellarlo toglilo dalla vendita (non attivo). Un nuovo prezzo vale solo per gli ordini da adesso.</p>
+  {% endif %}
+  <form method="post" class="scheda">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="box-errori" role="alert">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+    {% include "magazzino/_campo.html" with campo=form.nome %}
+    {% include "magazzino/_campo.html" with campo=form.categoria %}
+    {% include "magazzino/_campo.html" with campo=form.reparto %}
+    {% include "magazzino/_campo.html" with campo=form.prezzo %}
+    {% include "magazzino/_campo.html" with campo=form.attivo %}
+    {% include "magazzino/_campo.html" with campo=form.esaurito %}
+    <details class="campo"{% if form.piatto.errors or form.prodotto.errors or form.quantita_prodotto.errors or form.instance.piatto_id or form.instance.prodotto_id %} open{% endif %}>
+      <summary><strong>Collegamento con il magazzino</strong> <span class="tenue piccolo">(facoltativo)</span></summary>
+      {% include "magazzino/_campo.html" with campo=form.piatto %}
+      {% include "magazzino/_campo.html" with campo=form.prodotto %}
+      {% include "magazzino/_campo.html" with campo=form.quantita_prodotto %}
+    </details>
+    {% include "magazzino/_campo.html" with campo=form.ordine %}
+    {% include "magazzino/_campo.html" with campo=form.note %}
+    <div class="azioni">
+      <button type="submit" class="pulsante">Salva</button>
+      <a class="pulsante secondario" href="{% url 'cassa:listino' %}">Annulla</a>
+    </div>
+  </form>
+{% endblock %}

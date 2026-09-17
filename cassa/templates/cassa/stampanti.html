@@ -1,0 +1,96 @@
+{% extends "cassa/base.html" %}
+{% block titolo %}Stampanti{% endblock %}
+{% block contenuto %}
+  <h1>Stampanti</h1>
+  <p class="tenue">Comande e ricevute escono su stampanti termiche (80 o 58 mm) oppure dalla stampante del computer della cassa.</p>
+  <div class="azioni">
+    <a class="pulsante" href="{% url 'cassa:stampante_nuova' %}">Aggiungi stampante</a>
+    <a class="pulsante secondario" href="{% url 'cassa:impostazioni' %}">Cosa stampare e dove</a>
+  </div>
+
+  <div class="scheda">
+    {% if stampanti %}
+      <ul class="elenco">
+        {% for s in stampanti %}
+          <li>
+            <div class="voce">
+              <a class="voce-nome" href="{% url 'cassa:stampante_modifica' s.pk %}">{{ s.nome }}</a>
+              {% if not s.attiva %}<span class="etichetta">non attiva</span>{% endif %}
+            </div>
+            <div class="tenue piccolo">{{ s.get_connessione_display }}{% if s.indirizzo %} · {{ s.indirizzo }}{% endif %}{% if s.agente %} · computer «{{ s.agente }}»{% endif %} · {{ s.colonne }} caratteri</div>
+            <form method="post" action="{% url 'cassa:stampante_prova' s.pk %}" class="azioni">
+              {% csrf_token %}
+              <button type="submit" class="pulsante secondario piccolo">Stampa di prova</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="tenue">Nessuna stampante. Aggiungine una: senza stampanti la cassa registra gli ordini ma non stampa niente.</p>
+    {% endif %}
+  </div>
+
+  <h2>Programma di stampa</h2>
+  <p>Le stampanti di rete e quelle collegate a un computer ricevono le comande da un piccolo programma che gira su un computer della sagra
+    (anche un Raspberry Pi), collegato alla stessa rete delle stampanti. Il programma chiede le stampe al server: funziona anche con l'app in cloud, senza aprire porte nel router.</p>
+  {% if servono_agenti and not agenti %}<div class="box-errori">Ci sono stampanti che hanno bisogno del programma di stampa, ma non si è ancora mai collegato.</div>{% endif %}
+  <div class="scheda">
+    <ol class="passi">
+      <li>Sul computer serve Python 3 (su Windows si installa da <a href="https://www.python.org/downloads/" rel="noopener">python.org</a>).</li>
+      <li><a class="pulsante piccolo" href="{% url 'cassa:agente_scarica' %}">Scarica il programma di stampa</a> — è già configurato per questo server.</li>
+      <li>Avvialo: <code>python3 agente_stampa.py</code> (su Windows basta un doppio clic). Deve restare acceso durante il servizio.</li>
+      <li>Fai una stampa di prova da qui sopra.</li>
+    </ol>
+    <details>
+      <summary>Configurazione a mano</summary>
+      <p class="piccolo">Indirizzo del server: <code>{{ server }}</code></p>
+      <p class="piccolo">Chiave: <code class="chiave">{{ imp.token_agente }}</code></p>
+      <p class="piccolo"><code>python3 agente_stampa.py --server {{ server }} --token CHIAVE --nome cassa</code></p>
+      <form method="post" action="{% url 'cassa:token_rigenera' %}" class="azioni">
+        {% csrf_token %}
+        <button type="submit" class="pulsante secondario piccolo">Crea una chiave nuova</button>
+        <span class="tenue piccolo">Da fare se la chiave è finita in mani sbagliate: i programmi già installati vanno riscaricati.</span>
+      </form>
+    </details>
+  </div>
+
+  {% if agenti %}
+    <h3>Computer collegati</h3>
+    <div class="scheda">
+      <ul class="elenco">
+        {% for a in agenti %}
+          <li class="voce">
+            <span><strong>{{ a.nome }}</strong> <span class="tenue piccolo">{{ a.indirizzo_ip|default:"" }}{% if a.versione %} · versione {{ a.versione }}{% endif %}</span></span>
+            {% if a.collegato %}<span class="etichetta ok">collegato</span>{% else %}<span class="etichetta pericolo">ultimo contatto {{ a.ultimo_contatto|date:"j/m H:i" }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if errori %}
+    <h2>Stampe in errore</h2>
+    <div class="scheda">
+      <ul class="elenco">
+        {% for s in errori %}
+          <li>
+            <div class="voce">
+              <span><strong>{{ s.descrizione }}</strong> su {{ s.stampante }}{% if s.ordine %} · <a href="{% url 'cassa:ordine' s.ordine.pk %}">ordine n. {{ s.ordine.numero }}</a>{% endif %}</span>
+              <span class="tenue piccolo">{{ s.creata_il|date:"j/m H:i" }}</span>
+            </div>
+            <p class="errore">{{ s.errore }}</p>
+            <form method="post" action="{% url 'cassa:stampa_riprova' s.pk %}" class="azioni">
+              {% csrf_token %}
+              <input type="hidden" name="torna" value="{% url 'cassa:stampanti' %}">
+              <button type="submit" class="pulsante secondario piccolo">Riprova</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <h2>Stampa dal browser</h2>
+  <p class="piccolo">Con una stampante collegata al computer della cassa si può scegliere «Dal browser della cassa»: le comande escono da lì appena confermato l'ordine.
+    Per non dover confermare ogni volta la finestra di stampa, avvia Chrome con l'opzione <code>--kiosk-printing</code> e imposta la stampante termica come predefinita.</p>
+{% endblock %}

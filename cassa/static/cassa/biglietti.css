@@ -1,0 +1,21 @@
+/* Biglietti in formato scontrino (carta da 80 mm, 42 caratteri per riga). */
+@page { margin: 0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #e9e5de; font-family: system-ui, sans-serif; }
+.comandi { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; padding: .75rem 1rem; font-size: .9rem; }
+.comandi button { font: inherit; font-weight: 600; padding: .5rem 1rem; border-radius: 8px; border: 1px solid #7a2e12; background: #7a2e12; color: #fff; cursor: pointer; }
+.comandi span { color: #625c54; }
+.foglio { background: #fff; width: 76mm; margin: 0 auto 1rem; padding: 3mm 2mm 6mm; box-shadow: 0 1px 6px rgba(0,0,0,.15); }
+.biglietto { font-family: "DejaVu Sans Mono", Consolas, "Courier New", monospace; font-size: 2.9mm; line-height: 1.3; color: #000; }
+.b-riga { white-space: pre; overflow: hidden; }
+.b-centro { text-align: center; }
+.b-grassetto { font-weight: 700; }
+/* Altezza doppia: stessa larghezza dei caratteri, allungati in verticale come sulla termica. */
+.b-alto { height: 6mm; transform: scaleY(1.55); transform-origin: top; }
+.b-largo.b-alto { height: auto; transform: none; font-size: 5.8mm; line-height: 1.2; }
+@media print {
+  body { background: #fff; }
+  .comandi { display: none; }
+  .foglio { box-shadow: none; margin: 0; width: auto; padding: 0 1mm 4mm; break-after: page; page-break-after: always; }
+  .foglio:last-of-type { break-after: auto; page-break-after: auto; }
+}

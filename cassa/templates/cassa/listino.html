@@ -1,0 +1,75 @@
+{% extends "cassa/base.html" %}
+{% load cassa_tags %}
+{% block titolo %}Listino{% endblock %}
+{% block contenuto %}
+  <h1>Listino</h1>
+  <p class="tenue">Gli articoli senza prezzo o non attivi non compaiono in cassa. Gli esauriti si vedono ma non si vendono (si segnano anche dalla cassa).</p>
+  {% if user.is_staff %}
+    <div class="azioni">
+      <a class="pulsante" href="{% url 'cassa:articolo_nuovo' %}">Nuovo articolo</a>
+      <a class="pulsante secondario" href="{% url 'admin:cassa_categoria_changelist' %}">Categorie</a>
+    </div>
+  {% endif %}
+  {% if errori %}
+    <div class="box-errori" id="errori" role="alert" tabindex="-1"><strong>Non è stato salvato niente.</strong> Correggi i prezzi segnati in rosso.</div>
+  {% endif %}
+  {% if gruppi %}
+    <form method="post" data-filtro-elenco>
+      {% csrf_token %}
+      <div class="filtri">
+        <input type="search" data-cerca placeholder="Cerca articolo…" aria-label="Cerca articolo" autocomplete="off">
+      </div>
+      {% for categoria, articoli in gruppi %}
+        <section data-sezione>
+          <h2 class="gruppo-titolo"><span class="pallino colore-{{ categoria.colore }}" aria-hidden="true"></span>{{ categoria.nome }}</h2>
+          <div class="scorrimento">
+            <table class="tabella listino">
+              <thead>
+                <tr><th>Articolo</th><th>Reparto</th><th class="num">Prezzo (€)</th><th>Attivo</th><th>Esaurito</th></tr>
+              </thead>
+              <tbody>
+                {% for a in articoli %}
+                  <tr data-voce data-nome="{{ a.nome }}"{% if a.errore_prezzo %} class="con-errore"{% endif %}>
+                    <td>
+                      {% if user.is_staff %}<a href="{% url 'cassa:articolo_modifica' a.pk %}">{{ a.nome }}</a>{% else %}{{ a.nome }}{% endif %}
+                      <div class="tenue piccolo">
+                        {% if a.piatto %}Piatto: {{ a.piatto.nome }}{% endif %}
+                        {% if a.prodotto %}{% if a.piatto %} · {% endif %}Scarica: {{ a.prodotto.nome }}{% endif %}
+                      </div>
+                      {% if a.errore_prezzo %}<p class="errore">{{ a.errore_prezzo }}</p>{% endif %}
+                    </td>
+                    <td>{{ a.get_reparto_display }}</td>
+                    <td class="num">
+                      {% if user.is_staff %}
+                        <input type="hidden" name="presente-{{ a.pk }}" value="1">
+                        <input class="campo-prezzo" type="text" inputmode="decimal" name="prezzo-{{ a.pk }}" value="{{ a.testo_prezzo }}" placeholder="da fare" aria-label="Prezzo di {{ a.nome }}">
+                      {% elif a.prezzo is not None %}{{ a.prezzo|euro }}{% else %}<span class="etichetta avviso">senza prezzo</span>{% endif %}
+                    </td>
+                    <td>
+                      {% if user.is_staff %}<input type="checkbox" name="attivo-{{ a.pk }}" value="1"{% if a.attivo %} checked{% endif %} aria-label="{{ a.nome }} attivo">
+                      {% elif a.attivo %}sì{% else %}no{% endif %}
+                    </td>
+                    <td>
+                      {% if user.is_staff %}<input type="checkbox" name="esaurito-{{ a.pk }}" value="1"{% if a.esaurito %} checked{% endif %} aria-label="{{ a.nome }} esaurito">
+                      {% elif a.esaurito %}<span class="etichetta pericolo">esaurito</span>{% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      {% endfor %}
+      {% if user.is_staff %}
+        <div class="barra-invio">
+          <div class="barra-invio-dentro">
+            <span class="tenue piccolo">I prezzi nuovi valgono per gli ordini confermati da adesso.</span>
+            <button type="submit" class="pulsante" data-invio>Salva il listino</button>
+          </div>
+        </div>
+      {% endif %}
+    </form>
+  {% else %}
+    <p class="tenue">Il listino è vuoto.{% if user.is_staff %} {% if not n_categorie %}Crea prima una categoria, poi gli articoli.{% endif %}{% endif %}</p>
+  {% endif %}
+{% endblock %}

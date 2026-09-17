@@ -1,0 +1,37 @@
+{% extends "cassa/base.html" %}
+{% load static %}
+{% block titolo %}Monitor cucina{% endblock %}
+{% block classe_pagina %}pagina-monitor{% endblock %}
+{% block classe_contenuto %} contenuto-monitor{% endblock %}
+{% block testa_cassa %}<script src="{% static 'cassa/monitor.js' %}" defer></script>{% endblock %}
+{% block nav %}{% endblock %}
+{% block contenuto %}
+  {{ dati|json_script:"monitor-dati" }}
+  {% csrf_token %}
+  <div class="monitor-barra">
+    <strong>Monitor cucina</strong>
+    <span class="tenue">{{ servizio }}</span>
+    <span class="monitor-connessione" data-connessione role="status">Collegamento…</span>
+    <button type="button" class="pulsante secondario piccolo" data-suono aria-pressed="false">Attiva suono</button>
+    <button type="button" class="pulsante secondario piccolo" data-schermo-intero>Schermo intero</button>
+    <a class="piccolo" href="{% url 'cassa:inizio' %}">Esci</a>
+  </div>
+  <div class="monitor">
+    <section class="monitor-colonna" aria-labelledby="col-nuove">
+      <h2 id="col-nuove">Da fare <span class="monitor-conta" data-conta="nuova">0</span></h2>
+      <div class="monitor-comande" data-colonna="nuova"></div>
+    </section>
+    <section class="monitor-colonna" aria-labelledby="col-prep">
+      <h2 id="col-prep">In preparazione <span class="monitor-conta" data-conta="preparazione">0</span></h2>
+      <div class="monitor-comande" data-colonna="preparazione"></div>
+    </section>
+    <section class="monitor-colonna" aria-labelledby="col-pronte">
+      <h2 id="col-pronte">Pronte <span class="monitor-conta" data-conta="pronta">0</span></h2>
+      <div class="monitor-comande" data-colonna="pronta"></div>
+    </section>
+    <aside class="monitor-totali" aria-labelledby="col-totali">
+      <h2 id="col-totali">Da preparare in tutto</h2>
+      <ul data-totali></ul>
+    </aside>
+  </div>
+{% endblock %}

@@ -19,7 +19,20 @@
     <div class="griglia-azioni">
       <a class="tessera evidenza" href="{% url 'servizio_cucina' servizio.pk %}"><strong>Metti a cucinare</strong><span>Inizio servizio o aggiunte</span></a>
       <a class="tessera" href="{% url 'servizio_reso' servizio.pk %}"><strong>Rientro dalla cucina</strong><span>Quello che torna in frigo</span></a>
+      {% if IMPOSTAZIONI_CASSA.scarico_magazzino and cassa %}<a class="tessera" href="{% url 'servizio_venduto' servizio.pk %}"><strong>Scarica il venduto</strong><span>Bevande vendute in cassa</span></a>{% endif %}
       <a class="tessera" href="{% url 'servizio_chiudi' servizio.pk %}"><strong>Termina {{ servizio.tipo_con_articolo }}</strong><span>Quando è tutto finito</span></a>
+    </div>
+  {% endif %}
+
+  {% if cassa %}
+    <div class="scheda">
+      <div class="voce">
+        <span><strong>Cassa:</strong> {{ cassa.ordini }} ordin{{ cassa.ordini|pluralize:"e,i" }}</span>
+        <a href="{% url 'cassa:report' servizio.pk %}">Report della cassa →</a>
+      </div>
+      {% if IMPOSTAZIONI_CASSA.scarico_magazzino and cassa.da_scaricare %}
+        <p class="piccolo">C'è del venduto in cassa ancora da scaricare dal magazzino.{% if not servizio.chiuso %} <a href="{% url 'servizio_venduto' servizio.pk %}">Scaricalo</a>{% endif %}</p>
+      {% endif %}
     </div>
   {% endif %}
 
@@ -28,23 +41,24 @@
     <div class="scorrimento">
       <table class="tabella compatta">
         <thead>
-          <tr><th>Prodotto</th><th class="num">Preso</th><th class="num">Rientrato</th><th class="num">Usato</th></tr>
+          <tr><th>Prodotto</th><th class="num">Preso</th><th class="num">Rientrato</th>{% if con_venduto %}<th class="num">Venduto in cassa</th>{% endif %}<th class="num">Usato</th></tr>
         </thead>
         <tbody>
           {% for r in riepilogo %}
             <tr>
               <td><a href="{% url 'prodotto_dettaglio' r.prodotto.pk %}">{{ r.prodotto.nome }}</a></td>
-              <td class="num">{{ r.preso|qta:r.prodotto.unita }}</td>
+              <td class="num">{% if r.preso %}{{ r.preso|qta:r.prodotto.unita }}{% else %}—{% endif %}</td>
               <td class="num">{% if r.rientrato %}{{ r.rientrato|qta:r.prodotto.unita }}{% else %}—{% endif %}</td>
+              {% if con_venduto %}<td class="num">{% if r.venduto %}{{ r.venduto|qta:r.prodotto.unita }}{% else %}—{% endif %}</td>{% endif %}
               <td class="num"><strong>{{ r.usato|qta:r.prodotto.unita }}</strong></td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    <p class="tenue piccolo">Preso = messo a cucinare. Usato = preso meno rientrato.</p>
+    <p class="tenue piccolo">Preso = messo a cucinare. Usato = preso meno rientrato{% if con_venduto %}, più il venduto in cassa{% endif %}.</p>
   {% else %}
-    <p class="tenue">Non è ancora stato messo niente a cucinare.</p>
+    <p class="tenue">Non è ancora uscito niente dal magazzino.</p>
   {% endif %}
 
   <h2>Operazioni del servizio</h2>

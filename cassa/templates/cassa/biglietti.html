@@ -1,0 +1,23 @@
+{% load static cassa_tags %}<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stampa · {{ APP_NOME }}</title>
+  <link rel="stylesheet" href="{% static 'cassa/biglietti.css' %}">
+  <script src="{% static 'cassa/biglietti.js' %}" defer></script>
+</head>
+<body data-automatica="{{ automatica|yesno:'1,0' }}" data-da-segnare="{{ da_segnare|join:',' }}" data-url-fatto="{% url 'cassa:stampe_browser_fatto' %}">
+  {% csrf_token %}
+  <div class="comandi">
+    <button type="button" data-stampa>Stampa</button>
+    {% if torna %}<a href="{{ torna }}">Torna indietro</a>{% endif %}
+    <span>Per stampare senza la finestra di conferma, avvia Chrome con <code>--kiosk-printing</code> (vedi README).</span>
+  </div>
+  {% for titolo, righe in biglietti %}
+    <section class="foglio" aria-label="{{ titolo }}">{% biglietto righe %}</section>
+  {% empty %}
+    <p class="comandi">Niente da stampare.</p>
+  {% endfor %}
+</body>
+</html>

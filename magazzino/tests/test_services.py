@@ -134,7 +134,7 @@ class CucinaTest(BaseMagazzino):
         self.assertEqual(op.tipo, TipoOperazione.CUCINA)
         self.assertEqual(op.servizio, self.serata)
         self.assertEqual(self.giacenza(self.pollo, self.frigo1), D("6"))
-        self.assertEqual(services.consumi_servizio(self.serata)[self.pollo.pk], {"preso": D("4"), "rientrato": D("0")})
+        self.assertEqual(services.consumi_servizio(self.serata)[self.pollo.pk], {"preso": D("4"), "rientrato": D("0"), "venduto": D("0")})
 
     def test_aggiunte_durante_la_serata_si_sommano(self):
         self.carica(self.pollo, self.frigo1, "10")
@@ -210,7 +210,7 @@ class ResoTest(BaseMagazzino):
         self.assertEqual(self.giacenza(self.pollo, self.frigo1), D("2"))
         self.assertEqual(self.giacenza(self.pollo, self.frigo2), D("3"))
         self.assertEqual(
-            services.consumi_servizio(self.serata)[self.pollo.pk], {"preso": D("8"), "rientrato": D("3")}
+            services.consumi_servizio(self.serata)[self.pollo.pk], {"preso": D("8"), "rientrato": D("3"), "venduto": D("0")}
         )
 
     def test_non_rientra_piu_di_quanto_uscito(self):

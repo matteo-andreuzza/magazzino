@@ -1,0 +1,296 @@
+/* Cassa: si appoggia a magazzino/app.css (colori, pulsanti, schede). */
+
+:root {
+  --col-rosso: #d6453d;
+  --col-arancio: #e8772e;
+  --col-giallo: #e0a500;
+  --col-verde: #2f8a3e;
+  --col-azzurro: #1e9bc0;
+  --col-blu: #2a6fd6;
+  --col-viola: #7a4fc4;
+  --col-marrone: #8a5a36;
+  --col-grigio: #8a857c;
+  --g-superficie: #ffffff;
+}
+
+.colore-rosso { --col: var(--col-rosso); }
+.colore-arancio { --col: var(--col-arancio); }
+.colore-giallo { --col: var(--col-giallo); }
+.colore-verde { --col: var(--col-verde); }
+.colore-azzurro { --col: var(--col-azzurro); }
+.colore-blu { --col: var(--col-blu); }
+.colore-viola { --col: var(--col-viola); }
+.colore-marrone { --col: var(--col-marrone); }
+.colore-grigio { --col: var(--col-grigio); }
+
+.pallino { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; background: var(--col); margin-right: .4rem; vertical-align: baseline; }
+.elenco-avvisi { margin: .3rem 0 0; padding-left: 1.2rem; }
+.elenco-avvisi li { margin: .2rem 0; }
+.barrato { text-decoration: line-through; color: var(--tenue); }
+.etichette { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .25rem; }
+.etichette:empty { display: none; }
+.passi { margin: 0; padding-left: 1.3rem; display: grid; gap: .5rem; }
+code { font-size: .9em; background: var(--sfondo); border: 1px solid var(--bordo); border-radius: 4px; padding: 0 .25rem; overflow-wrap: anywhere; }
+.dati { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: 0 0 .75rem; }
+.dati dt { font-size: .8rem; color: var(--tenue); }
+.dati dd { margin: 0; font-weight: 600; }
+.tabella .riga-gruppo th { background: var(--sfondo); color: var(--testo); }
+.tabella.listino td { vertical-align: middle; }
+.tabella.listino tr.con-errore td { background: var(--pericolo-chiaro); }
+.campo-prezzo { width: 6.5rem !important; text-align: right; font-weight: 700; }
+.tabella.listino input[type=checkbox] { width: 1.3rem; height: 1.3rem; }
+.interruttori .campo-check label { font-weight: 700; }
+details summary { cursor: pointer; }
+
+/* Pagine della serata -------------------------------------------------- */
+
+.schede-serata { display: flex; flex-wrap: wrap; gap: .3rem; margin: .25rem 0 1rem; }
+.schede-serata a {
+  padding: .4rem .8rem; border-radius: 999px; border: 1px solid var(--bordo); background: var(--carta);
+  text-decoration: none; color: var(--testo); font-weight: 600; font-size: .95rem;
+}
+.schede-serata a[aria-current] { background: var(--primario); border-color: var(--primario); color: #fff; }
+
+/* Cassa (presa ordini) ------------------------------------------------- */
+
+.contenuto.contenuto-pos { max-width: none; padding: .5rem .75rem 5rem; }
+.pos-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem 1rem; margin-bottom: .5rem; }
+.pos-titolo strong { font-size: 1.2rem; margin-right: .4rem; }
+.pos-link { display: flex; gap: 1rem; font-weight: 600; }
+
+.pos { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: .9rem; align-items: start; }
+.pos-bloccata { opacity: .55; pointer-events: none; }
+
+.pos-strumenti {
+  position: sticky; top: 0; z-index: 4; background: var(--sfondo); padding: .35rem 0 .45rem;
+  display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; border-bottom: 1px solid var(--bordo);
+}
+.pos-strumenti input[type=search] { flex: 1 1 10rem; width: auto; min-width: 0; }
+.pos-strumenti .chips { flex: 1 1 100%; order: 3; }
+.pos .gruppo-titolo { margin: .8rem 0 .35rem; }
+
+.pos-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .5rem; }
+.pos-articolo {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: .35rem;
+  min-height: 5.2rem; padding: .6rem .65rem .55rem .9rem; text-align: left; cursor: pointer;
+  font: inherit; color: var(--testo); background: var(--carta);
+  border: 1px solid var(--bordo); border-radius: var(--raggio);
+  box-shadow: inset 5px 0 0 var(--col, var(--col-grigio));
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.pos-articolo:hover { border-color: var(--col, var(--primario)); }
+.pos-articolo:active { transform: scale(.98); }
+.pos-articolo.scelto { border-color: var(--col); background: color-mix(in srgb, var(--col) 9%, #fff); }
+.pos-articolo-nome { font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.pos-articolo-prezzo { color: var(--tenue); font-variant-numeric: tabular-nums; }
+.pos-articolo-conteggio {
+  position: absolute; top: -.45rem; right: -.35rem; min-width: 1.7rem; height: 1.7rem; padding: 0 .4rem;
+  border-radius: 999px; background: var(--primario); color: #fff; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; font-size: .95rem;
+}
+.pos-articolo-esaurito { display: none; }
+.pos-articolo.esaurito { background: #f1eeea; color: var(--tenue); box-shadow: inset 5px 0 0 #c9c3ba; cursor: not-allowed; }
+.pos-articolo.esaurito .pos-articolo-nome { text-decoration: line-through; }
+.pos-articolo.esaurito .pos-articolo-esaurito {
+  display: inline-block; align-self: flex-start; font-size: .75rem; font-weight: 700; color: var(--pericolo);
+  background: var(--pericolo-chiaro); border-radius: 999px; padding: 0 .45rem;
+}
+.modo-esauriti .pos-articolo { cursor: pointer; outline: 2px dashed var(--avviso); outline-offset: -4px; }
+
+.pos > * { min-width: 0; }
+.pos-ordine {
+  position: sticky; top: .5rem; background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio);
+  padding: .7rem; display: flex; flex-direction: column; gap: .5rem; max-height: calc(100vh - 1rem);
+}
+.pos-ordine > * { flex: none; }
+.pos-carrello { flex: 1 1 auto; min-height: 6rem; overflow-y: auto; display: grid; align-content: start; gap: .4rem; }
+.pos-cliente { display: grid; grid-template-columns: minmax(0, 1fr) 5.5rem 4.5rem; gap: .45rem; }
+.pos-campo { display: grid; gap: .15rem; font-size: .85rem; font-weight: 600; color: var(--tenue); }
+.pos-campo input { font-size: 1.05rem; font-weight: 600; color: var(--testo); min-width: 0; }
+.pos-campo-tavolo input { font-size: 1.25rem; text-align: center; }
+
+.pos-righe { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.pos-riga {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "quantita testo importo" "quantita nota nota" "campo campo campo";
+  gap: 0 .5rem; align-items: center; padding: .3rem .45rem; border: 1px solid var(--bordo); border-radius: 8px;
+}
+.pos-riga.appena-aggiunta { background: var(--primario-chiaro); }
+.pos-carrello { position: relative; }
+.pos-riga-testo { grid-area: testo; min-width: 0; align-self: end; }
+.pos-riga-nome { font-weight: 700; display: block; line-height: 1.2; }
+.pos-riga-nota { display: block; font-size: .85rem; color: var(--avviso); font-weight: 600; }
+.pos-riga-importo { grid-area: importo; font-weight: 700; font-variant-numeric: tabular-nums; align-self: end; white-space: nowrap; }
+.pos-riga-quantita { grid-area: quantita; display: flex; align-items: center; gap: .2rem; }
+.pos-q {
+  width: 2.3rem; height: 2.3rem; font: inherit; font-size: 1.25rem; font-weight: 700; line-height: 1;
+  border: 1px solid var(--bordo); background: var(--sfondo); border-radius: 8px; cursor: pointer; color: var(--testo);
+  touch-action: manipulation;
+}
+.pos-q-numero { min-width: 1.7rem; text-align: center; font-weight: 700; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.pos-riga-nota-btn {
+  grid-area: nota; justify-self: start; font: inherit; font-size: .8rem; background: none; border: 0;
+  color: var(--primario); text-decoration: underline; cursor: pointer; padding: .1rem 0;
+}
+.pos-riga-nota-campo { grid-area: campo; margin-top: .3rem; }
+.pos-vuoto { margin: .3rem 0; }
+
+.pos-totale { display: flex; justify-content: space-between; align-items: baseline; border-top: 2px solid var(--testo); padding-top: .45rem; font-size: 1.1rem; }
+.pos-totale strong { font-size: 1.9rem; }
+
+.pos-pagamento { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+.pos-pagamento label {
+  display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.9rem; padding: .3rem .5rem;
+  border: 1px solid var(--bordo); border-radius: var(--raggio); font-weight: 700; cursor: pointer; text-align: center;
+}
+.pos-pagamento label:has(input:checked) { background: var(--primario); border-color: var(--primario); color: #fff; }
+.pos-pagamento .pos-pagamento-omaggio { grid-column: 1 / -1; min-height: 2.3rem; font-weight: 500; font-size: .9rem; }
+.pos-pagamento input { width: 1.1rem; height: 1.1rem; }
+
+.pos-resto { display: grid; gap: .4rem; background: var(--sfondo); border-radius: var(--raggio); padding: .5rem; }
+.pos-banconote { display: flex; flex-wrap: wrap; gap: .3rem; }
+.pos-resto-valore { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; }
+.pos-resto-valore strong { font-size: 1.5rem; }
+
+.pos-mancante { margin: 0; min-height: 1.2em; color: var(--avviso); font-weight: 600; font-size: .9rem; }
+.pos-conferma { width: 100%; min-height: 3.6rem; font-size: 1.2rem; }
+.pos-conferma[disabled] { cursor: not-allowed; }
+.pos-svuota { justify-self: center; font-size: .9rem; }
+
+.pos-esito { border-radius: var(--raggio); padding: .7rem .8rem; }
+.pos-esito p { margin: .2rem 0 0; }
+.pos-esito-titolo { display: block; font-size: 1.15rem; }
+.pos-esito.ok { background: var(--ok-chiaro); color: var(--ok); border: 2px solid #9fd0ad; }
+.pos-esito.errore { background: var(--pericolo-chiaro); color: var(--pericolo); border: 2px solid var(--pericolo); }
+.pos-esito-resto { font-size: 1.6rem; font-weight: 700; color: var(--testo); }
+
+.pos-ultimi { margin-top: 1rem; }
+.pos-ultimi h2 { font-size: 1rem; margin: 0 0 .4rem; }
+.pos-ultimi-elenco { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr)); gap: .4rem; }
+.pos-ultimo { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; background: var(--carta); border: 1px solid var(--bordo); border-radius: 8px; padding: .4rem .6rem; }
+.pos-ultimo.annullato .pos-ultimo-link { text-decoration: line-through; color: var(--tenue); }
+.pos-ultimo-link { flex: 1; display: flex; gap: .5rem; align-items: baseline; color: var(--testo); text-decoration: none; min-width: 0; }
+.pos-ultimo-link span:not(.num) { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tenue); }
+
+.pos-riassunto {
+  display: none; position: fixed; left: .75rem; right: .75rem; bottom: calc(.6rem + env(safe-area-inset-bottom)); z-index: 20;
+  background: var(--primario); color: #fff; font-weight: 700; text-align: center; padding: .8rem; border-radius: 999px;
+  text-decoration: none; box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+.pos-iframe-stampa { position: absolute; width: 0; height: 0; border: 0; left: -9999px; }
+
+/* Su PC e tablet la cassa occupa lo schermo: listino e ordine scorrono ognuno per conto suo,
+   così totale, pagamento e «Conferma» restano sempre in vista. */
+@media (min-width: 62.01rem) {
+  body.pagina-pos { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  .pagina-pos .contenuto-pos { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; padding-bottom: .5rem; }
+  .pagina-pos .contenuto-pos > * { flex: none; }
+  .pagina-pos .pos { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  .pagina-pos .pos-listino { overflow-y: auto; padding-right: .25rem; }
+  .pagina-pos .pos-ordine { position: static; max-height: none; min-height: 0; }
+  .pagina-pos .pos-ultimi { margin-top: .5rem; max-height: 7.5rem; overflow-y: auto; }
+}
+
+@media (max-width: 62rem) {
+  .pos { grid-template-columns: 1fr; }
+  .pos-ordine { position: static; max-height: none; }
+  .pos-carrello { overflow: visible; min-height: 0; }
+  .pos-riassunto:not([hidden]) { display: block; }
+}
+@media (max-width: 26rem) {
+  .pos-griglia { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pos-cliente { grid-template-columns: 1fr 1fr; }
+  .pos-campo-nome { grid-column: 1 / -1; }
+}
+
+/* Monitor cucina ------------------------------------------------------- */
+
+.contenuto.contenuto-monitor { max-width: none; padding: .5rem .75rem 1rem; }
+.monitor-barra { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-bottom: .6rem; }
+.monitor-barra strong { font-size: 1.2rem; }
+.monitor-connessione { margin-left: auto; font-size: .9rem; color: var(--tenue); }
+.monitor-connessione.errore { color: var(--pericolo); font-weight: 700; }
+.monitor { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 15rem; gap: .75rem; align-items: start; }
+.monitor-colonna h2, .monitor-totali h2 { margin: 0 0 .5rem; font-size: 1.05rem; text-transform: uppercase; letter-spacing: .03em; }
+.monitor-conta { display: inline-block; min-width: 1.8rem; text-align: center; background: var(--testo); color: #fff; border-radius: 999px; padding: 0 .4rem; }
+.monitor-comande { display: grid; gap: .6rem; }
+.monitor-vuota { color: var(--tenue); margin: .5rem 0; }
+.monitor-comanda { background: var(--carta); border: 1px solid var(--bordo); border-left: 8px solid var(--ok); border-radius: var(--raggio); padding: .6rem .7rem; }
+.monitor-comanda.attesa { border-left-color: var(--col-giallo); }
+.monitor-comanda.ritardo { border-left-color: var(--pericolo); }
+.monitor-comanda.annullata { border-left-color: var(--pericolo); background: var(--pericolo-chiaro); }
+.monitor-comanda.annullata .monitor-righe { text-decoration: line-through; opacity: .7; }
+.monitor-testa { display: flex; align-items: baseline; gap: .6rem; }
+.monitor-numero { font-size: 1.35rem; font-weight: 800; }
+.monitor-tavolo { font-size: 1.35rem; font-weight: 800; color: var(--primario); }
+.monitor-tempo { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+.monitor-nome { color: var(--tenue); font-weight: 600; }
+.monitor-annullato { color: var(--pericolo); font-weight: 800; margin-top: .2rem; }
+.monitor-righe { list-style: none; margin: .45rem 0; padding: 0; display: grid; gap: .2rem; font-size: 1.15rem; }
+.monitor-righe li, .monitor-totali li { display: flex; flex-wrap: wrap; gap: .1rem .45rem; align-items: baseline; }
+.monitor-q { min-width: 2.2rem; }
+.monitor-nota { flex-basis: 100%; padding-left: 2.65rem; color: var(--avviso); font-weight: 700; font-size: .95rem; }
+.monitor-note { margin: .2rem 0; font-weight: 700; color: var(--avviso); }
+.monitor-azioni { display: flex; gap: .4rem; }
+.monitor-azioni .pulsante { flex: 1; min-height: 3rem; font-size: 1.1rem; }
+.monitor-azioni .indietro { flex: 0 0 3.2rem; }
+.monitor-totali { position: sticky; top: .5rem; background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: .6rem .7rem; }
+.monitor-totali ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; font-size: 1.1rem; }
+
+@media (max-width: 62rem) {
+  .monitor { grid-template-columns: 1fr 1fr; }
+  .monitor-totali { position: static; grid-column: 1 / -1; order: -1; }
+}
+@media (max-width: 36rem) {
+  .monitor { grid-template-columns: 1fr; }
+}
+
+/* Report: numeri e grafici -------------------------------------------- */
+
+.kpi { display: grid; gap: .75rem; margin: 1rem 0; }
+.kpi-eroe { display: grid; }
+.kpi-etichetta { font-size: .85rem; color: var(--tenue); }
+.kpi-valore-eroe { font-size: 3rem; font-weight: 700; line-height: 1.1; }
+.kpi-tessere { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: .5rem; margin: .5rem 0; }
+.kpi-tessera { display: grid; align-content: start; background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: .6rem .75rem; }
+.kpi-valore { font-size: 1.35rem; font-weight: 700; }
+.kpi-nota { font-size: .8rem; color: var(--tenue); }
+
+.grafico-scheda { margin: 1.25rem 0; background: var(--g-superficie); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: .8rem 1rem; }
+.grafico-scheda figcaption { margin-bottom: .5rem; }
+.g-scorrimento { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.grafico { display: block; width: 100%; min-width: 34rem; height: auto; }
+.grafico .g-tacca { font-size: 11px; fill: #6f6d67; font-variant-numeric: tabular-nums; }
+.grafico .g-valore { font-size: 12px; font-weight: 700; fill: #1f1d1a; }
+.grafico .g-bersaglio { cursor: default; outline: none; }
+.grafico .g-bersaglio.g-attivo, .grafico .g-bersaglio:focus-visible { fill: rgba(31, 29, 26, .06); }
+.g-legenda { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: .9rem; margin: 0 0 .4rem; }
+.g-legenda i { display: inline-block; width: .8rem; height: .8rem; border-radius: 2px; margin-right: .35rem; vertical-align: -.05rem; }
+.g-barre { display: grid; gap: .45rem; }
+.g-barra { display: grid; grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr); gap: .6rem; align-items: center; border-radius: 6px; outline: none; }
+.g-barra.g-attivo, .g-barra:focus-visible { background: #f4f2ee; }
+.g-barra-nome { font-size: .95rem; line-height: 1.2; }
+.g-barra-traccia { display: flex; align-items: center; gap: .4rem; min-height: 1.6rem; }
+.g-barra-riempimento { display: block; height: 18px; border-radius: 0 4px 4px 0; }
+.g-barra-valore { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vista-tabella { margin-top: .5rem; font-size: .9rem; }
+.g-riquadro {
+  position: absolute; z-index: 50; pointer-events: none; background: #fff; color: var(--testo);
+  border: 1px solid rgba(11,11,11,.12); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  padding: .45rem .6rem; font-size: .85rem; min-width: 9rem;
+}
+.g-riquadro-titolo { color: var(--tenue); margin-bottom: .2rem; }
+.g-riquadro-riga { display: flex; align-items: center; gap: .4rem; }
+.g-riquadro-riga i { display: inline-block; width: .8rem; height: 2px; }
+.g-riquadro-riga span { color: var(--tenue); }
+
+@media (max-width: 30rem) {
+  .g-barra { grid-template-columns: 1fr; gap: .15rem; }
+  .kpi-valore-eroe { font-size: 2.4rem; }
+}
+
+@media print {
+  .schede-serata, .pos-barra, .vista-tabella summary { display: none !important; }
+  .grafico-scheda { break-inside: avoid; border: 0; padding: 0; }
+  .kpi-tessera { border-color: #ccc; }
+}

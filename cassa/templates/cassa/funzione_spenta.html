@@ -1,0 +1,12 @@
+{% extends "cassa/base.html" %}
+{% block titolo %}Funzione non attiva{% endblock %}
+{% block contenuto %}
+  <h1>Funzione non attiva</h1>
+  <p>La funzione «{{ funzione }}» è spenta.</p>
+  {% if user.is_staff %}
+    <p>Si attiva dalle <a href="{% url 'cassa:impostazioni' %}">impostazioni della cassa</a>.</p>
+  {% else %}
+    <p>Può attivarla chi gestisce la cassa.</p>
+  {% endif %}
+  <p><a class="pulsante secondario" href="{% url 'cassa:inizio' %}">Torna alla cassa</a></p>
+{% endblock %}

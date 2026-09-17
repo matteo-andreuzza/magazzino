@@ -21,6 +21,16 @@
     <p class="tenue">In questo servizio non è stato messo niente a cucinare.</p>
   {% endif %}
 
+  {% if IMPOSTAZIONI_CASSA.scarico_magazzino and cassa.da_scaricare %}
+    <div class="box-avviso">
+      <p><strong>In cassa c'è del venduto non ancora scaricato dal magazzino</strong> (es. bevande). Scaricalo prima di terminare.</p>
+      <p><a class="pulsante secondario" href="{% url 'servizio_venduto' servizio.pk %}">Scarica il venduto</a></p>
+    </div>
+  {% endif %}
+  {% if cassa %}
+    <p class="tenue">Da terminat{{ servizio.desinenza }} anche la cassa non potrà più registrare ordini per {{ servizio.tipo_con_articolo }}.</p>
+  {% endif %}
+
   <form method="post" class="azioni">
     {% csrf_token %}
     <button type="submit" class="pulsante">Sì, termina {{ servizio.tipo_con_articolo }}</button>

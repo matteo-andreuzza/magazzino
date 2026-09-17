@@ -1,0 +1,20 @@
+{% extends "magazzino/base.html" %}
+{% load static %}
+{% block testa %}
+  <link rel="stylesheet" href="{% static 'cassa/cassa.css' %}">
+  <script src="{% static 'cassa/grafici.js' %}" defer></script>
+  {% block testa_cassa %}{% endblock %}
+{% endblock %}
+{% block sezione_magazzino %}{% endblock %}
+{% block sezione_cassa %} aria-current="true"{% endblock %}
+{% block nav %}
+  <nav class="nav" aria-label="Sezioni della cassa">
+    <a href="{% url 'cassa:inizio' %}">Oggi</a>
+    <a href="{% url 'cassa:statistiche' %}">Statistiche</a>
+    <a href="{% url 'cassa:listino' %}">Listino</a>
+    {% if user.is_staff %}
+      <a href="{% url 'cassa:impostazioni' %}">Impostazioni</a>
+      <a href="{% url 'cassa:stampanti' %}">Stampanti</a>
+    {% endif %}
+  </nav>
+{% endblock %}

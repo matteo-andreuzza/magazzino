@@ -24,6 +24,13 @@ from ..quantita import ZERO
 from .comuni import giorno_servizio, operazioni_recenti, ordina_per_categoria
 
 
+def riepilogo_cassa(servizio):
+    """Numeri della cassa da mostrare nelle pagine del magazzino."""
+    from cassa.report import riepilogo_breve
+
+    return riepilogo_breve(servizio)
+
+
 def home(request):
     oggi = giorno_servizio()
     return render(
@@ -224,7 +231,8 @@ def servizio_dettaglio(request, pk):
             "prodotto": p,
             "preso": consumi[p.pk]["preso"],
             "rientrato": consumi[p.pk]["rientrato"],
-            "usato": consumi[p.pk]["preso"] - consumi[p.pk]["rientrato"],
+            "venduto": consumi[p.pk]["venduto"],
+            "usato": consumi[p.pk]["preso"] - consumi[p.pk]["rientrato"] + consumi[p.pk]["venduto"],
         }
         for p in ordina_per_categoria(prodotti.values())
     ]
@@ -234,7 +242,13 @@ def servizio_dettaglio(request, pk):
     return render(
         request,
         "magazzino/servizio_dettaglio.html",
-        {"servizio": servizio, "riepilogo": riepilogo, "operazioni": operazioni},
+        {
+            "servizio": servizio,
+            "riepilogo": riepilogo,
+            "con_venduto": any(r["venduto"] for r in riepilogo),
+            "operazioni": operazioni,
+            "cassa": riepilogo_cassa(servizio),
+        },
     )
 
 
@@ -304,10 +318,12 @@ def operazione_dettaglio(request, pk):
 
 
 def dati_riepilogo():
-    """Consumo netto (messo a cucinare - rientrato) per prodotto e servizio."""
+    """Consumo netto (messo a cucinare - rientrato + venduto in cassa) per prodotto e servizio."""
     servizi_elenco = list(Servizio.objects.order_by("data", "tipo", "nome"))
     righe_db = (
-        Movimento.objects.filter(operazione__tipo__in=[TipoOperazione.CUCINA, TipoOperazione.RESO])
+        Movimento.objects.filter(
+            operazione__tipo__in=[TipoOperazione.CUCINA, TipoOperazione.RESO, TipoOperazione.VENDITA]
+        )
         .values("prodotto_id", "operazione__servizio_id")
         .annotate(totale=Sum("quantita"))
         .order_by()

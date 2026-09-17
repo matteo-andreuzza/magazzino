@@ -9,6 +9,12 @@
     <p class="piccolo">Manca un prodotto? <a href="{% url 'prodotto_nuovo' %}?next={{ request.path|urlencode }}">Crealo</a> prima di compilare.</p>
   {% endif %}
 
+  {% if avvisi %}
+    <div class="box-avviso">
+      <ul class="elenco">{% for a in avvisi %}<li>{{ a }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
   {% if errori %}
     <div class="box-errori" id="errori" role="alert" tabindex="-1">
       <strong>Non è stato registrato niente.</strong>

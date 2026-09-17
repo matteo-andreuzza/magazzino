@@ -17,6 +17,7 @@ from .moduli import (  # noqa: F401
     scarto,
     servizio_cucina,
     servizio_reso,
+    servizio_venduto,
     spostamento,
 )
 from .pagine import (  # noqa: F401

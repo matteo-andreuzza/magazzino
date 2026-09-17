@@ -5,6 +5,9 @@
   {% if ha_operazioni %}
     <div class="box-errori">Non si può eliminare: ci sono movimenti registrati in questo servizio. Annullali prima.</div>
     <a class="pulsante secondario" href="{% url 'servizio_dettaglio' servizio.pk %}">Torna al servizio</a>
+  {% elif ha_ordini %}
+    <div class="box-errori">Non si può eliminare: in questo servizio ci sono ordini registrati in cassa.</div>
+    <a class="pulsante secondario" href="{% url 'servizio_dettaglio' servizio.pk %}">Torna al servizio</a>
   {% else %}
     <form method="post" class="azioni">
       {% csrf_token %}

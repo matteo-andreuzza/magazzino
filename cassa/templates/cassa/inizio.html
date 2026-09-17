@@ -1,0 +1,68 @@
+{% extends "cassa/base.html" %}
+{% block titolo %}Cassa{% endblock %}
+{% block contenuto %}
+  <h1>Cassa · {{ oggi|date:"l j F"|capfirst }}</h1>
+
+  {% if avvisi %}
+    <div class="box-avviso">
+      <p><strong>Prima di aprire la cassa</strong></p>
+      <ul class="elenco-avvisi">
+        {% for testo, link in avvisi %}
+          <li>{{ testo }}{% if user.is_staff %} <a href="{{ link }}">Sistema</a>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% for s in servizi_oggi %}
+    <div class="scheda">
+      <h2>{{ s }}{% if s.chiuso %} <span class="etichetta">terminat{{ s.desinenza }}</span>{% endif %}</h2>
+      {% if s.chiuso %}
+        <p class="tenue">Terminat{{ s.desinenza }}: per prendere altri ordini va riapert{{ s.desinenza }} dal <a href="{% url 'servizio_dettaglio' s.pk %}">magazzino</a>.</p>
+      {% endif %}
+      <div class="griglia-azioni">
+        {% if not s.chiuso %}
+          <a class="tessera evidenza" href="{% url 'cassa:cassa' s.pk %}"><strong>Apri la cassa</strong><span>All'ingresso: ordini e comande</span></a>
+          {% if imp.cassa_bar %}<a class="tessera" href="{% url 'cassa:cassa_bar' s.pk %}"><strong>Cassa bar</strong><span>Solo bevande, si paga al bar</span></a>{% endif %}
+          {% if imp.monitor_cucina %}<a class="tessera" href="{% url 'cassa:monitor' s.pk %}"><strong>Monitor cucina</strong><span>Comande a schermo</span></a>{% endif %}
+        {% endif %}
+        <a class="tessera" href="{% url 'cassa:ordini' s.pk %}"><strong>Ordini</strong><span>Cerca, ristampa, annulla</span></a>
+        <a class="tessera" href="{% url 'cassa:report' s.pk %}"><strong>Report</strong><span>Incassi e venduto</span></a>
+      </div>
+    </div>
+  {% empty %}
+    <div class="box-avviso">
+      <p><strong>Per oggi non c'è ancora nessuna serata o pranzo.</strong></p>
+      <p>La cassa registra gli ordini nella stessa serata del magazzino: creala prima.</p>
+      <div class="azioni">
+        <a class="pulsante" href="{% url 'servizio_nuovo' %}?tipo=sera&amp;next={% url 'cassa:inizio' %}">Crea la serata di oggi</a>
+        <a class="pulsante secondario" href="{% url 'servizio_nuovo' %}?tipo=pranzo&amp;next={% url 'cassa:inizio' %}">Crea il pranzo di oggi</a>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if recenti %}
+    <h2>Serate con ordini</h2>
+    <div class="scheda">
+      <ul class="elenco">
+        {% for s in recenti %}
+          <li class="voce">
+            <a class="voce-nome" href="{% url 'cassa:report' s.pk %}">{{ s }}</a>
+            <span class="tenue piccolo nowrap">{{ s.n_ordini }} ordin{{ s.n_ordini|pluralize:"e,i" }} · <a href="{% url 'cassa:ordini' s.pk %}">elenco</a></span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <p><a href="{% url 'cassa:statistiche' %}">Statistiche di tutta la sagra →</a></p>
+  {% endif %}
+
+  <h2>Funzioni smart</h2>
+  <div class="scheda">
+    <ul class="elenco">
+      <li class="voce"><span>Monitor cucina</span>{% if imp.monitor_cucina %}<span class="etichetta ok">attivo</span>{% else %}<span class="etichetta">spento</span>{% endif %}</li>
+      <li class="voce"><span>Cassa al bar</span>{% if imp.cassa_bar %}<span class="etichetta ok">attiva</span>{% else %}<span class="etichetta">spenta</span>{% endif %}</li>
+      <li class="voce"><span>Scarico dal magazzino del venduto</span>{% if imp.scarico_magazzino %}<span class="etichetta ok">attivo</span>{% else %}<span class="etichetta">spento</span>{% endif %}</li>
+    </ul>
+    {% if user.is_staff %}<p class="piccolo"><a href="{% url 'cassa:impostazioni' %}">Attiva o spegni dalle impostazioni</a></p>{% endif %}
+  </div>
+{% endblock %}

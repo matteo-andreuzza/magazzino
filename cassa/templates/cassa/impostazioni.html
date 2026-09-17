@@ -1,0 +1,41 @@
+{% extends "cassa/base.html" %}
+{% block titolo %}Impostazioni della cassa{% endblock %}
+{% block contenuto %}
+  <h1>Impostazioni della cassa</h1>
+  <form method="post">
+    {% csrf_token %}
+    {% if form.errors %}<div class="box-errori" role="alert">Controlla i campi segnati.</div>{% endif %}
+
+    <h2>Funzioni smart</h2>
+    <p class="tenue piccolo">Spente, la cassa prende gli ordini, stampa le comande e li memorizza. Si possono accendere e spegnere in qualsiasi momento.</p>
+    <div class="scheda interruttori">
+      {% include "magazzino/_campo.html" with campo=form.monitor_cucina %}
+      {% include "magazzino/_campo.html" with campo=form.cassa_bar %}
+      {% include "magazzino/_campo.html" with campo=form.scarico_magazzino %}
+      {% include "magazzino/_campo.html" with campo=form.ubicazione_scarico %}
+    </div>
+
+    <h2>Cosa si stampa e dove</h2>
+    <p class="tenue piccolo">Le stampanti si aggiungono da <a href="{% url 'cassa:stampanti' %}">Stampanti</a>.</p>
+    <div class="scheda">
+      {% include "magazzino/_campo.html" with campo=form.intestazione %}
+      {% include "magazzino/_campo.html" with campo=form.stampante_cucina %}
+      {% include "magazzino/_campo.html" with campo=form.stampante_bar %}
+    </div>
+    <div class="scheda">
+      {% include "magazzino/_campo.html" with campo=form.ricevuta_cliente %}
+      {% include "magazzino/_campo.html" with campo=form.stampante_ricevute %}
+      {% include "magazzino/_campo.html" with campo=form.messaggio_ricevuta %}
+    </div>
+    <div class="scheda">
+      <h3>Cassa al bar</h3>
+      {% include "magazzino/_campo.html" with campo=form.stampante_cassa_bar %}
+      {% include "magazzino/_campo.html" with campo=form.stampa_comande_cassa_bar %}
+    </div>
+
+    <div class="azioni">
+      <button type="submit" class="pulsante">Salva</button>
+      <a class="pulsante secondario" href="{% url 'cassa:inizio' %}">Annulla</a>
+    </div>
+  </form>
+{% endblock %}

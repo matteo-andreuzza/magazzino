@@ -1,0 +1,7 @@
+{% extends "cassa/base.html" %}
+{% block titolo %}Accesso riservato{% endblock %}
+{% block contenuto %}
+  <h1>Accesso riservato</h1>
+  <p>Questa pagina è solo per chi gestisce la cassa (utenti con accesso all'amministrazione).</p>
+  <p><a class="pulsante secondario" href="{% url 'cassa:inizio' %}">Torna alla cassa</a></p>
+{% endblock %}

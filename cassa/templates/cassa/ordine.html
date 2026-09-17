@@ -1,0 +1,111 @@
+{% extends "cassa/base.html" %}
+{% load cassa_tags %}
+{% block titolo %}Ordine n. {{ ordine.numero }}{% endblock %}
+{% block contenuto %}
+  {% include "cassa/_serata_nav.html" with servizio=ordine.servizio attiva="ordini" %}
+  <h1>Ordine n. {{ ordine.numero }}{% if ordine.annullato %} <span class="etichetta pericolo">annullato</span>{% endif %}</h1>
+  <p class="tenue">
+    {{ ordine.creato_il|date:"l j F, H:i"|capfirst }} · {{ ordine.get_postazione_display }}{% if ordine.utente %} · {{ ordine.utente.get_username }}{% endif %}
+  </p>
+
+  {% if ordine.annullato %}
+    <div class="box-errori">
+      Annullato alle {{ ordine.annullato_il|time:"H:i" }}{% if ordine.annullato_da %} da {{ ordine.annullato_da.get_username }}{% endif %}{% if ordine.motivo_annullamento %}: «{{ ordine.motivo_annullamento }}»{% endif %}.
+      Non conta negli incassi.
+    </div>
+  {% endif %}
+
+  <div class="scheda">
+    <dl class="dati">
+      {% if ordine.tavolo %}<div><dt>Tavolo</dt><dd>{{ ordine.tavolo }}</dd></div>{% endif %}
+      {% if ordine.nome %}<div><dt>Nome</dt><dd>{{ ordine.nome }}</dd></div>{% endif %}
+      {% if ordine.coperti %}<div><dt>Coperti</dt><dd>{{ ordine.coperti }}</dd></div>{% endif %}
+      <div><dt>Pagamento</dt><dd>{{ ordine.get_pagamento_display }}</dd></div>
+      {% if ordine.note %}<div><dt>Note</dt><dd>{{ ordine.note }}</dd></div>{% endif %}
+    </dl>
+    <div class="scorrimento">
+      <table class="tabella compatta">
+        <thead><tr><th>Articolo</th><th>Reparto</th><th class="num">Q.tà</th><th class="num">Prezzo</th><th class="num">Importo</th></tr></thead>
+        <tbody>
+          {% for r in righe %}
+            <tr>
+              <td>{{ r.descrizione }}{% if r.note %}<div class="tenue piccolo">{{ r.note }}</div>{% endif %}</td>
+              <td>{{ r.get_reparto_display }}</td>
+              <td class="num">{{ r.quantita }}</td>
+              <td class="num">{{ r.prezzo|euro }}</td>
+              <td class="num">{{ r.importo|euro }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr><td colspan="4">Totale</td><td class="num">{{ ordine.totale|euro }}</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  {% if monitor and comande %}
+    <h2>Preparazione</h2>
+    <div class="scheda">
+      <ul class="elenco">
+        {% for c in comande %}
+          <li class="voce">
+            <span>{{ c.get_reparto_display }}</span>
+            <span class="tenue piccolo">{{ c.get_stato_display }}{% if c.pronta_il %} alle {{ c.pronta_il|time:"H:i" }}{% elif c.iniziata_il %} dalle {{ c.iniziata_il|time:"H:i" }}{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <h2>Stampe</h2>
+  {% if stampe %}
+    <div class="scheda">
+      <ul class="elenco">
+        {% for s in stampe %}
+          <li>
+            <div class="voce">
+              <span><strong>{{ s.descrizione }}</strong> <span class="tenue">su {{ s.stampante }}</span></span>
+              <span>
+                {% if s.stato == "stampata" %}<span class="etichetta ok">stampata {{ s.stampata_il|time:"H:i" }}</span>
+                {% elif s.stato == "errore" %}<span class="etichetta pericolo">errore</span>
+                {% elif s.stato == "annullata" %}<span class="etichetta">non più necessaria</span>
+                {% else %}<span class="etichetta avviso">{{ s.get_stato_display|lower }}</span>{% endif %}
+              </span>
+            </div>
+            {% if s.errore %}<p class="errore">{{ s.errore }}</p>{% endif %}
+            {% if s.stato == "errore" %}
+              <form method="post" action="{% url 'cassa:stampa_riprova' s.pk %}" class="azioni">
+                {% csrf_token %}
+                <button type="submit" class="pulsante secondario piccolo">Riprova</button>
+              </form>
+            {% elif s.stato == "coda" and s.stampante.dal_browser %}
+              <p class="azioni"><a class="pulsante secondario piccolo" href="{% url 'cassa:stampe_browser' %}?id={{ s.pk }}&amp;torna={{ request.path|urlencode }}">Stampa da qui</a></p>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <p class="tenue">Nessuna stampa: non ci sono stampanti impostate per questo ordine.</p>
+  {% endif %}
+
+  {% if not ordine.annullato %}
+    <h2>Ristampa</h2>
+    <form method="post" action="{% url 'cassa:ordine_ristampa' ordine.pk %}" class="azioni">
+      {% csrf_token %}
+      {% for cosa, etichetta in ristampabili %}
+        <button type="submit" name="cosa" value="{{ cosa }}" class="pulsante secondario">{{ etichetta }}</button>
+      {% endfor %}
+    </form>
+    <p class="piccolo tenue">Se le stampanti non funzionano: <a href="{% url 'cassa:ordine_biglietti' ordine.pk %}?auto=1">stampa tutto con la stampante di questo computer</a>.</p>
+
+    <h2>Correzioni</h2>
+    <div class="azioni">
+      {% if not ordine.servizio.chiuso %}
+        <a class="pulsante pericolo" href="{% url 'cassa:ordine_annulla' ordine.pk %}">Annulla o correggi l'ordine</a>
+      {% endif %}
+      <a class="pulsante secondario" href="{{ url_cassa }}">Torna alla cassa</a>
+    </div>
+  {% else %}
+    <div class="azioni"><a class="pulsante secondario" href="{{ url_cassa }}">Torna alla cassa</a></div>
+  {% endif %}
+{% endblock %}

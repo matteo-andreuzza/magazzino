@@ -8,11 +8,16 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%237a2e12%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27Arial%27 font-weight=%27bold%27%3EM%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="{% static 'magazzino/app.css' %}">
   <script src="{% static 'magazzino/app.js' %}" defer></script>
+  {% block testa %}{% endblock %}
 </head>
-<body>
+<body class="{% block classe_pagina %}{% endblock %}">
   <header class="testata">
     <a class="marchio" href="{% url 'home' %}">{{ APP_NOME }}</a>
     {% if user.is_authenticated %}
+      <nav class="sezioni" aria-label="Magazzino o cassa">
+        <a href="{% url 'home' %}"{% block sezione_magazzino %} aria-current="true"{% endblock %}>Magazzino</a>
+        <a href="{% url 'cassa:inizio' %}"{% block sezione_cassa %}{% endblock %}>Cassa</a>
+      </nav>
       <form method="post" action="{% url 'logout' %}" class="utente">
         {% csrf_token %}
         <span class="tenue">{{ user.get_username }}</span>
@@ -20,7 +25,7 @@
       </form>
     {% endif %}
   </header>
-  {% if user.is_authenticated %}
+  {% if user.is_authenticated %}{% block nav %}
     <nav class="nav" aria-label="Sezioni">
       <a href="{% url 'home' %}">Inizio</a>
       <a href="{% url 'servizi' %}">Serate</a>
@@ -34,8 +39,8 @@
       <a href="{% url 'prodotti' %}">Prodotti</a>
       {% if user.is_staff %}<a href="{% url 'admin:index' %}">Amministrazione</a>{% endif %}
     </nav>
-  {% endif %}
-  <main class="contenuto">
+  {% endblock %}{% endif %}
+  <main class="contenuto{% block classe_contenuto %}{% endblock %}">
     {% if messages %}
       <div class="messaggi">
         {% for m in messages %}<div class="messaggio {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
@@ -43,5 +48,6 @@
     {% endif %}
     {% block contenuto %}{% endblock %}
   </main>
+  {% block fondo %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,1 @@
+{% load cassa_tags %}<div class="biglietto">{% for stile, allineamento, testo in righe %}<div class="b-riga b-{{ allineamento }} {{ stile|classi_riga }}">{{ testo|default:" " }}</div>{% endfor %}</div>

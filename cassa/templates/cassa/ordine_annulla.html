@@ -1,0 +1,29 @@
+{% extends "cassa/base.html" %}
+{% load cassa_tags %}
+{% block titolo %}Annulla ordine n. {{ ordine.numero }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'cassa:ordine' ordine.pk %}">Ordine n. {{ ordine.numero }}</a></p>
+  <h1>Annullare l'ordine n. {{ ordine.numero }}?</h1>
+  <div class="scheda">
+    <p><strong>{% if ordine.tavolo %}Tavolo {{ ordine.tavolo }}{% endif %}{% if ordine.nome %} · {{ ordine.nome }}{% endif %}</strong> · {{ ordine.totale|euro }} · {{ ordine.get_pagamento_display }}</p>
+    <ul class="elenco">{% for r in righe %}<li>{{ r.quantita }} × {{ r.descrizione }}{% if r.note %} <span class="tenue">({{ r.note }})</span>{% endif %}</li>{% endfor %}</ul>
+  </div>
+  <ul class="piccolo">
+    <li>L'ordine resta nell'elenco, segnato come annullato, e non conta negli incassi. Se il cliente aveva già pagato, restituisci i soldi.</li>
+    {% if stampate %}<li>Alle stampanti che hanno già stampato la comanda arriva un biglietto <strong>ANNULLATO</strong>.</li>
+    {% else %}<li>Le comande non ancora stampate non escono più.</li>{% endif %}
+  </ul>
+  <form method="post" class="scheda">
+    {% csrf_token %}
+    <div class="campo">
+      <label for="motivo">Motivo <span class="tenue piccolo">(facoltativo)</span></label>
+      <input id="motivo" name="motivo" type="text" maxlength="200" placeholder="Es. sbagliato il tavolo">
+    </div>
+    <div class="azioni">
+      <button type="submit" name="rifai" value="1" class="pulsante">Annulla e correggi</button>
+      <button type="submit" class="pulsante pericolo">Annulla e basta</button>
+      <a class="pulsante secondario" href="{% url 'cassa:ordine' ordine.pk %}">No, torna indietro</a>
+    </div>
+    <p class="tenue piccolo">«Annulla e correggi» riapre la cassa con lo stesso ordine già compilato: lo modifichi e lo confermi come nuovo ordine.</p>
+  </form>
+{% endblock %}

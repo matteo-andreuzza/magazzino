@@ -1,0 +1,138 @@
+{% extends "cassa/base.html" %}
+{% load cassa_tags magazzino_tags %}
+{% block titolo %}Report · {{ servizio }}{% endblock %}
+{% block contenuto %}
+  {% include "cassa/_serata_nav.html" with attiva="report" %}
+  <h1>Report della serata</h1>
+  {% with t=dati.totali %}
+    {% if t.ordini or dati.annullati.n %}
+      <p class="tenue">{{ servizio }}{% if dati.orari.primo %} · ordini dalle {{ dati.orari.primo|time:"H:i" }} alle {{ dati.orari.ultimo|time:"H:i" }}{% endif %}</p>
+      <div class="azioni">
+        <a class="pulsante secondario" href="{% url 'cassa:report_csv' servizio.pk %}">Venduto per Excel</a>
+        <a class="pulsante secondario" href="{% url 'cassa:ordini_csv' servizio.pk %}">Ordini per Excel</a>
+        <button type="button" class="pulsante secondario" onclick="window.print()">Stampa</button>
+      </div>
+
+      {% if da_scaricare %}
+        <div class="box-avviso">
+          <p><strong>Da scaricare dal magazzino.</strong> Sono stati venduti articoli collegati a prodotti del magazzino (es. bevande) non ancora scaricati.</p>
+          <p><a class="pulsante piccolo" href="{% url 'servizio_venduto' servizio.pk %}">Scarica il venduto</a></p>
+        </div>
+      {% endif %}
+
+      <section class="kpi" aria-label="Totali">
+        <div class="kpi-eroe">
+          <span class="kpi-etichetta">Incassato</span>
+          <span class="kpi-valore-eroe">{{ t.incassato|euro }}</span>
+        </div>
+        <div class="kpi-tessere">
+          <div class="kpi-tessera"><span class="kpi-etichetta">Contanti</span><span class="kpi-valore">{{ t.contanti|euro }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Carta / bancomat</span><span class="kpi-valore">{{ t.carta|euro }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Ordini</span><span class="kpi-valore">{{ t.ordini }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Coperti</span><span class="kpi-valore">{% if t.coperti %}{{ t.coperti }}{% else %}—{% endif %}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Scontrino medio</span><span class="kpi-valore">{% if t.scontrino_medio is not None %}{{ t.scontrino_medio|euro }}{% else %}—{% endif %}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Omaggi</span><span class="kpi-valore">{{ t.omaggi|euro }}</span><span class="kpi-nota">{{ t.n_omaggi }} ordin{{ t.n_omaggi|pluralize:"e,i" }}, non incassati</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Annullati</span><span class="kpi-valore">{{ dati.annullati.n }}</span><span class="kpi-nota">{{ dati.annullati.totale|euro }} non contati</span></div>
+        </div>
+      </section>
+
+      {% if dati.postazioni %}
+        <h2>Per cassa</h2>
+        <div class="scorrimento">
+          <table class="tabella">
+            <thead><tr><th>Cassa</th><th class="num">Ordini</th><th class="num">Contanti</th><th class="num">Carta</th><th class="num">Incassato</th></tr></thead>
+            <tbody>
+              {% for nome, p in dati.postazioni %}
+                <tr><td>{{ nome }}</td><td class="num">{{ p.ordini }}</td><td class="num">{{ p.contanti|euro }}</td><td class="num">{{ p.carta|euro }}</td><td class="num"><strong>{{ p.incassato|euro }}</strong></td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if grafico_andamento %}
+        <figure class="grafico-scheda">
+          <figcaption><strong>Ordini ogni quarto d'ora</strong> <span class="tenue piccolo">Passa sopra una colonna per l'incasso.</span></figcaption>
+          {{ grafico_andamento }}
+          <details class="vista-tabella">
+            <summary>Mostra come tabella</summary>
+            <div class="scorrimento">
+              <table class="tabella compatta">
+                <thead><tr><th>Dalle</th><th class="num">Ordini</th><th class="num">Incasso</th></tr></thead>
+                <tbody>{% for f in dati.andamento %}<tr><td>{{ f.inizio|time:"H:i" }}</td><td class="num">{{ f.ordini }}</td><td class="num">{{ f.incasso|euro }}</td></tr>{% endfor %}</tbody>
+              </table>
+            </div>
+          </details>
+        </figure>
+      {% endif %}
+
+      {% if dati.venduti %}
+        <figure class="grafico-scheda">
+          <figcaption><strong>Più venduti</strong> <span class="tenue piccolo">Pezzi venduti; l'elenco completo è sotto.</span></figcaption>
+          {{ grafico_articoli }}
+        </figure>
+
+        <h2>Venduto per articolo</h2>
+        <div class="scorrimento">
+          <table class="tabella">
+            <thead><tr><th>Articolo</th><th class="num">Pezzi</th><th class="num">Di cui omaggio</th><th class="num">Incasso</th></tr></thead>
+            <tbody>
+              {% regroup dati.venduti by articolo.categoria as gruppi %}
+              {% for g in gruppi %}
+                <tr class="riga-gruppo"><th colspan="4">{{ g.grouper.nome }}</th></tr>
+                {% for r in g.list %}
+                  <tr><td>{{ r.articolo.nome }}</td><td class="num">{{ r.quantita }}</td><td class="num">{% if r.omaggi %}{{ r.omaggi }}{% else %}—{% endif %}</td><td class="num">{{ r.importo|euro }}</td></tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+            <tfoot><tr><td>Totale</td><td class="num"></td><td class="num"></td><td class="num">{{ t.incassato|euro }}</td></tr></tfoot>
+          </table>
+        </div>
+
+        <h2>Per categoria</h2>
+        <div class="scorrimento">
+          <table class="tabella compatta">
+            <thead><tr><th>Categoria</th><th class="num">Pezzi</th><th class="num">Incasso</th></tr></thead>
+            <tbody>{% for c in dati.categorie %}<tr><td>{{ c.categoria.nome }}</td><td class="num">{{ c.quantita }}</td><td class="num">{{ c.importo|euro }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if dati.cucina %}
+        <h2>Tempi della cucina</h2>
+        <p class="tenue piccolo">Dalle comande gestite con il monitor cucina ({{ dati.cucina.comande }}).</p>
+        <div class="kpi-tessere">
+          <div class="kpi-tessera"><span class="kpi-etichetta">Attesa prima di iniziare</span><span class="kpi-valore">{{ dati.cucina.attesa|minuti }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Preparazione</span><span class="kpi-valore">{{ dati.cucina.preparazione|minuti }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Dall'ordine a pronta</span><span class="kpi-valore">{{ dati.cucina.totale|minuti }}</span><span class="kpi-nota">al massimo {{ dati.cucina.massimo }} min</span></div>
+        </div>
+      {% endif %}
+
+      <h2>Consumi del magazzino</h2>
+      {% if dati.consumi %}
+        <p class="tenue piccolo">Quanto è uscito dal magazzino per la cucina (preso meno rientrato) diviso per le porzioni vendute dei piatti che lo usano. È una stima, utile per gli ordini del prossimo anno.</p>
+        <div class="scorrimento">
+          <table class="tabella compatta">
+            <thead><tr><th>Prodotto</th><th class="num">Usato</th><th class="num">Porzioni</th><th class="num">Per porzione</th><th>Piatti</th></tr></thead>
+            <tbody>
+              {% for c in dati.consumi %}
+                <tr>
+                  <td><a href="{% url 'prodotto_dettaglio' c.prodotto.pk %}">{{ c.prodotto.nome }}</a></td>
+                  <td class="num">{{ c.usato|qta:c.prodotto.unita }}</td>
+                  <td class="num">{{ c.porzioni }}</td>
+                  <td class="num"><strong>{{ c.per_porzione|qta:c.prodotto.unita }}</strong></td>
+                  <td class="piccolo tenue">{{ c.piatti|join:", " }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="tenue piccolo">Servono sia gli articoli del listino collegati ai piatti del menu sia i prelievi «Metti a cucinare» della serata.</p>
+      {% endif %}
+      <p><a href="{% url 'servizio_dettaglio' servizio.pk %}">Riepilogo della serata nel magazzino →</a></p>
+    {% else %}
+      <p class="tenue">In questa serata non ci sono ancora ordini.</p>
+    {% endif %}
+  {% endwith %}
+{% endblock %}

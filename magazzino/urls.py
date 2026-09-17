@@ -24,6 +24,7 @@ urlpatterns = [
     path("servizi/<int:pk>/elimina/", views.servizio_elimina, name="servizio_elimina"),
     path("servizi/<int:pk>/cucina/", views.servizio_cucina, name="servizio_cucina"),
     path("servizi/<int:pk>/rientro/", views.servizio_reso, name="servizio_reso"),
+    path("servizi/<int:pk>/venduto/", views.servizio_venduto, name="servizio_venduto"),
     path("servizi/<int:pk>/termina/", views.servizio_chiudi, name="servizio_chiudi"),
     path("servizi/<int:pk>/riapri/", views.servizio_riapri, name="servizio_riapri"),
     path("storico/", views.operazioni, name="operazioni"),

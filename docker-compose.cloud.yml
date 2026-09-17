@@ -1,0 +1,35 @@
+# Installazione in cloud, con HTTPS automatico (certificato Let's Encrypt):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.cloud.yml up -d --build
+#
+# Serve un server raggiungibile da internet con le porte 80 e 443 aperte e un
+# dominio che punta al suo indirizzo (DOMINIO nel file .env). L'app non è più
+# raggiungibile direttamente sulla porta 8000: si passa solo da HTTPS.
+# Backup e Google Drive funzionano come nell'installazione locale.
+
+services:
+  web:
+    environment:
+      DJANGO_ALLOWED_HOSTS: ${DOMINIO:?Imposta DOMINIO nel file .env}
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://${DOMINIO}
+      DJANGO_COOKIE_SICURI: "1"
+      DJANGO_DIETRO_PROXY_HTTPS: "1"
+    ports: !reset []
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    command: ["caddy", "reverse-proxy", "--from", "${DOMINIO}", "--to", "web:8000"]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_dati:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_dati:
+  caddy_config:

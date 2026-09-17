@@ -2,6 +2,7 @@
 
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -9,6 +10,7 @@ from .. import services
 from ..forms import ProdottoForm, ServizioForm
 from ..models import Prodotto, Servizio
 from .comuni import giorno_servizio, ordina_per_categoria
+from .pagine import riepilogo_cassa
 
 
 def _prossimo(request, predefinito):
@@ -54,8 +56,12 @@ def servizio_nuovo(request):
     if request.method == "POST" and form.is_valid():
         servizio = form.save()
         messages.success(request, f"Creato: {servizio}.")
-        return redirect("servizio_dettaglio", pk=servizio.pk)
-    return render(request, "magazzino/servizio_form.html", {"form": form, "titolo": "Nuovo servizio"})
+        return redirect(_prossimo(request, reverse("servizio_dettaglio", args=[servizio.pk])))
+    return render(
+        request,
+        "magazzino/servizio_form.html",
+        {"form": form, "titolo": "Nuovo servizio", "next": _prossimo(request, "")},
+    )
 
 
 @require_http_methods(["GET", "POST"])
@@ -80,16 +86,24 @@ def servizio_modifica(request, pk):
 def servizio_elimina(request, pk):
     servizio = get_object_or_404(Servizio, pk=pk)
     ha_operazioni = servizio.operazioni.exists()
+    ha_ordini = servizio.ordini.exists()
     if request.method == "POST":
-        if ha_operazioni:
-            messages.error(request, "Non si può eliminare: ci sono movimenti registrati. Annullali prima.")
+        if ha_operazioni or ha_ordini:
+            messages.error(
+                request,
+                "Non si può eliminare: ci sono movimenti registrati. Annullali prima."
+                if ha_operazioni
+                else "Non si può eliminare: ci sono ordini registrati in cassa.",
+            )
             return redirect("servizio_dettaglio", pk=servizio.pk)
         nome = str(servizio)
         servizio.delete()
         messages.success(request, f"Eliminato: {nome}.")
         return redirect("servizi")
     return render(
-        request, "magazzino/servizio_elimina.html", {"servizio": servizio, "ha_operazioni": ha_operazioni}
+        request,
+        "magazzino/servizio_elimina.html",
+        {"servizio": servizio, "ha_operazioni": ha_operazioni, "ha_ordini": ha_ordini},
     )
 
 
@@ -114,7 +128,9 @@ def servizio_chiudi(request, pk):
         if consumi[p.pk]["preso"] > consumi[p.pk]["rientrato"]
     ]
     return render(
-        request, "magazzino/servizio_chiudi.html", {"servizio": servizio, "non_rientrati": non_rientrati}
+        request,
+        "magazzino/servizio_chiudi.html",
+        {"servizio": servizio, "non_rientrati": non_rientrati, "cassa": riepilogo_cassa(servizio)},
     )
 
 

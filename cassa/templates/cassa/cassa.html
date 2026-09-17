@@ -1,0 +1,142 @@
+{% extends "cassa/base.html" %}
+{% load static cassa_tags %}
+{% block titolo %}{% if bar %}Cassa bar{% else %}Cassa{% endif %}{% endblock %}
+{% block classe_pagina %}pagina-pos{% endblock %}
+{% block classe_contenuto %} contenuto-pos{% endblock %}
+{% block testa_cassa %}<script src="{% static 'cassa/pos.js' %}" defer></script>{% endblock %}
+{% block nav %}{% endblock %}
+{% block contenuto %}
+  {{ dati|json_script:"pos-dati" }}
+  <div class="pos-barra">
+    <div class="pos-titolo">
+      <strong>{% if bar %}Cassa bar{% else %}Cassa{% endif %}</strong>
+      <span class="tenue">{{ servizio }}</span>
+    </div>
+    <div class="pos-link">
+      <a href="{% url 'cassa:ordini' servizio.pk %}">Ordini</a>
+      <a href="{% url 'cassa:report' servizio.pk %}">Report</a>
+      <a href="{% url 'cassa:inizio' %}">Esci</a>
+    </div>
+  </div>
+
+  <div class="box-errori pos-avviso-stampa" data-avviso-stampa hidden role="alert"></div>
+  <div class="box-avviso" data-avviso-listino hidden role="status">
+    Il listino è cambiato (prezzi o esauriti). <button type="button" class="pulsante piccolo" data-ricarica>Aggiorna la cassa</button>
+    <span class="tenue piccolo">L'ordine in corso non si perde.</span>
+  </div>
+  <div class="box-avviso" data-avviso role="status" hidden></div>
+  {% if servizio.chiuso %}
+    <div class="box-errori" role="alert">
+      <strong>{{ servizio.get_tipo_display }} terminat{{ servizio.desinenza }}:</strong> non si possono registrare ordini.
+      Per riaprirl{{ servizio.desinenza }} vai al <a href="{% url 'servizio_dettaglio' servizio.pk %}">magazzino</a>.
+    </div>
+  {% endif %}
+  {% if senza_prezzo %}
+    <p class="piccolo tenue">{{ senza_prezzo }} articol{{ senza_prezzo|pluralize:"o,i" }} senza prezzo non compa{{ senza_prezzo|pluralize:"re,iono" }}: <a href="{% url 'cassa:listino' %}">listino</a>.</p>
+  {% endif %}
+
+  <form class="pos{% if servizio.chiuso %} pos-bloccata{% endif %}" data-pos autocomplete="off" novalidate>
+    {% csrf_token %}
+    <section class="pos-listino" aria-label="Articoli">
+      <div class="pos-strumenti">
+        <input type="search" data-cerca placeholder="Cerca articolo (F2)" aria-label="Cerca articolo" enterkeyhint="done">
+        {% if categorie|length > 1 %}
+          <div class="chips" data-categorie>
+            <button type="button" class="chip attivo" data-categoria="">Tutti</button>
+            {% for c in categorie %}<button type="button" class="chip" data-categoria="{{ c.pk }}">{{ c.nome }}</button>{% endfor %}
+          </div>
+        {% endif %}
+        <button type="button" class="pulsante secondario piccolo" data-modo-esauriti aria-pressed="false">Segna esauriti</button>
+      </div>
+      <p class="box-avviso piccolo" data-avviso-esauriti hidden>
+        Tocca un articolo per segnarlo <strong>esaurito</strong> o di nuovo disponibile.
+        <button type="button" class="pulsante piccolo" data-modo-esauriti-fine>Fatto</button>
+      </p>
+      {% regroup articoli by categoria as gruppi %}
+      {% for g in gruppi %}
+        <div class="pos-gruppo" data-gruppo="{{ g.grouper.pk }}">
+          <h2 class="gruppo-titolo">{{ g.grouper.nome }}</h2>
+          <div class="pos-griglia">
+            {% for a in g.list %}
+              <button type="button" class="pos-articolo colore-{{ a.categoria.colore }}{% if a.esaurito %} esaurito{% endif %}" data-articolo="{{ a.pk }}" data-nome="{{ a.nome }}">
+                <span class="pos-articolo-nome">{{ a.nome }}</span>
+                <span class="pos-articolo-prezzo">{{ a.prezzo|euro }}</span>
+                <span class="pos-articolo-conteggio" data-conteggio hidden></span>
+                <span class="pos-articolo-esaurito">Esaurito</span>
+              </button>
+            {% endfor %}
+          </div>
+        </div>
+      {% empty %}
+        <div class="scheda">
+          <p><strong>Nessun articolo in vendita{% if bar %} al bar{% endif %}.</strong></p>
+          <p class="tenue">Servono articoli attivi e con il prezzo{% if bar %}, del reparto bar{% endif %}.{% if not bar %} Se la serata ha scelto i suoi piatti, compaiono solo quelli.{% endif %}</p>
+          {% if user.is_staff %}<p><a class="pulsante secondario" href="{% url 'cassa:listino' %}">Vai al listino</a></p>{% endif %}
+        </div>
+      {% endfor %}
+      <p class="tenue piccolo" data-nessun-risultato hidden>Nessun articolo trovato.</p>
+    </section>
+
+    <aside class="pos-ordine" id="ordine" aria-label="Ordine in corso">
+      <div class="pos-cliente">
+        <label class="pos-campo pos-campo-nome">Nome{% if not bar %} *{% endif %}
+          <input type="text" data-campo="nome" maxlength="40" autocapitalize="words" enterkeyhint="next" spellcheck="false">
+        </label>
+        <label class="pos-campo pos-campo-tavolo">Tavolo{% if not bar %} *{% endif %}
+          <input type="text" data-campo="tavolo" maxlength="10" enterkeyhint="next">
+        </label>
+        {% if not bar %}
+          <label class="pos-campo pos-campo-coperti">Coperti
+            <input type="text" data-campo="coperti" maxlength="3" inputmode="numeric" pattern="[0-9]*" enterkeyhint="next">
+          </label>
+        {% endif %}
+      </div>
+
+      <div class="pos-carrello">
+        <div class="pos-esito" data-esito hidden role="status" tabindex="-1"></div>
+        <ol class="pos-righe" data-righe aria-live="polite"></ol>
+        <p class="pos-vuoto tenue" data-vuoto>Tocca gli articoli per aggiungerli all'ordine.</p>
+      </div>
+
+      <label class="pos-campo pos-campo-note">Note per la cucina
+        <input type="text" data-campo="note" maxlength="200" enterkeyhint="done">
+      </label>
+
+      <div class="pos-totale"><span>Totale</span><strong data-totale>0,00 €</strong></div>
+
+      <fieldset class="pos-pagamento">
+        <legend class="visually-hidden">Pagamento</legend>
+        {% for valore, etichetta in pagamenti %}
+          <label class="pos-pagamento-{{ valore }}"><input type="radio" name="pagamento" value="{{ valore }}" data-pagamento> {{ etichetta }}</label>
+        {% endfor %}
+      </fieldset>
+
+      <div class="pos-resto" data-resto hidden>
+        <label class="pos-campo">Ricevuti
+          <input type="text" inputmode="decimal" data-campo="ricevuti" placeholder="0,00">
+        </label>
+        <div class="pos-banconote">
+          <button type="button" class="chip" data-banconota="esatto">Esatto</button>
+          <button type="button" class="chip" data-banconota="500">5 €</button>
+          <button type="button" class="chip" data-banconota="1000">10 €</button>
+          <button type="button" class="chip" data-banconota="2000">20 €</button>
+          <button type="button" class="chip" data-banconota="5000">50 €</button>
+          <button type="button" class="chip" data-banconota="10000">100 €</button>
+        </div>
+        <div class="pos-resto-valore">Resto <strong data-resto-valore>—</strong></div>
+      </div>
+
+      <p class="pos-mancante" data-mancante></p>
+      <button type="button" class="pulsante pos-conferma" data-conferma disabled>Conferma e stampa</button>
+      <button type="button" class="link pos-svuota" data-svuota>Svuota ordine</button>
+    </aside>
+
+    <a class="pos-riassunto" href="#ordine" data-riassunto hidden></a>
+  </form>
+
+  <section class="pos-ultimi" aria-label="Ultimi ordini">
+    <h2>Ultimi ordini{% if bar %} al bar{% endif %}</h2>
+    <ol class="pos-ultimi-elenco" data-ultimi><li class="tenue">Nessun ordine.</li></ol>
+  </section>
+  <iframe class="pos-iframe-stampa" data-iframe-stampa title="Stampa delle comande" tabindex="-1" aria-hidden="true"></iframe>
+{% endblock %}

@@ -70,6 +70,7 @@ SEGNO = {
     TipoOperazione.SCARTO: -1,
     TipoOperazione.SPOSTAMENTO: 0,
     TipoOperazione.RETTIFICA: 0,
+    TipoOperazione.VENDITA: -1,
 }
 
 
@@ -107,19 +108,24 @@ def giacenze_totali(prodotti=None):
 
 
 def consumi_servizio(servizio, prodotti=None):
-    """{prodotto_id: {"preso": q, "rientrato": q}} con quantità positive."""
+    """{prodotto_id: {"preso": q, "rientrato": q, "venduto": q}} con quantità positive.
+
+    "venduto" è quanto scaricato perché venduto in cassa (es. bevande).
+    """
     qs = Movimento.objects.filter(operazione__servizio=servizio)
     if prodotti is not None:
         qs = qs.filter(prodotto__in=list(prodotti))
     righe = (
         qs.values("prodotto_id", "operazione__tipo").annotate(totale=Sum("quantita")).order_by()
     )
-    risultato = defaultdict(lambda: {"preso": ZERO, "rientrato": ZERO})
+    risultato = defaultdict(lambda: {"preso": ZERO, "rientrato": ZERO, "venduto": ZERO})
     for r in righe:
         if r["operazione__tipo"] == TipoOperazione.CUCINA:
             risultato[r["prodotto_id"]]["preso"] += -r["totale"]
         elif r["operazione__tipo"] == TipoOperazione.RESO:
             risultato[r["prodotto_id"]]["rientrato"] += r["totale"]
+        elif r["operazione__tipo"] == TipoOperazione.VENDITA:
+            risultato[r["prodotto_id"]]["venduto"] += -r["totale"]
     return dict(risultato)
 
 
@@ -239,7 +245,7 @@ def _controlla(tipo, righe, servizio):
 def _registra(tipo, prodotto_ids, calcola_righe, *, utente, servizio=None, note="", token=None, allegati=()):
     """Crea un'operazione con i suoi movimenti. Restituisce (operazione, creata)."""
     if (tipo in TIPI_CON_SERVIZIO) != (servizio is not None):
-        raise ValueError("Il servizio va indicato solo per i prelievi e i rientri della cucina.")
+        raise ValueError("Il servizio va indicato solo per i prelievi, i rientri e il venduto in cassa.")
     if token is not None:
         esistente = Operazione.objects.filter(token=token).first()
         if esistente is not None:
@@ -412,6 +418,16 @@ def registra_reso(*, servizio, rientri, utente, note="", token=None):
     righe = [Riga(p, u, q) for p, u, q in voci]
     return _registra(
         TipoOperazione.RESO, [p.pk for p, _, _ in voci], lambda: righe,
+        utente=utente, servizio=servizio, note=note, token=token,
+    )
+
+
+def registra_vendita(*, servizio, prelievi, utente, note="", token=None):
+    """Scarico di quanto venduto in cassa. prelievi: iterabile di (prodotto, ubicazione, q>0)."""
+    voci = _positive(prelievi)
+    righe = [Riga(p, u, -q) for p, u, q in voci]
+    return _registra(
+        TipoOperazione.VENDITA, [p.pk for p, _, _ in voci], lambda: righe,
         utente=utente, servizio=servizio, note=note, token=token,
     )
 
