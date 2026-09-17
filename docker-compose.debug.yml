@@ -1,0 +1,32 @@
+# Configurazione per il debug con Docker e PostgreSQL:
+#   docker compose -f docker-compose.yml -f docker-compose.debug.yml up --build
+#
+# - usa il codice della cartella (niente rebuild) e si ricarica a ogni modifica;
+# - DEBUG attivo: pagine di errore dettagliate;
+# - debugger di VS Code sulla porta 5678 ("Magazzino: collega a Docker");
+# - app su http://localhost:8002;
+# - progetto separato ("magazzino-debug"): database e allegati sono solo suoi,
+#   i dati veri non vengono toccati. Backup e Google Drive sono spenti.
+name: magazzino-debug
+
+services:
+  web:
+    build:
+      target: debug
+    image: magazzino-sagra:debug
+    command: ["python", "-Xfrozen_modules=off", "manage.py", "runserver", "0.0.0.0:8000"]
+    environment:
+      DJANGO_DEBUG: "1"
+      DJANGO_LOG_SQL: ${DJANGO_LOG_SQL:-0}
+      DEBUGPY_PORTA: "5678"
+    ports: !override
+      - "${PORTA_DEBUG:-8002}:8000"
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - .:/app
+
+  backup:
+    profiles: ["mai"]
+
+  drive:
+    profiles: ["mai"]

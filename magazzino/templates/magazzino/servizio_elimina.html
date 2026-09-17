@@ -1,0 +1,15 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Elimina servizio{% endblock %}
+{% block contenuto %}
+  <h1>Eliminare {{ servizio }}?</h1>
+  {% if ha_operazioni %}
+    <div class="box-errori">Non si può eliminare: ci sono movimenti registrati in questo servizio. Annullali prima.</div>
+    <a class="pulsante secondario" href="{% url 'servizio_dettaglio' servizio.pk %}">Torna al servizio</a>
+  {% else %}
+    <form method="post" class="azioni">
+      {% csrf_token %}
+      <button type="submit" class="pulsante pericolo">Sì, elimina</button>
+      <a class="pulsante secondario" href="{% url 'servizio_dettaglio' servizio.pk %}">No</a>
+    </form>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Serate e pranzi{% endblock %}
+{% block contenuto %}
+  <h1>Serate e pranzi</h1>
+  <div class="azioni"><a class="pulsante" href="{% url 'servizio_nuovo' %}">Nuovo servizio</a></div>
+  <div class="scheda">
+    <ul class="elenco">
+      {% for s in elenco %}
+        <li>
+          <div class="voce">
+            <a class="voce-nome" href="{% url 'servizio_dettaglio' s.pk %}">{{ s }}</a>
+            <span class="nowrap">
+              {% if s.data == oggi %}<span class="etichetta ok">oggi</span>{% endif %}
+              {% if s.chiuso %}<span class="etichetta">terminat{{ s.desinenza }}</span>{% endif %}
+            </span>
+          </div>
+          <div class="tenue piccolo">
+            {{ s.n_operazioni }} operazion{{ s.n_operazioni|pluralize:"e,i" }} · {{ s.n_piatti }} piatt{{ s.n_piatti|pluralize:"o,i" }} nel menu
+          </div>
+        </li>
+      {% empty %}
+        <li class="tenue">Nessun servizio. Creane uno per iniziare a registrare cosa va in cucina.</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

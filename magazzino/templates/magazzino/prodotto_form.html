@@ -1,0 +1,15 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block contenuto %}
+  <h1>{{ titolo }}</h1>
+  <form method="post" class="scheda">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    {% if form.non_field_errors %}<div class="box-errori" role="alert">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+    {% for campo in form %}{% include "magazzino/_campo.html" %}{% endfor %}
+    <div class="azioni">
+      <button type="submit" class="pulsante">Salva</button>
+      <a class="pulsante secondario" href="{% if prodotto %}{% url 'prodotto_dettaglio' prodotto.pk %}{% elif next %}{{ next }}{% else %}{% url 'prodotti' %}{% endif %}">Annulla</a>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}{{ operazione.get_tipo_display }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'operazioni' %}">Storico</a>{% if operazione.servizio %} · <a href="{% url 'servizio_dettaglio' operazione.servizio_id %}">{{ operazione.servizio }}</a>{% endif %}</p>
+  <h1>{{ operazione.get_tipo_display }}</h1>
+  <p class="tenue">
+    {{ operazione.creata_il|date:"l j F Y, H:i" }}
+    {% if operazione.utente %} · {{ operazione.utente.get_username }}{% endif %}
+  </p>
+  {% if operazione.note %}<p>Note: {{ operazione.note }}</p>{% endif %}
+
+  <div class="scheda">
+    <ul class="elenco">
+      {% for m in movimenti %}
+        <li>
+          <div class="voce">
+            <span><a class="voce-nome" href="{% url 'prodotto_dettaglio' m.prodotto_id %}">{{ m.prodotto.nome }}</a> <span class="tenue">· {{ m.ubicazione.nome }}</span></span>
+            <strong class="num">{{ m.quantita|qta_segno:m.prodotto.unita }}</strong>
+          </div>
+          {% if not spostamento and not bloccata %}<a class="piccolo" href="{% url 'movimento_annulla' m.pk %}">Annulla questa riga</a>{% endif %}
+        </li>
+      {% empty %}
+        <li class="tenue">Nessuna riga.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <p class="tenue piccolo">+ entra in magazzino, − esce dal magazzino.</p>
+
+  {% if operazione.ammette_allegati %}
+    <h2>Fatture e bolle</h2>
+    <div class="scheda">
+      {% if allegati %}
+        <ul class="elenco">
+          {% for a in allegati %}
+            <li class="allegato">
+              {% if a.immagine %}
+                <a href="{% url 'allegato_file' a.pk %}" target="_blank" rel="noopener"><img src="{% url 'allegato_file' a.pk %}" alt="Anteprima di {{ a.nome }}" loading="lazy"></a>
+              {% endif %}
+              <div>
+                <a class="voce-nome" href="{% url 'allegato_file' a.pk %}" target="_blank" rel="noopener">{{ a.nome }}</a>
+                <div class="tenue piccolo">
+                  {{ a.dimensione|filesizeformat }} · {{ a.caricato_il|date:"D j/m H:i" }}{% if a.utente %} · {{ a.utente.get_username }}{% endif %}
+                </div>
+                <div class="piccolo"><a href="{% url 'allegato_file' a.pk %}?scarica=1">Scarica</a> · <a href="{% url 'allegato_elimina' a.pk %}">Elimina</a></div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="tenue">Nessun allegato.</p>
+      {% endif %}
+      <form method="post" action="{% url 'operazione_allegati' operazione.pk %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="campo campo-file">
+          <label for="allegati">Aggiungi fattura o bolla</label>
+          <input id="allegati" name="allegati" type="file" accept="image/*,application/pdf,.pdf,.heic,.heif" multiple required>
+          <div class="aiuto">Foto o PDF, al massimo {{ allegati_max_mb }} MB per file.</div>
+        </div>
+        <button type="submit" class="pulsante secondario">Allega</button>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if bloccata %}
+    <p class="tenue piccolo">{{ operazione.servizio.get_tipo_display }} terminat{{ operazione.servizio.desinenza }}: per annullare questa operazione <a href="{% url 'servizio_dettaglio' operazione.servizio_id %}">riapri {{ operazione.servizio.tipo_con_articolo }}</a>.</p>
+  {% else %}
+    <div class="azioni">
+      <a class="pulsante secondario" href="{% url 'operazione_annulla' operazione.pk %}">Annulla tutta l'operazione</a>
+    </div>
+  {% endif %}
+{% endblock %}

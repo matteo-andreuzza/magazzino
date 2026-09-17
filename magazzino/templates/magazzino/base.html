@@ -1,0 +1,47 @@
+{% load static %}<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7a2e12">
+  <title>{% block titolo %}{% endblock %} · {{ APP_NOME }}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%237a2e12%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27Arial%27 font-weight=%27bold%27%3EM%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{% static 'magazzino/app.css' %}">
+  <script src="{% static 'magazzino/app.js' %}" defer></script>
+</head>
+<body>
+  <header class="testata">
+    <a class="marchio" href="{% url 'home' %}">{{ APP_NOME }}</a>
+    {% if user.is_authenticated %}
+      <form method="post" action="{% url 'logout' %}" class="utente">
+        {% csrf_token %}
+        <span class="tenue">{{ user.get_username }}</span>
+        <button type="submit" class="link">Esci</button>
+      </form>
+    {% endif %}
+  </header>
+  {% if user.is_authenticated %}
+    <nav class="nav" aria-label="Sezioni">
+      <a href="{% url 'home' %}">Inizio</a>
+      <a href="{% url 'servizi' %}">Serate</a>
+      <a href="{% url 'giacenze' %}">Giacenze</a>
+      <a href="{% url 'ubicazioni' %}">Frighi</a>
+      <a href="{% url 'carico_scelta' %}">Carica</a>
+      <a href="{% url 'spostamento_scelta' %}">Sposta</a>
+      <a href="{% url 'operazioni' %}">Storico</a>
+      <a href="{% url 'riepilogo' %}">Consumi</a>
+      <a href="{% url 'menu' %}">Menu</a>
+      <a href="{% url 'prodotti' %}">Prodotti</a>
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}">Amministrazione</a>{% endif %}
+    </nav>
+  {% endif %}
+  <main class="contenuto">
+    {% if messages %}
+      <div class="messaggi">
+        {% for m in messages %}<div class="messaggio {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
+      </div>
+    {% endif %}
+    {% block contenuto %}{% endblock %}
+  </main>
+</body>
+</html>

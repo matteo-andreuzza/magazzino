@@ -1,0 +1,33 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Prodotti{% endblock %}
+{% block contenuto %}
+  <h1>Prodotti</h1>
+  <div class="azioni"><a class="pulsante" href="{% url 'prodotto_nuovo' %}">Nuovo prodotto</a></div>
+  <div data-filtro-elenco>
+    <div class="filtri"><input type="search" data-cerca placeholder="Cerca prodotto…" aria-label="Cerca prodotto" autocomplete="off"></div>
+    {% for categoria, voci in categorie %}
+      <section data-sezione>
+        <h2 class="gruppo-titolo">{{ categoria }}</h2>
+        <div class="scheda">
+          <ul class="elenco">
+            {% for p, totale in voci %}
+              <li data-voce data-nome="{{ p.nome }}">
+                <div class="voce">
+                  <a class="voce-nome" href="{% url 'prodotto_dettaglio' p.pk %}">{{ p.nome }}</a>
+                  <span class="num">{{ totale|qta:p.unita }}</span>
+                </div>
+                <div class="tenue piccolo">
+                  in {{ p.unita|unita }}{% if p.scorta_minima is not None %} · scorta minima {{ p.scorta_minima|qta:p.unita }}{% endif %}
+                  {% if not p.attivo %} · <span class="etichetta">non attivo</span>{% endif %}
+                  {% if p.note %} · {{ p.note }}{% endif %}
+                  · <a href="{% url 'prodotto_modifica' p.pk %}">modifica</a>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+{% endblock %}

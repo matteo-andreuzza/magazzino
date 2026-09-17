@@ -1,0 +1,29 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Termina {{ servizio.tipo_con_articolo }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'servizio_dettaglio' servizio.pk %}">{{ servizio }}</a></p>
+  <h1>Terminare {{ servizio.tipo_con_articolo }}?</h1>
+  <p>Dopo non si potranno più registrare prelievi né rientri per questo servizio. Se serve, si può riaprire.</p>
+
+  {% if non_rientrati %}
+    <div class="box-avviso">
+      <p><strong>Uscito per la cucina e non ancora rientrato:</strong></p>
+      <ul class="elenco">
+        {% for p, q in non_rientrati %}
+          <li class="voce"><span>{{ p.nome }}</span><strong class="num">{{ q|qta:p.unita }}</strong></li>
+        {% endfor %}
+      </ul>
+      <p>Se qualcosa è avanzato e torna in frigo o in dispensa, registra prima il rientro. Tutto il resto verrà contato come usato.</p>
+      <p><a class="pulsante secondario" href="{% url 'servizio_reso' servizio.pk %}">Registra il rientro</a></p>
+    </div>
+  {% else %}
+    <p class="tenue">In questo servizio non è stato messo niente a cucinare.</p>
+  {% endif %}
+
+  <form method="post" class="azioni">
+    {% csrf_token %}
+    <button type="submit" class="pulsante">Sì, termina {{ servizio.tipo_con_articolo }}</button>
+    <a class="pulsante secondario" href="{% url 'servizio_dettaglio' servizio.pk %}">No, torna indietro</a>
+  </form>
+{% endblock %}

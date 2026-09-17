@@ -1,0 +1,57 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Storico{% endblock %}
+{% block contenuto %}
+  <h1>Storico operazioni</h1>
+  <form method="get" class="scheda">
+    <div class="griglia-azioni">
+      <div>
+        <label for="f-tipo">Tipo</label>
+        <select id="f-tipo" name="tipo">
+          <option value="">Tutti</option>
+          {% for valore, etichetta in tipi %}<option value="{{ valore }}"{% if filtri.tipo == valore %} selected{% endif %}>{{ etichetta }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="f-servizio">Servizio</label>
+        <select id="f-servizio" name="servizio">
+          <option value="">Tutti</option>
+          {% for s in servizi %}<option value="{{ s.pk }}"{% if filtri.servizio == s.pk|stringformat:"s" %} selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="f-ubicazione">Dove</label>
+        <select id="f-ubicazione" name="ubicazione">
+          <option value="">Ovunque</option>
+          {% for u in ubicazioni %}<option value="{{ u.pk }}"{% if filtri.ubicazione == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="f-prodotto">Prodotto</label>
+        <select id="f-prodotto" name="prodotto">
+          <option value="">Tutti</option>
+          {% for p in prodotti %}<option value="{{ p.pk }}"{% if filtri.prodotto == p.pk|stringformat:"s" %} selected{% endif %}>{{ p.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="f-giorno">Giorno</label>
+        <input id="f-giorno" type="date" name="giorno" value="{{ filtri.giorno }}">
+      </div>
+    </div>
+    <div class="azioni">
+      <button type="submit" class="pulsante">Filtra</button>
+      <a class="pulsante secondario" href="{% url 'operazioni' %}">Togli filtri</a>
+      <a class="pulsante secondario" href="{% url 'movimenti_csv' %}?{{ parametri }}">Scarica per Excel</a>
+    </div>
+  </form>
+
+  <p class="tenue piccolo">{{ pagina.paginator.count }} operazion{{ pagina.paginator.count|pluralize:"e,i" }}. + entra in magazzino, − esce.</p>
+  {% include "magazzino/_operazioni.html" with operazioni=pagina.object_list mostra_movimenti=True %}
+
+  {% if pagina.has_other_pages %}
+    <div class="azioni">
+      {% if pagina.has_previous %}<a class="pulsante secondario" href="?{% if parametri %}{{ parametri }}&amp;{% endif %}pagina={{ pagina.previous_page_number }}">← Più recenti</a>{% endif %}
+      <span class="tenue">Pagina {{ pagina.number }} di {{ pagina.paginator.num_pages }}</span>
+      {% if pagina.has_next %}<a class="pulsante secondario" href="?{% if parametri %}{{ parametri }}&amp;{% endif %}pagina={{ pagina.next_page_number }}">Meno recenti →</a>{% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

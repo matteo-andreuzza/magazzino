@@ -1,0 +1,16 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block contenuto %}
+  {% if indietro %}<p class="tenue piccolo"><a href="{{ indietro }}">← Indietro</a></p>{% endif %}
+  <h1>{{ titolo }}</h1>
+  <p class="tenue">{{ descrizione }}</p>
+  {% if voci %}
+    <div class="griglia-azioni">
+      {% for url, nome, sottotitolo in voci %}
+        <a class="tessera" href="{{ url }}"><strong>{{ nome }}</strong><span>{{ sottotitolo }}</span></a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="scheda"><p>Non c'è niente da scegliere: il magazzino è vuoto.</p></div>
+  {% endif %}
+{% endblock %}

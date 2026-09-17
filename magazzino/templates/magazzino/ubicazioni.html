@@ -1,0 +1,16 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Frighi e congelatori{% endblock %}
+{% block contenuto %}
+  <h1>Frighi, congelatori e dispensa</h1>
+  <div class="griglia-azioni">
+    {% for u, n in elenco %}
+      <a class="tessera" href="{% url 'ubicazione_dettaglio' u.pk %}">
+        <strong>{{ u.nome }}</strong>
+        <span>{{ u.get_tipo_display }} · {% if n %}{{ n }} prodott{{ n|pluralize:"o,i" }}{% else %}vuoto{% endif %}{% if not u.attiva %} · non attiva{% endif %}</span>
+      </a>
+    {% endfor %}
+  </div>
+  {% if user.is_staff %}
+    <p class="tenue piccolo">Per aggiungere o rinominare frighi e congelatori usa l'<a href="{% url 'admin:magazzino_ubicazione_changelist' %}">amministrazione</a>.</p>
+  {% endif %}
+{% endblock %}

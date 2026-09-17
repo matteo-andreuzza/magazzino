@@ -1,0 +1,50 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Giacenze{% endblock %}
+{% block contenuto %}
+  <h1>Giacenze</h1>
+  <p class="tenue">Cosa c'è in magazzino e dove, prodotto per prodotto.</p>
+  <div class="azioni">
+    {% if tutti %}
+      <a class="pulsante secondario piccolo" href="{% url 'giacenze' %}">Nascondi i prodotti esauriti</a>
+    {% else %}
+      <a class="pulsante secondario piccolo" href="{% url 'giacenze' %}?tutti=1">Mostra anche i prodotti esauriti</a>
+    {% endif %}
+    <a class="pulsante secondario piccolo" href="{% url 'giacenze_csv' %}">Scarica per Excel</a>
+    <button type="button" class="pulsante secondario piccolo" onclick="window.print()">Stampa</button>
+  </div>
+
+  <div data-filtro-elenco>
+    <div class="filtri"><input type="search" data-cerca placeholder="Cerca prodotto…" aria-label="Cerca prodotto" autocomplete="off"></div>
+    {% for categoria, schede in categorie %}
+      <section data-sezione>
+        <h2 class="gruppo-titolo">{{ categoria }}</h2>
+        <div class="scheda">
+          <ul class="elenco">
+            {% for s in schede %}
+              <li data-voce data-nome="{{ s.prodotto.nome }}">
+                <div class="voce">
+                  <a class="voce-nome" href="{% url 'prodotto_dettaglio' s.prodotto.pk %}">{{ s.prodotto.nome }}</a>
+                  <strong class="num{% if s.totale < 0 %} negativo{% endif %}">
+                    {% if s.totale %}{{ s.totale|qta:s.prodotto.unita }}{% else %}<span class="etichetta pericolo">esaurito</span>{% endif %}
+                  </strong>
+                </div>
+                {% if s.sotto_scorta %}<span class="etichetta avviso">sotto scorta (minimo {{ s.prodotto.scorta_minima|qta:s.prodotto.unita }})</span>{% endif %}
+                {% if s.dettagli %}
+                  <div class="chip-ubicazioni">
+                    {% for u, q in s.dettagli %}<span{% if q < 0 %} class="negativo"{% endif %}>{{ u.nome }}: <strong>{{ q|qta:s.prodotto.unita }}</strong></span>{% endfor %}
+                  </div>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+    {% empty %}
+      <div class="scheda">
+        <p>Il magazzino è vuoto.</p>
+        <p><a class="pulsante" href="{% url 'carico_scelta' %}">Carica la merce</a></p>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block contenuto %}
+  {% if servizio %}<p class="tenue piccolo"><a href="{% url 'servizio_dettaglio' servizio.pk %}">{{ servizio }}</a></p>{% endif %}
+  <h1>{{ titolo }}</h1>
+  <p class="tenue">{{ sottotitolo }}</p>
+  {% if mostra_nuovo_prodotto %}
+    <p class="piccolo">Manca un prodotto? <a href="{% url 'prodotto_nuovo' %}?next={{ request.path|urlencode }}">Crealo</a> prima di compilare.</p>
+  {% endif %}
+
+  {% if errori %}
+    <div class="box-errori" id="errori" role="alert" tabindex="-1">
+      <strong>Non è stato registrato niente.</strong>
+      <ul>{% for e in errori %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  {% if not righe %}
+    <div class="scheda">
+      <p>{{ elenco_vuoto|default:"Non c'è niente da mostrare." }}</p>
+      <p><a class="pulsante secondario" href="{{ annulla_url }}">Torna indietro</a></p>
+    </div>
+  {% else %}
+    <form method="post" data-modulo-righe novalidate{% if allegati_ammessi %} enctype="multipart/form-data"{% endif %}>
+      {% csrf_token %}
+      <input type="hidden" name="token" value="{{ token }}">
+
+      {% if tipi_carico %}
+        <fieldset class="scelta-tipo">
+          <legend>Che cosa stai caricando?</legend>
+          {% for valore, etichetta, spiegazione in tipi_carico %}
+            <label class="opzione">
+              <input type="radio" name="tipo" value="{{ valore }}" {% if tipo == valore %}checked{% endif %}>
+              <span><strong>{{ etichetta }}</strong><small>{{ spiegazione }}</small></span>
+            </label>
+          {% endfor %}
+        </fieldset>
+      {% endif %}
+
+      <div class="filtri">
+        <input type="search" data-cerca placeholder="Cerca prodotto…" aria-label="Cerca prodotto" autocomplete="off">
+        {% if filtro_menu %}
+          <label class="interruttore"><input type="checkbox" data-solo-menu checked> Solo ingredienti dei piatti di questo servizio</label>
+        {% endif %}
+        {% if filtro_presenti %}
+          <label class="interruttore"><input type="checkbox" data-solo-presenti> Solo prodotti che secondo l'app ci sono</label>
+        {% endif %}
+        {% if gruppi|length > 1 %}
+          <div class="chips" data-chips>
+            <button type="button" class="chip attivo" data-gruppo="">Tutti</button>
+            {% for g in gruppi %}<button type="button" class="chip" data-gruppo="{{ g }}">{{ g }}</button>{% endfor %}
+          </div>
+        {% endif %}
+        <span class="tenue piccolo" data-conteggio-visibili></span>
+      </div>
+
+      {% regroup righe by gruppo as gruppi_righe %}
+      {% for g in gruppi_righe %}
+        <section data-sezione>
+          <h2 class="gruppo-titolo">{{ g.grouper }}</h2>
+          {% for r in g.list %}
+            <div class="riga{% if r.errore %} con-errore{% endif %}" data-riga data-nome="{{ r.prodotto.nome }}" data-gruppo="{{ r.gruppo }}" data-menu="{% if r.in_menu %}1{% else %}0{% endif %}" data-presente="{% if r.attuale %}1{% else %}0{% endif %}">
+              <div class="riga-testo">
+                <label class="riga-nome" for="{{ r.nome_campo }}">{{ r.prodotto.nome }}</label>
+                <div class="riga-info">
+                  {% if etichetta_attuale and r.attuale is not None %}{{ etichetta_attuale }}: <strong class="num">{{ r.attuale|qta:r.prodotto.unita }}</strong>{% endif %}
+                  {% for i in r.info %}<span class="sep">·</span>{{ i }}{% endfor %}
+                </div>
+                {% if r.scegli_ubicazione %}
+                  <label class="riga-ubicazione">Rimetti in
+                    <select name="u-{{ r.prodotto.pk }}">
+                      <option value="">— scegli —</option>
+                      {% for u in ubicazioni_scelta %}
+                        <option value="{{ u.pk }}" {% if r.ubicazione_scelta == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.nome }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                {% endif %}
+                {% if r.errore %}<p class="errore">{{ r.errore }}</p>{% endif %}
+              </div>
+              <div class="riga-input">
+                <input id="{{ r.nome_campo }}" name="{{ r.nome_campo }}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" value="{{ r.testo }}" placeholder="{{ etichetta_input }}"{% if r.massimo is not None %} data-massimo="{{ r.massimo|num }}"{% endif %}>
+                <span class="unita">{{ r.prodotto.unita|unita }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        </section>
+      {% endfor %}
+
+      {% if allegati_ammessi %}
+        <div class="campo campo-file">
+          <label for="allegati">Fattura o bolla <span class="tenue piccolo">(facoltativa)</span></label>
+          <input id="allegati" name="allegati" type="file" accept="image/*,application/pdf,.pdf,.heic,.heif" multiple>
+          <div class="aiuto">Scatta una foto o scegli un PDF. Puoi aggiungerle anche dopo, aprendo il carico dallo storico.</div>
+        </div>
+      {% endif %}
+
+      <div class="campo">
+        <label for="note">Note</label>
+        <input id="note" name="note" type="text" maxlength="250" value="{{ note }}" placeholder="{{ placeholder_note }}">
+      </div>
+
+      <div class="barra-invio">
+        <div class="barra-invio-dentro">
+          <span data-contatore></span>
+          <a class="pulsante secondario" href="{{ annulla_url }}">Annulla</a>
+          <button type="submit" class="pulsante" data-invio>{{ testo_pulsante }}</button>
+        </div>
+      </div>
+    </form>
+  {% endif %}
+{% endblock %}

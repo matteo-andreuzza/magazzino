@@ -1,0 +1,38 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block contenuto %}
+  <h1>{{ titolo }}</h1>
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="box-errori" role="alert">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+    <div class="scheda">
+      {% include "magazzino/_campo.html" with campo=form.data %}
+      {% include "magazzino/_campo.html" with campo=form.tipo %}
+      {% include "magazzino/_campo.html" with campo=form.nome %}
+    </div>
+
+    <h2>Piatti serviti</h2>
+    <p class="tenue piccolo">{{ form.piatti.help_text }} Se non ne scegli nessuno vengono mostrati tutti i prodotti.</p>
+    {% for e in form.piatti.errors %}<p class="errore">{{ e }}</p>{% endfor %}
+    {% for menu, piatti in form.gruppi_piatti %}
+      <fieldset class="gruppo-piatti" id="menu-{{ menu.pk }}">
+        <legend>{{ menu.nome }}</legend>
+        <div class="azioni">
+          <button type="button" class="pulsante secondario piccolo" data-seleziona="tutti" data-gruppo="menu-{{ menu.pk }}">Tutti</button>
+          <button type="button" class="pulsante secondario piccolo" data-seleziona="nessuno" data-gruppo="menu-{{ menu.pk }}">Nessuno</button>
+        </div>
+        <div class="caselle">
+          {% for piatto, selezionato in piatti %}
+            <label><input type="checkbox" name="{{ form.piatti.html_name }}" value="{{ piatto.pk }}"{% if selezionato %} checked{% endif %}> {{ piatto.nome }}</label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+
+    <div class="scheda">{% include "magazzino/_campo.html" with campo=form.note %}</div>
+    <div class="azioni">
+      <button type="submit" class="pulsante">Salva</button>
+      <a class="pulsante secondario" href="{% if servizio %}{% url 'servizio_dettaglio' servizio.pk %}{% else %}{% url 'servizi' %}{% endif %}">Annulla</a>
+    </div>
+  </form>
+{% endblock %}

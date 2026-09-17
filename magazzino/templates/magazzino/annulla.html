@@ -1,0 +1,32 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Annulla{% endblock %}
+{% block contenuto %}
+  <h1>{% if intera %}Annullare l'intera operazione?{% else %}Annullare questa riga?{% endif %}</h1>
+  <p><strong>{{ operazione.get_tipo_display }}</strong> del {{ operazione.creata_il|date:"j/m/Y H:i" }}{% if operazione.servizio %} · {{ operazione.servizio }}{% endif %}{% if operazione.utente %} · {{ operazione.utente.get_username }}{% endif %}</p>
+  <div class="box-avviso">
+    Le giacenze torneranno come se {% if intera %}questa operazione{% else %}questa riga{% endif %} non fosse mai stata registrata.
+    Se hai sbagliato una quantità, annulla e poi registra di nuovo quella giusta.
+  </div>
+  {% if allegati_persi %}
+    <div class="box-errori">
+      {% if allegati_persi == 1 %}Verrà eliminato anche l'allegato (fattura o bolla).{% else %}Verranno eliminati anche i {{ allegati_persi }} allegati (fatture o bolle).{% endif %}
+      Se ti serv{{ allegati_persi|pluralize:"e,ono" }}, <a href="{% url 'operazione_dettaglio' operazione.pk %}">scarica{{ allegati_persi|pluralize:"lo,li" }}</a> prima.
+    </div>
+  {% endif %}
+  <div class="scheda">
+    <ul class="elenco">
+      {% for m in movimenti %}
+        <li class="voce">
+          <span><span class="voce-nome">{{ m.prodotto.nome }}</span> <span class="tenue">· {{ m.ubicazione.nome }}</span></span>
+          <strong class="num">{{ m.quantita|qta_segno:m.prodotto.unita }}</strong>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <form method="post" class="azioni">
+    {% csrf_token %}
+    <button type="submit" class="pulsante pericolo">Sì, annulla</button>
+    <a class="pulsante secondario" href="{% url 'operazione_dettaglio' operazione.pk %}">No, torna indietro</a>
+  </form>
+{% endblock %}

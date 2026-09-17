@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Magazzino: avvia con debugger (SQLite)",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "program": "${workspaceFolder}/manage.py",
+      "args": ["runserver", "127.0.0.1:8001"],
+      "django": true,
+      "justMyCode": true,
+      "env": {
+        "DJANGO_DEBUG": "1",
+        "DJANGO_LOG_SQL": "0"
+      },
+      "preLaunchTask": "Magazzino: migrate"
+    },
+    {
+      "name": "Magazzino: test con debugger",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "program": "${workspaceFolder}/manage.py",
+      "args": ["test", "--noinput", "${input:etichettaTest}"],
+      "django": true,
+      "justMyCode": false
+    },
+    {
+      "name": "Magazzino: collega a Docker (debug)",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": { "host": "127.0.0.1", "port": 5678 },
+      "pathMappings": [{ "localRoot": "${workspaceFolder}", "remoteRoot": "/app" }],
+      "justMyCode": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "etichettaTest",
+      "type": "promptString",
+      "description": "Quali test? (magazzino = tutti; es. magazzino.tests.test_allegati)",
+      "default": "magazzino"
+    }
+  ]
+}

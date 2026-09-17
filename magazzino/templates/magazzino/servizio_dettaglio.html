@@ -1,0 +1,73 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}{{ servizio }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'servizi' %}">Serate e pranzi</a></p>
+  <h1>{{ servizio }}</h1>
+  {% if servizio.note %}<p>{{ servizio.note|linebreaksbr }}</p>{% endif %}
+
+  {% if servizio.chiuso %}
+    <div class="box-avviso">
+      <p><strong>{{ servizio.get_tipo_display }} terminat{{ servizio.desinenza }}</strong> {{ servizio.chiuso_il|date:"l j F"|lower }} alle {{ servizio.chiuso_il|time:"H:i" }}{% if servizio.chiuso_da %} da {{ servizio.chiuso_da.get_username }}{% endif %}.</p>
+      <p>Non si possono più registrare prelievi né rientri. Se hai dimenticato qualcosa, riaprilo.</p>
+      <form method="post" action="{% url 'servizio_riapri' servizio.pk %}" class="azioni">
+        {% csrf_token %}
+        <button type="submit" class="pulsante secondario piccolo">Riapri {{ servizio.tipo_con_articolo }}</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="griglia-azioni">
+      <a class="tessera evidenza" href="{% url 'servizio_cucina' servizio.pk %}"><strong>Metti a cucinare</strong><span>Inizio servizio o aggiunte</span></a>
+      <a class="tessera" href="{% url 'servizio_reso' servizio.pk %}"><strong>Rientro dalla cucina</strong><span>Quello che torna in frigo</span></a>
+      <a class="tessera" href="{% url 'servizio_chiudi' servizio.pk %}"><strong>Termina {{ servizio.tipo_con_articolo }}</strong><span>Quando è tutto finito</span></a>
+    </div>
+  {% endif %}
+
+  <h2>Riepilogo</h2>
+  {% if riepilogo %}
+    <div class="scorrimento">
+      <table class="tabella compatta">
+        <thead>
+          <tr><th>Prodotto</th><th class="num">Preso</th><th class="num">Rientrato</th><th class="num">Usato</th></tr>
+        </thead>
+        <tbody>
+          {% for r in riepilogo %}
+            <tr>
+              <td><a href="{% url 'prodotto_dettaglio' r.prodotto.pk %}">{{ r.prodotto.nome }}</a></td>
+              <td class="num">{{ r.preso|qta:r.prodotto.unita }}</td>
+              <td class="num">{% if r.rientrato %}{{ r.rientrato|qta:r.prodotto.unita }}{% else %}—{% endif %}</td>
+              <td class="num"><strong>{{ r.usato|qta:r.prodotto.unita }}</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="tenue piccolo">Preso = messo a cucinare. Usato = preso meno rientrato.</p>
+  {% else %}
+    <p class="tenue">Non è ancora stato messo niente a cucinare.</p>
+  {% endif %}
+
+  <h2>Operazioni del servizio</h2>
+  {% include "magazzino/_operazioni.html" with operazioni=operazioni mostra_movimenti=True %}
+  {% if servizio.chiuso %}
+    <p class="tenue piccolo">Per correggere un errore riapri prima {{ servizio.tipo_con_articolo }}, poi apri l'operazione e annulla la riga sbagliata.</p>
+  {% else %}
+    <p class="tenue piccolo">Per correggere un errore apri l'operazione e annulla la riga sbagliata.</p>
+  {% endif %}
+
+  <h2>Piatti del menu</h2>
+  {% with piatti=servizio.piatti.all %}
+    {% if piatti %}
+      <div class="scheda">
+        <ul class="elenco">{% for p in piatti %}<li>{{ p.nome }} <span class="tenue">· {{ p.menu.nome }}</span></li>{% endfor %}</ul>
+      </div>
+    {% else %}
+      <p class="tenue">Nessun piatto indicato: nel modulo "Metti a cucinare" vengono mostrati tutti i prodotti.</p>
+    {% endif %}
+  {% endwith %}
+
+  <div class="azioni">
+    <a class="pulsante secondario" href="{% url 'servizio_modifica' servizio.pk %}">Modifica servizio</a>
+    {% if not operazioni %}<a class="pulsante secondario" href="{% url 'servizio_elimina' servizio.pk %}">Elimina servizio</a>{% endif %}
+  </div>
+{% endblock %}

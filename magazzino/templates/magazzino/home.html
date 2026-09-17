@@ -1,0 +1,70 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Inizio{% endblock %}
+{% block contenuto %}
+  <h1>{{ oggi|date:"l j F"|capfirst }}</h1>
+
+  {% if servizi_oggi %}
+    {% for s in servizi_oggi %}
+      <div class="scheda">
+        <h2><a href="{% url 'servizio_dettaglio' s.pk %}">{{ s }}</a>{% if s.chiuso %} <span class="etichetta">terminat{{ s.desinenza }}</span>{% endif %}</h2>
+        {% if s.chiuso %}
+          <p class="tenue">Terminat{{ s.desinenza }} alle {{ s.chiuso_il|time:"H:i" }}. <a href="{% url 'servizio_dettaglio' s.pk %}">Vedi il riepilogo</a></p>
+        {% else %}
+          <div class="griglia-azioni">
+            <a class="tessera evidenza" href="{% url 'servizio_cucina' s.pk %}"><strong>Metti a cucinare</strong><span>Inizio serata o aggiunte</span></a>
+            <a class="tessera" href="{% url 'servizio_reso' s.pk %}"><strong>Rientro dalla cucina</strong><span>Quello che torna in frigo</span></a>
+            <a class="tessera" href="{% url 'servizio_dettaglio' s.pk %}"><strong>Riepilogo</strong><span>Cosa è uscito finora</span></a>
+            <a class="tessera" href="{% url 'servizio_chiudi' s.pk %}"><strong>Termina {{ s.tipo_con_articolo }}</strong><span>Quando è tutto finito</span></a>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="box-avviso">
+      <p><strong>Per oggi non c'è ancora nessuna serata o pranzo.</strong></p>
+      <p>Per registrare cosa metti a cucinare crea prima il servizio.</p>
+      <div class="azioni">
+        <a class="pulsante" href="{% url 'servizio_nuovo' %}?tipo=sera">Crea la serata di oggi</a>
+        <a class="pulsante secondario" href="{% url 'servizio_nuovo' %}?tipo=pranzo">Crea il pranzo di oggi</a>
+      </div>
+    </div>
+  {% endif %}
+
+  <h2>Magazzino</h2>
+  <div class="griglia-azioni">
+    <a class="tessera" href="{% url 'carico_scelta' %}"><strong>Carica merce</strong><span>Inventario iniziale e acquisti</span></a>
+    <a class="tessera" href="{% url 'giacenze' %}"><strong>Giacenze</strong><span>Cosa c'è e dove</span></a>
+    <a class="tessera" href="{% url 'ubicazioni' %}"><strong>Frighi e congelatori</strong><span>Contenuto di ognuno</span></a>
+    <a class="tessera" href="{% url 'spostamento_scelta' %}"><strong>Sposta</strong><span>Es. da congelatore a frigo</span></a>
+    <a class="tessera" href="{% url 'scarto_scelta' %}"><strong>Scarto</strong><span>Merce buttata</span></a>
+    <a class="tessera" href="{% url 'rettifica_scelta' %}"><strong>Correggi conteggio</strong><span>Se i numeri non tornano</span></a>
+  </div>
+
+  {% if sotto_scorta %}
+    <h2>Sotto la scorta minima</h2>
+    <div class="scheda">
+      <ul class="elenco">
+        {% for p, totale in sotto_scorta %}
+          <li class="voce">
+            <a class="voce-nome" href="{% url 'prodotto_dettaglio' p.pk %}">{{ p.nome }}</a>
+            <span class="num"><span class="etichetta avviso">{{ totale|qta:p.unita }}</span> <span class="tenue piccolo">minimo {{ p.scorta_minima|qta:p.unita }}</span></span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if prossimi %}
+    <h2>Prossimi servizi</h2>
+    <div class="scheda">
+      <ul class="elenco">
+        {% for s in prossimi %}<li><a href="{% url 'servizio_dettaglio' s.pk %}">{{ s }}</a></li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <h2>Ultime operazioni</h2>
+  {% include "magazzino/_operazioni.html" with operazioni=ultime %}
+  <p><a href="{% url 'operazioni' %}">Tutto lo storico →</a></p>
+{% endblock %}

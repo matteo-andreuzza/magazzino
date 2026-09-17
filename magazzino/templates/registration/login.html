@@ -1,0 +1,23 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Accesso{% endblock %}
+{% block contenuto %}
+  <div class="accesso scheda">
+    <h1>Accesso</h1>
+    {% if form.errors %}
+      <div class="box-errori" role="alert">Nome utente o password sbagliati.</div>
+    {% endif %}
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      <div class="campo">
+        <label for="id_username">Nome utente</label>
+        <input type="text" name="username" id="id_username" autocomplete="username" autocapitalize="none" required autofocus value="{{ form.username.value|default:'' }}">
+      </div>
+      <div class="campo">
+        <label for="id_password">Password</label>
+        <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="pulsante" style="width:100%">Entra</button>
+    </form>
+  </div>
+{% endblock %}

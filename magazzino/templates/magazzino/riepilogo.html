@@ -1,0 +1,39 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Consumi{% endblock %}
+{% block contenuto %}
+  <h1>Consumi per servizio</h1>
+  <p class="tenue">Usato = messo a cucinare meno rientrato. Utile anche per preparare gli ordini della prossima sagra.</p>
+  <div class="azioni">
+    <a class="pulsante secondario" href="{% url 'riepilogo_csv' %}">Scarica per Excel</a>
+    <button type="button" class="pulsante secondario" onclick="window.print()">Stampa</button>
+  </div>
+  {% if righe %}
+    <div class="scorrimento">
+      <table class="tabella">
+        <thead>
+          <tr>
+            <th class="sticky-col">Prodotto</th>
+            {% for s in servizi %}<th class="num">{% if s.nome %}{{ s.nome }}<br>{% endif %}{{ s.get_tipo_display }} {{ s.data|date:"D j/m" }}</th>{% endfor %}
+            <th class="num">Totale usato</th>
+            <th class="num">Scartato</th>
+            <th class="num">In magazzino ora</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in righe %}
+            <tr>
+              <td class="sticky-col"><a href="{% url 'prodotto_dettaglio' r.prodotto.pk %}">{{ r.prodotto.nome }}</a></td>
+              {% for v in r.valori %}<td class="num">{% if v is not None %}{{ v|qta:r.prodotto.unita }}{% else %}<span class="tenue">—</span>{% endif %}</td>{% endfor %}
+              <td class="num"><strong>{{ r.totale|qta:r.prodotto.unita }}</strong></td>
+              <td class="num">{% if r.scartato %}{{ r.scartato|qta:r.prodotto.unita }}{% else %}<span class="tenue">—</span>{% endif %}</td>
+              <td class="num">{{ r.giacenza|qta:r.prodotto.unita }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="tenue">Non ci sono ancora consumi registrati.</p>
+  {% endif %}
+{% endblock %}

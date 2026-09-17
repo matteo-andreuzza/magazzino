@@ -1,0 +1,33 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Menu{% endblock %}
+{% block contenuto %}
+  <h1>Menu e ingredienti</h1>
+  <p class="tenue">Per ogni ingrediente è indicata la quantità totale in magazzino (tutti i frighi, congelatori e dispensa).</p>
+  {% if user.is_staff %}
+    <p class="tenue piccolo">Piatti e ingredienti si modificano dall'<a href="{% url 'admin:magazzino_menu_changelist' %}">amministrazione</a>.</p>
+  {% endif %}
+  {% for m in menu_list %}
+    <div class="scheda">
+      <h2>{{ m.nome }}</h2>
+      {% if m.note %}<p class="box-avviso">{{ m.note|linebreaksbr }}</p>{% endif %}
+      {% for piatto in m.piatti.all %}
+        <div class="piatto">
+          <strong>{{ piatto.nome }}</strong>{% if piatto.note %} <span class="tenue">— {{ piatto.note }}</span>{% endif %}
+          <ul class="ingredienti">
+            {% for ing in piatto.ingredienti.all %}
+              {% with totale=totali|prendi:ing.prodotto.pk %}
+                <li>
+                  <span><a href="{% url 'prodotto_dettaglio' ing.prodotto.pk %}">{{ ing.prodotto.nome }}</a>{% if ing.note %} <span class="tenue piccolo">({{ ing.note }})</span>{% endif %}</span>
+                  {% if totale %}<span class="num">{{ totale|qta:ing.prodotto.unita }}</span>{% else %}<span class="etichetta pericolo">non in magazzino</span>{% endif %}
+                </li>
+              {% endwith %}
+            {% empty %}
+              <li class="tenue">Nessun ingrediente indicato.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "magazzino/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}{{ ubicazione.nome }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'ubicazioni' %}">Frighi e congelatori</a></p>
+  <h1>{{ ubicazione.nome }}</h1>
+  <p class="tenue">{{ ubicazione.get_tipo_display }}{% if ubicazione.note %} · {{ ubicazione.note }}{% endif %}{% if not ubicazione.attiva %} · <span class="etichetta">non attiva</span>{% endif %}</p>
+  <p class="tenue piccolo">Situazione del {% now "j/m/Y H:i" %}</p>
+
+  <div class="azioni">
+    {% if ubicazione.attiva %}<a class="pulsante" href="{% url 'carico' ubicazione.pk %}">Carica qui</a>{% endif %}
+    {% if n_prodotti %}
+      <a class="pulsante secondario" href="{% url 'spostamento_destinazione' ubicazione.pk %}">Sposta da qui</a>
+      <a class="pulsante secondario" href="{% url 'scarto' ubicazione.pk %}">Scarto</a>
+    {% endif %}
+    <a class="pulsante secondario" href="{% url 'rettifica' ubicazione.pk %}">Correggi conteggio</a>
+    <button type="button" class="pulsante secondario" onclick="window.print()">Stampa</button>
+  </div>
+
+  {% for categoria, voci in categorie %}
+    <h2 class="gruppo-titolo">{{ categoria }}</h2>
+    <div class="scheda">
+      <ul class="elenco">
+        {% for p, q in voci %}
+          <li class="voce">
+            <a class="voce-nome" href="{% url 'prodotto_dettaglio' p.pk %}">{{ p.nome }}</a>
+            <strong class="num{% if q < 0 %} negativo{% endif %}">{{ q|qta:p.unita }}</strong>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% empty %}
+    <div class="scheda"><p>Vuoto: secondo l'app qui non c'è niente.</p></div>
+  {% endfor %}
+{% endblock %}

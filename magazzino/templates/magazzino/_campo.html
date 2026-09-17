@@ -1,0 +1,13 @@
+<div class="campo{% if campo.field.widget.input_type == 'checkbox' %} campo-check{% endif %}">
+  {% if campo.field.widget.input_type == 'checkbox' %}
+    <label>{{ campo }} {{ campo.label }}</label>
+  {% elif campo.field.widget.input_type == 'radio' %}
+    <label>{{ campo.label }}</label>
+    <div class="opzioni-radio">{% for r in campo %}<label>{{ r.tag }} {{ r.choice_label }}</label>{% endfor %}</div>
+  {% else %}
+    <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+    {{ campo }}
+  {% endif %}
+  {% if campo.help_text %}<div class="aiuto">{{ campo.help_text }}</div>{% endif %}
+  {% for e in campo.errors %}<p class="errore">{{ e }}</p>{% endfor %}
+</div>

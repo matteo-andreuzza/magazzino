@@ -1,0 +1,29 @@
+{% load magazzino_tags %}
+{% if operazioni %}
+  <div class="scheda">
+    <ul class="elenco">
+      {% for op in operazioni %}
+        <li>
+          <div class="voce">
+            <a class="voce-nome" href="{% url 'operazione_dettaglio' op.pk %}">{{ op.get_tipo_display }}</a>
+            <span class="tenue piccolo nowrap">{{ op.creata_il|date:"D j/m H:i" }}</span>
+          </div>
+          <div class="tenue piccolo">
+            {{ op.n_movimenti }} rig{{ op.n_movimenti|pluralize:"a,he" }}
+            {% if op.n_allegati %} · {{ op.n_allegati }} allegat{{ op.n_allegati|pluralize:"o,i" }}{% endif %}
+            {% if op.servizio %} · {{ op.servizio }}{% endif %}
+            {% if op.utente %} · {{ op.utente.get_username }}{% endif %}
+            {% if op.note %} · «{{ op.note }}»{% endif %}
+          </div>
+          {% if mostra_movimenti %}
+            <div class="chip-ubicazioni">
+              {% for m in op.movimenti.all %}<span>{{ m.prodotto.nome }} {{ m.quantita|qta_segno:m.prodotto.unita }} · {{ m.ubicazione.nome }}</span>{% endfor %}
+            </div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% else %}
+  <p class="tenue">Nessuna operazione registrata.</p>
+{% endif %}

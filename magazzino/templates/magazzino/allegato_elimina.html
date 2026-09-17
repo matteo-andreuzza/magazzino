@@ -1,0 +1,16 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Elimina allegato{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'operazione_dettaglio' allegato.operazione_id %}">{{ allegato.operazione }}</a></p>
+  <h1>Eliminare l'allegato?</h1>
+  <div class="scheda">
+    <p><a class="voce-nome" href="{% url 'allegato_file' allegato.pk %}" target="_blank" rel="noopener">{{ allegato.nome }}</a></p>
+    <p class="tenue piccolo">{{ allegato.dimensione|filesizeformat }} · caricato {{ allegato.caricato_il|date:"D j/m H:i" }}</p>
+  </div>
+  <p>Il file verrà cancellato dall'app. Il carico e le sue quantità restano come sono.</p>
+  <form method="post" class="azioni">
+    {% csrf_token %}
+    <button type="submit" class="pulsante pericolo">Sì, elimina</button>
+    <a class="pulsante secondario" href="{% url 'operazione_dettaglio' allegato.operazione_id %}">No, torna indietro</a>
+  </form>
+{% endblock %}

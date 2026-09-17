@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+dati/
+staticfiles/
+backup/
+# Contiene l'accesso a Google Drive: non va mai condiviso.
+rclone/
