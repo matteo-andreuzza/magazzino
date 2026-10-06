@@ -1,7 +1,6 @@
 <p class="tenue piccolo"><a href="{% url 'cassa:inizio' %}">Cassa</a> · {{ servizio }}{% if servizio.chiuso %} <span class="etichetta">terminat{{ servizio.desinenza }}</span>{% endif %}</p>
 <nav class="schede-serata" aria-label="Pagine della serata">
-  <a href="{% url 'cassa:cassa' servizio.pk %}"{% if attiva == "cassa" %} aria-current="page"{% endif %}>Cassa</a>
-  {% if IMPOSTAZIONI_CASSA.cassa_bar %}<a href="{% url 'cassa:cassa_bar' servizio.pk %}"{% if attiva == "bar" %} aria-current="page"{% endif %}>Cassa bar</a>{% endif %}
+  <a href="{% url 'cassa:cassa' servizio.pk %}"{% if attiva == "cassa" %} aria-current="page"{% endif %}>Cassa ingresso</a>
   {% if IMPOSTAZIONI_CASSA.monitor_cucina %}<a href="{% url 'cassa:monitor' servizio.pk %}"{% if attiva == "monitor" %} aria-current="page"{% endif %}>Monitor cucina</a>{% endif %}
   <a href="{% url 'cassa:ordini' servizio.pk %}"{% if attiva == "ordini" %} aria-current="page"{% endif %}>Ordini</a>
   <a href="{% url 'cassa:report' servizio.pk %}"{% if attiva == "report" %} aria-current="page"{% endif %}>Report</a>

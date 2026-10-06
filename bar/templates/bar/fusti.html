@@ -1,0 +1,367 @@
+{% extends "bar/base.html" %}
+{% load magazzino_tags bar_tags %}
+{% block titolo %}Fusti{% endblock %}
+{% block classe_contenuto %} contenuto-largo{% endblock %}
+{% block contenuto %}
+<div class="fusti-pagina" data-fusti-pagina>
+  {% include "bar/_definizioni_svg.html" %}
+
+  <div class="fusti-testa">
+    <div>
+      <h1>Fusti alla spina</h1>
+      <p class="tenue">{% if servizio %}{{ servizio|capfirst }}{% if servizio.chiuso %} · <span class="etichetta">terminat{{ servizio.desinenza }}</span>{% endif %}{% else %}Come sono adesso{% endif %}</p>
+    </div>
+    {% if servizi_oggi|length > 1 %}
+      <nav class="schede-serata" aria-label="Serate di oggi">
+        {% for s in servizi_oggi %}<a href="{% url 'bar:conta_fusti' s.pk %}"{% if servizio and s.pk == servizio.pk %} aria-current="page"{% endif %}>{{ s.get_tipo_display }}{% if s.nome %} {{ s.nome }}{% endif %}</a>{% endfor %}
+      </nav>
+    {% endif %}
+  </div>
+
+  {% if not servizio %}
+    <div class="box-avviso">
+      <p><strong>Oggi non c'è una serata aperta.</strong> Per attaccare, finire o pesare i fusti serve la serata (o il pranzo).</p>
+      <div class="azioni">
+        {% if ultima_modificabile %}<a class="pulsante" href="{% url 'bar:conta_fusti' ultima_modificabile.pk %}">Sistema i fusti di {{ ultima_modificabile.data|date:"l j/n"|lower }}</a>{% endif %}
+        <a class="pulsante{% if ultima_modificabile %} secondario{% endif %}" href="{% url 'servizio_nuovo' %}?tipo=sera&amp;next={% url 'bar:fusti' %}">Crea la serata di oggi</a>
+        <a class="pulsante secondario" href="{% url 'servizio_nuovo' %}?tipo=pranzo&amp;next={% url 'bar:fusti' %}">Crea il pranzo di oggi</a>
+      </div>
+    </div>
+  {% elif motivo %}
+    <div class="box-avviso"><p><strong>Solo da guardare.</strong> {{ motivo }}</p>{% if servizi_oggi %}<p><a href="{% url 'bar:fusti' %}">Vai ai fusti di oggi</a></p>{% endif %}</div>
+  {% elif servizio.chiuso %}
+    <p class="tenue piccolo">{{ servizio.tipo_con_articolo|capfirst }} è terminat{{ servizio.desinenza }}, ma i fusti si possono ancora sistemare finché non si registrano quelli della serata dopo.</p>
+  {% endif %}
+
+  {% if tare_provvisorie %}
+    <div class="box-avviso piccolo">
+      <strong>Litri e tare provvisori.</strong> Il peso dei fusti vuoti (e quanti litri contengono) è ancora un valore simbolico:
+      i litri calcolati non sono giusti finché l'amministrazione non scrive quelli veri{% if user.is_staff %} in <a href="{% url 'bar:bevande' %}">Bevande e fusti</a>{% endif %}.
+      Correggendoli si correggono anche le serate passate.
+    </div>
+  {% endif %}
+
+  {% if scoperte %}
+    <div class="box-avviso piccolo">
+      <strong>Fusti non registrati:</strong>
+      {% for s in scoperte %}{{ s.data|date:"l j/n"|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}
+      {% if scoperte|length == 1 %}ha{% else %}hanno{% endif %} venduto alla spina ma non ci sono i fusti: quello che è uscito finirà nei conti di stasera.
+      Se puoi, registra prima {% if scoperte|length == 1 %}quella serata{% else %}quelle serate{% endif %} (pesate e cambi).
+    </div>
+  {% endif %}
+
+  {% if servizio %}
+    <section class="fusti-stasera" aria-label="Alla spina, la serata">
+      {% if bevande %}
+        <div class="scorrimento">
+          <table class="tabella compatta tabella-spina">
+            <thead><tr><th>Alla spina</th><th class="num">Uscita<span class="lungo"> dai fusti</span></th><th class="num">Venduta<span class="lungo"> in cassa</span></th><th class="num">Diff<span class="lungo">erenza</span><span class="corto">.</span></th></tr></thead>
+            <tbody>
+              {% for b in bevande %}
+                <tr>
+                  <td><span class="pallino l-{{ b.bevanda.colore }}" aria-hidden="true"></span>{{ b.bevanda.nome }}</td>
+                  <td class="num">{% if b.spillato is not None %}≈ {{ b.spillato|floatformat:1 }} l{% else %}<span class="tenue">da pesare</span>{% endif %}</td>
+                  <td class="num">{{ b.venduto|floatformat:1 }} l</td>
+                  <td class="num">{% if b.spillato is not None %}{{ b.differenza|floatformat:1 }} l{% if b.percentuale is not None %} <span class="tenue piccolo">({{ b.percentuale }}%)</span>{% endif %}{% else %}—{% endif %}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="tenue piccolo">Venduta: omaggi compresi. La differenza è schiuma, prove e bicchieri non battuti in cassa.</p>
+      {% else %}
+        <p class="tenue piccolo">Stasera ancora niente alla spina: né venduto in cassa né uscito dai fusti.</p>
+      {% endif %}
+      {% if da_pesare %}
+        <div class="fusti-promemoria">
+          <span><strong>A fine serata</strong> pesa {% if da_pesare|length == 1 %}il fusto attaccato{% else %}i {{ da_pesare|length }} fusti attaccati{% endif %}.</span>
+          <button type="button" class="pulsante piccolo" data-apri="d-pesata" aria-haspopup="dialog">Pesata di fine serata</button>
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  {% if operabile %}
+    <p class="fusti-aiuto tenue piccolo">Fai qui quello che fai al bancone: <strong>trascina</strong> un fusto nuovo su una spina per attaccarlo e quello finito tra i finiti (col dito: tieni premuto un attimo, poi trascina). <strong>Tocca</strong> un fusto per pesarlo o per le altre scelte.</p>
+  {% endif %}
+
+  <div class="scena{% if operabile %} operabile{% endif %}" data-scena{% if operabile %} data-operabile{% endif %}>
+
+    <section class="zona zona-pieni" data-zona="pieni" aria-labelledby="titolo-pieni">
+      <h2 id="titolo-pieni" class="zona-titolo">Fusti nuovi <span>pieni, in magazzino</span></h2>
+      <div class="gruppi-pieni">
+      {% for g in pieni %}
+        <div class="gruppo-pieni">
+        <h3 class="zona-sottotitolo"><span class="pallino l-{{ g.bevanda.colore }}" aria-hidden="true"></span>{{ g.bevanda.nome }}</h3>
+        <div class="pile">
+          {% for p in g.tipi %}
+            <button type="button" class="pila{% if p.pieni <= 0 %} esaurita{% endif %}" data-apri="d-pieno-{{ p.tipo.pk }}" aria-haspopup="dialog"
+                    aria-label="{{ p.tipo.nome }} di {{ g.bevanda.nome }}: {{ p.pieni|num }} pieni"
+                    {% if operabile %}data-trascina="pieno" data-tipo="{{ p.tipo.pk }}" data-bevanda="{{ g.bevanda.pk }}"{% endif %} data-nome="{{ p.tipo.nome }}">
+              <span class="pila-fusti">{% for i in p.pila %}{% fusto_svg p.tipo 1 %}{% endfor %}</span>
+              <span class="pila-conta{% if p.pieni < 0 %} negativo{% endif %}">× {{ p.pieni|num }}</span>
+              <span class="pila-nome">{{ p.tipo.nome }}</span>
+            </button>
+          {% endfor %}
+        </div>
+        </div>
+      {% empty %}
+        <p class="zona-vuota">Nessun tipo di fusto.{% if user.is_staff %} <a href="{% url 'bar:bevande' %}">Aggiungili</a>.{% endif %}</p>
+      {% endfor %}
+      </div>
+      <p class="zona-piede piccolo"><a href="{% url 'bar:carico' %}?tipo=carico">Arrivati fusti? Registra la consegna</a></p>
+    </section>
+
+    <section class="zona zona-spine" aria-label="Spinatrici">
+      {% for g in spinatrici %}
+        <div class="spinatrice" style="--spine: {{ g.spine|length }}">
+          <h2 class="spinatrice-nome">{{ g.spinatrice.nome }}</h2>
+          {% spinatrice_svg g.disegno %}
+          <div class="attacchi">
+            {% for st in g.spine %}
+              <div class="stazione">
+                <div class="tubo{% if not st.fusto %} staccato{% endif %}" aria-hidden="true"></div>
+                <div class="stazione-nome"><span class="pallino l-{% if st.fusto %}{{ st.fusto.bevanda.colore }}{% elif st.spina.bevanda %}{{ st.spina.bevanda.colore }}{% else %}nessuno{% endif %}" aria-hidden="true"></span>{{ st.spina.nome }}</div>
+                <div class="attacco{% if not st.fusto %} libero{% endif %}" data-zona="spina" data-spina="{{ st.spina.pk }}" data-nome-spina="{{ st.spina.nome }}"
+                     data-bevanda-spina="{{ st.spina.bevanda_id|default:'' }}"
+                     {% if st.fusto %}data-attaccato="{{ st.fusto.fusto.pk }}" data-nome-attaccato="{{ st.fusto.tipo.nome }}"{% endif %}>
+                  {% if st.fusto %}
+                    {% with s=st.fusto %}
+                      <button type="button" class="fusto-attaccato" data-apri="d-fusto-{{ s.fusto.pk }}" aria-haspopup="dialog"
+                              aria-label="{{ st.spina.nome }}: {{ s.tipo.nome }}{% if s.litri_rimasti is not None %}, circa {{ s.litri_rimasti|floatformat:1 }} litri{% endif %}"
+                              {% if operabile %}data-trascina="attaccato" data-fusto="{{ s.fusto.pk }}" data-bevanda="{{ s.bevanda.pk }}"{% if s.di_stasera %} data-staccabile{% endif %}{% endif %} data-nome="{{ s.tipo.nome }}">
+                        {% fusto_svg s.tipo s.riempimento %}
+                        <span class="fusto-dida">
+                          <strong>{{ s.tipo.nome }}</strong>
+                          <span>{% if s.litri_rimasti is not None %}≈ {{ s.litri_rimasti|floatformat:1 }} l{% endif %}</span>
+                          {% if operabile %}
+                            {% if s.pesata_stasera %}<span class="etichetta ok">{{ s.pesata_stasera.peso|num }} kg</span>{% else %}<span class="etichetta avviso">da pesare</span>{% endif %}
+                          {% endif %}
+                        </span>
+                      </button>
+                    {% endwith %}
+                  {% else %}
+                    <span class="attacco-vuoto">{% if operabile %}Trascina qui un fusto nuovo{% if st.spina.bevanda %} di {{ st.spina.bevanda.nome|lower }}{% endif %}{% else %}Nessun fusto{% endif %}</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% empty %}
+        <p class="zona-vuota">Nessuna spina attiva.{% if user.is_staff %} <a href="{% url 'bar:bevande' %}">Aggiungila</a>.{% endif %}</p>
+      {% endfor %}
+    </section>
+
+    <section class="zona zona-consumati" data-zona="consumati" aria-labelledby="titolo-consumati">
+      <h2 id="titolo-consumati" class="zona-titolo">Fusti finiti <span>usati, da inizio sagra{% if n_consumati %}: {{ n_consumati }}{% endif %}</span></h2>
+      {% for gruppo in consumati %}
+        <div class="consumati-serata">
+          <h3 class="zona-sottotitolo">{{ gruppo.servizio.data|date:"D j/n" }}{% if gruppo.servizio.tipo == "pranzo" %} pranzo{% endif %} <span class="tenue">· {{ gruppo.fusti|length }}</span></h3>
+          <div class="fila-consumati">
+            {% for s in gruppo.fusti %}
+              <button type="button" class="fusto-consumato{% if s.di_stasera %} stasera{% endif %}" data-apri="d-fusto-{{ s.fusto.pk }}" aria-haspopup="dialog"
+                      aria-label="{{ s.tipo.nome }} di {{ s.bevanda.nome }} finito {{ gruppo.servizio.data|date:'l j F' }}" title="{{ s.bevanda.nome }} · {{ s.tipo.nome }}"
+                      {% if operabile and s.di_stasera %}data-trascina="consumato" data-fusto="{{ s.fusto.pk }}" data-bevanda="{{ s.bevanda.pk }}"{% if s.fusto.aperto_con_id != conta.pk %} data-solo-spina="{{ s.fusto.spina_id|default:'' }}"{% endif %}{% endif %} data-nome="{{ s.tipo.nome }}">
+                {% fusto_svg s.tipo 0 "vuoto" %}
+                <span class="consumato-dida">{{ s.bevanda.nome|cut:"Birra "|cut:"Vino " }}</span>
+              </button>
+            {% endfor %}
+          </div>
+        </div>
+      {% empty %}
+        <p class="zona-vuota">Ancora nessuno.{% if operabile %} Quando un fusto attaccato finisce, trascinalo qui.{% endif %}</p>
+      {% endfor %}
+    </section>
+  </div>
+
+  {% if righe %}
+    <h2>Fusti della serata</h2>
+    <div class="scorrimento">
+      <table class="tabella compatta tabella-fusti-serata">
+        <thead><tr><th>Fusto</th><th class="num">Prima</th><th class="num">Adesso</th><th class="num">Uscito</th></tr></thead>
+        <tbody>
+          {% for r in righe %}
+            <tr>
+              <td>
+                <strong>{{ r.stato.fusto.spina.nome|default:r.stato.bevanda.nome }}</strong> · {{ r.stato.tipo.nome }}
+                <span class="tenue piccolo nowrap">{% if r.nuovo %}attaccato stasera{% else %}dal {{ r.stato.fusto.aperto_con.servizio.data|date:"D j/n" }}{% endif %}</span>
+                {% if r.finito %}<span class="etichetta ok">finito</span>{% endif %}
+              </td>
+              <td class="num">{% if r.nuovo %}pieno{% elif r.prima is not None %}{{ r.prima|num }} kg{% else %}—{% endif %}</td>
+              <td class="num">{% if r.finito %}vuoto{% if r.pesata.misurata %} ({{ r.peso|num }} kg){% endif %}{% elif r.peso is not None %}{{ r.peso|num }} kg{% endif %}</td>
+              <td class="num"><strong>{% if r.litri is not None %}{{ r.litri|floatformat:1 }} l{% else %}—{% endif %}</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="tenue piccolo">Un fusto finito arriva al peso da vuoto del suo tipo (tara); uno attaccato stasera parte da pieno.</p>
+  {% endif %}
+
+  {% if servizio %}
+    <div class="azioni">
+      <a class="pulsante secondario" href="{% url 'cassa:report' servizio.pk %}">Report della serata</a>
+      <a class="pulsante secondario" href="{% url 'bar:storico' %}">Storico</a>
+      {% if operabile and conta %}<button type="button" class="pulsante secondario" data-apri="d-azzera" aria-haspopup="dialog">Rifai da capo la serata…</button>{% endif %}
+    </div>
+  {% endif %}
+
+  {# ------------------------------------------------------------------ finestre #}
+
+  {% for g in pieni %}{% for p in g.tipi %}
+    <dialog class="finestra" id="d-pieno-{{ p.tipo.pk }}" aria-labelledby="d-pieno-{{ p.tipo.pk }}-titolo">
+      <form method="dialog" class="finestra-chiudi"><button type="submit" aria-label="Chiudi">×</button></form>
+      <div class="finestra-testa">
+        {% fusto_svg p.tipo 1 "finestra-fusto" %}
+        <div>
+          <h2 id="d-pieno-{{ p.tipo.pk }}-titolo">{{ p.tipo.nome }}</h2>
+          <p class="tenue">{{ g.bevanda.nome }} · {{ p.tipo.litri|num }} litri{% if p.tipo.tara is not None %} · vuoto {{ p.tipo.tara|num }} kg{% if p.tipo.tara_provvisoria %} (provvisorio){% endif %}{% endif %}</p>
+          <p>Pieni in magazzino: <strong class="{% if p.pieni <= 0 %}negativo{% endif %}">{{ p.pieni|num }}</strong></p>
+          {% if p.pieni <= 0 %}<p class="avviso-testo piccolo">Secondo l'app non ce ne sono: si può attaccare lo stesso, ma registra la consegna mancante.</p>{% endif %}
+        </div>
+      </div>
+      {% if operabile %}
+        {% for st in spine %}{% if not st.spina.bevanda_id or st.spina.bevanda_id == g.bevanda.pk %}
+          <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" data-azione-fusti>
+            {% csrf_token %}
+            <input type="hidden" name="tipo" value="{{ p.tipo.pk }}">
+            <input type="hidden" name="spina" value="{{ st.spina.pk }}">
+            {% if st.fusto %}
+              <input type="hidden" name="azione" value="cambia">
+              <input type="hidden" name="attuale" value="{{ st.fusto.fusto.pk }}">
+              <button type="submit" class="pulsante largo">Cambio fusto a «{{ st.spina.nome }}»: quello attaccato è finito, attacca questo</button>
+            {% else %}
+              <input type="hidden" name="azione" value="attacca">
+              <button type="submit" class="pulsante largo">Attacca alla spina «{{ st.spina.nome }}»</button>
+            {% endif %}
+          </form>
+        {% endif %}{% endfor %}
+      {% endif %}
+      <p class="piccolo"><a href="{% url 'bar:carico' %}?tipo=carico">Arrivati fusti? Registra la consegna</a></p>
+    </dialog>
+  {% endfor %}{% endfor %}
+
+  {% for st in attaccati %}{% with s=st.fusto %}
+    <dialog class="finestra" id="d-fusto-{{ s.fusto.pk }}" aria-labelledby="d-fusto-{{ s.fusto.pk }}-titolo">
+      <form method="dialog" class="finestra-chiudi"><button type="submit" aria-label="Chiudi">×</button></form>
+      <div class="finestra-testa">
+        {% fusto_svg s.tipo s.riempimento "finestra-fusto" %}
+        <div>
+          <h2 id="d-fusto-{{ s.fusto.pk }}-titolo">{{ st.spina.nome }}: {{ s.tipo.nome|lower }}</h2>
+          <p class="tenue">{{ s.bevanda.nome }} · attaccato {% if s.di_stasera %}stasera{% else %}{{ s.fusto.aperto_con.servizio.data|date:"l j/n"|lower }}{% endif %}.</p>
+          <p>{% if s.pesato_prima %}Prima di stasera pesava <strong>{{ s.prima_di_stasera|num }} kg</strong>{% elif s.prima_di_stasera is not None %}Pieno: circa <strong>{{ s.prima_di_stasera|floatformat:1 }} kg</strong>{% endif %}{% if s.litri_rimasti is not None %} · adesso ≈ <strong>{{ s.litri_rimasti|floatformat:1 }} l</strong>{% endif %}.</p>
+        </div>
+      </div>
+      {% if operabile %}
+        <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" class="finestra-pesata" data-azione-fusti>
+          {% csrf_token %}
+          <input type="hidden" name="azione" value="pesa">
+          <input type="hidden" name="fusto" value="{{ s.fusto.pk }}">
+          {% include "bar/_campo_peso.html" with s=s etichetta="Peso a fine serata" %}
+          <button type="submit" class="pulsante largo" data-invio>Salva il peso</button>
+        </form>
+        <div class="finestra-altre">
+          <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" data-azione-fusti>
+            {% csrf_token %}
+            <input type="hidden" name="azione" value="finito"><input type="hidden" name="fusto" value="{{ s.fusto.pk }}">
+            <button type="submit" class="pulsante secondario largo">È finito: spostalo tra i finiti</button>
+          </form>
+          {% if s.pesata_stasera %}
+            <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" data-azione-fusti>
+              {% csrf_token %}
+              <input type="hidden" name="azione" value="togli_pesata"><input type="hidden" name="fusto" value="{{ s.fusto.pk }}">
+              <button type="submit" class="link piccolo">Togli la pesata di stasera</button>
+            </form>
+          {% endif %}
+          {% if s.di_stasera %}
+            <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" data-azione-fusti>
+              {% csrf_token %}
+              <input type="hidden" name="azione" value="stacca"><input type="hidden" name="fusto" value="{{ s.fusto.pk }}">
+              <button type="submit" class="link piccolo">Attaccato per sbaglio: rimettilo tra i nuovi</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
+    </dialog>
+  {% endwith %}{% endfor %}
+
+  {% for gruppo in consumati %}{% for s in gruppo.fusti %}
+    <dialog class="finestra" id="d-fusto-{{ s.fusto.pk }}" aria-labelledby="d-fusto-{{ s.fusto.pk }}-titolo">
+      <form method="dialog" class="finestra-chiudi"><button type="submit" aria-label="Chiudi">×</button></form>
+      <div class="finestra-testa">
+        {% fusto_svg s.tipo 0 "finestra-fusto vuoto" %}
+        <div>
+          <h2 id="d-fusto-{{ s.fusto.pk }}-titolo">{{ s.tipo.nome }} <span class="etichetta">finito</span></h2>
+          <p class="tenue">{{ s.bevanda.nome }}{% if s.fusto.spina %} · spina «{{ s.fusto.spina.nome }}»{% endif %}. Attaccato {{ s.fusto.aperto_con.servizio.data|date:"l j/n"|lower }}, finito {{ gruppo.servizio.data|date:"l j/n"|lower }}.</p>
+          <p>Uscito: <strong>≈ {{ s.litri_spillati|floatformat:1 }} l</strong> su {{ s.tipo.litri|num }}.</p>
+        </div>
+      </div>
+      {% if operabile and s.di_stasera %}
+        {% for st in spine %}{% if not st.fusto %}{% if not st.spina.bevanda_id or st.spina.bevanda_id == s.bevanda.pk %}{% if s.fusto.aperto_con_id == conta.pk or st.spina.pk == s.fusto.spina_id %}
+          <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" data-azione-fusti>
+            {% csrf_token %}
+            <input type="hidden" name="azione" value="riattacca"><input type="hidden" name="fusto" value="{{ s.fusto.pk }}"><input type="hidden" name="spina" value="{{ st.spina.pk }}">
+            <button type="submit" class="pulsante secondario largo">Spostato per sbaglio: riattaccalo a «{{ st.spina.nome }}»</button>
+          </form>
+        {% endif %}{% endif %}{% endif %}{% endfor %}
+        <p class="tenue piccolo">Per riattaccarlo la sua spina deve essere libera: se c'è già un altro fusto, prima spostalo tra i finiti.</p>
+      {% endif %}
+    </dialog>
+  {% endfor %}{% endfor %}
+
+  {% if operabile %}
+    {% if attaccati %}
+      <dialog class="finestra finestra-larga" id="d-pesata" aria-labelledby="d-pesata-titolo">
+        <form method="dialog" class="finestra-chiudi"><button type="submit" aria-label="Chiudi">×</button></form>
+        <h2 id="d-pesata-titolo">Pesata di fine serata</h2>
+        <p class="tenue piccolo">Pesa ogni fusto rimasto attaccato e scrivi il peso. Se un fusto stasera non è stato usato tocca «Non usato». Prima sposta tra i finiti quelli finiti e attacca quelli nuovi.</p>
+        <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" class="pesata-tutti" data-azione-fusti>
+          {% csrf_token %}
+          <input type="hidden" name="azione" value="pesa_tutti">
+          {% for st in attaccati %}{% with s=st.fusto %}
+            <div class="pesata-riga">
+              {% fusto_svg s.tipo s.riempimento "pesata-fusto" %}
+              <div>
+                {% with etichetta=st.spina.nome|add:" · "|add:s.tipo.nome %}{% include "bar/_campo_peso.html" with s=s etichetta=etichetta tutti=True %}{% endwith %}
+              </div>
+            </div>
+          {% endwith %}{% endfor %}
+          <button type="submit" class="pulsante largo" data-invio>Salva le pesate</button>
+        </form>
+      </dialog>
+    {% endif %}
+    {% if conta %}
+      <dialog class="finestra" id="d-azzera" aria-labelledby="d-azzera-titolo">
+        <form method="dialog" class="finestra-chiudi"><button type="submit" aria-label="Chiudi">×</button></form>
+        <h2 id="d-azzera-titolo">Rifare da capo la serata?</h2>
+        <p>Si annulla tutto quello registrato stasera sui fusti: quelli attaccati stasera tornano tra i nuovi, quelli finiti stasera tornano attaccati, le pesate di stasera spariscono.</p>
+        <p class="tenue piccolo">Serve se la serata è stata registrata male, o per registrare prima una serata dimenticata. Le serate prima non cambiano.</p>
+        <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" data-azione-fusti>
+          {% csrf_token %}
+          <input type="hidden" name="azione" value="azzera">
+          <div class="azioni">
+            <button type="submit" class="pulsante pericolo">Sì, annulla i fusti di stasera</button>
+          </div>
+        </form>
+      </dialog>
+    {% endif %}
+    {# Usati dal trascinamento: bar.js li compila e li invia. #}
+    <form method="post" action="{% url 'bar:fusti_azione' servizio.pk %}" data-azione-fusti data-modulo-trascina hidden>
+      {% csrf_token %}
+      <input type="hidden" name="azione"><input type="hidden" name="spina"><input type="hidden" name="tipo">
+      <input type="hidden" name="fusto"><input type="hidden" name="attuale">
+    </form>
+    <dialog class="finestra" id="d-conferma" aria-labelledby="d-conferma-titolo">
+      <form method="dialog" class="finestra-chiudi"><button type="submit" aria-label="Chiudi">×</button></form>
+      <h2 id="d-conferma-titolo" data-conferma-titolo></h2>
+      <p data-conferma-testo></p>
+      <div class="azioni">
+        <button type="button" class="pulsante" data-conferma-si></button>
+        <button type="button" class="pulsante secondario" data-conferma-no>Annulla</button>
+      </div>
+    </dialog>
+  {% endif %}
+  <div class="trascinato" data-trascinato hidden aria-hidden="true"></div>
+</div>
+{% endblock %}

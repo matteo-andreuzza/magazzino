@@ -1,0 +1,12 @@
+# Copia in 10-segreti.yaml, cambia i valori e NON metterlo in git.
+# DJANGO_SECRET_KEY va scritta qui: con più copie dell'app (o dopo un trasloco) deve essere la stessa ovunque.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sagra-segreti
+  namespace: sagra
+type: Opaque
+stringData:
+  DJANGO_SECRET_KEY: "cambiami-con-una-stringa-lunga-e-casuale"
+  POSTGRES_PASSWORD: "cambiami"
+  ADMIN_PASSWORD: "cambiami"

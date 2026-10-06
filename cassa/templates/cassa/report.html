@@ -3,7 +3,31 @@
 {% block titolo %}Report · {{ servizio }}{% endblock %}
 {% block contenuto %}
   {% include "cassa/_serata_nav.html" with attiva="report" %}
-  <h1>Report della serata</h1>
+  <h1>{% if servizio.cassa_chiusa %}Riepilogo della serata{% else %}Report della serata{% endif %}</h1>
+
+  {% if servizio.cassa_chiusa %}
+    <div class="scheda chiusura-cassa">
+      <div class="voce">
+        <span><strong>Cassa chiusa</strong> alle {{ servizio.cassa_chiusa_il|time:"H:i" }}{% if servizio.cassa_chiusa_da %} da {{ servizio.cassa_chiusa_da.get_username }}{% endif %}.</span>
+        {% if not servizio.chiuso %}
+          <form method="post" action="{% url 'cassa:riapri' servizio.pk %}">{% csrf_token %}<button type="submit" class="pulsante secondario piccolo">Riapri la cassa</button></form>
+        {% endif %}
+      </div>
+      {% if fine_serata %}
+        <h2>Fine serata</h2>
+        <ol class="passi-fine">
+          {% for p in fine_serata %}
+            <li class="{% if p.fatto %}fatto{% endif %}">
+              {% if p.fatto %}<span class="etichetta ok">fatto</span> {{ p.testo }}{% else %}<a href="{{ p.url }}">{{ p.testo }}</a>{% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+    </div>
+  {% elif not servizio.chiuso %}
+    <div class="azioni"><a class="pulsante" href="{% url 'cassa:chiudi' servizio.pk %}">Chiudi la cassa</a> <span class="tenue piccolo">a fine serata: niente più ordini e riepilogo.</span></div>
+  {% endif %}
+
   {% with t=dati.totali %}
     {% if t.ordini or dati.annullati.n %}
       <p class="tenue">{{ servizio }}{% if dati.orari.primo %} · ordini dalle {{ dati.orari.primo|time:"H:i" }} alle {{ dati.orari.ultimo|time:"H:i" }}{% endif %}</p>
@@ -13,13 +37,6 @@
         <button type="button" class="pulsante secondario" onclick="window.print()">Stampa</button>
       </div>
 
-      {% if da_scaricare %}
-        <div class="box-avviso">
-          <p><strong>Da scaricare dal magazzino.</strong> Sono stati venduti articoli collegati a prodotti del magazzino (es. bevande) non ancora scaricati.</p>
-          <p><a class="pulsante piccolo" href="{% url 'servizio_venduto' servizio.pk %}">Scarica il venduto</a></p>
-        </div>
-      {% endif %}
-
       <section class="kpi" aria-label="Totali">
         <div class="kpi-eroe">
           <span class="kpi-etichetta">Incassato</span>
@@ -28,7 +45,7 @@
         <div class="kpi-tessere">
           <div class="kpi-tessera"><span class="kpi-etichetta">Contanti</span><span class="kpi-valore">{{ t.contanti|euro }}</span></div>
           <div class="kpi-tessera"><span class="kpi-etichetta">Carta / bancomat</span><span class="kpi-valore">{{ t.carta|euro }}</span></div>
-          <div class="kpi-tessera"><span class="kpi-etichetta">Ordini</span><span class="kpi-valore">{{ t.ordini }}</span></div>
+          <div class="kpi-tessera"><span class="kpi-etichetta">Ordini</span><span class="kpi-valore">{{ t.ordini }}</span>{% if t.asporto %}<span class="kpi-nota">di cui {{ t.asporto }} da asporto</span>{% endif %}</div>
           <div class="kpi-tessera"><span class="kpi-etichetta">Coperti</span><span class="kpi-valore">{% if t.coperti %}{{ t.coperti }}{% else %}—{% endif %}</span></div>
           <div class="kpi-tessera"><span class="kpi-etichetta">Scontrino medio</span><span class="kpi-valore">{% if t.scontrino_medio is not None %}{{ t.scontrino_medio|euro }}{% else %}—{% endif %}</span></div>
           <div class="kpi-tessera"><span class="kpi-etichetta">Omaggi</span><span class="kpi-valore">{{ t.omaggi|euro }}</span><span class="kpi-nota">{{ t.n_omaggi }} ordin{{ t.n_omaggi|pluralize:"e,i" }}, non incassati</span></div>
@@ -94,6 +111,35 @@
           <table class="tabella compatta">
             <thead><tr><th>Categoria</th><th class="num">Pezzi</th><th class="num">Incasso</th></tr></thead>
             <tbody>{% for c in dati.categorie %}<tr><td>{{ c.categoria.nome }}</td><td class="num">{{ c.quantita }}</td><td class="num">{{ c.importo|euro }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if dati.bar.bevande %}
+        <h2>Bar</h2>
+        <p class="tenue piccolo">Bevande uscite dal magazzino del bar con gli ordini (omaggi compresi). Birra e vino in litri.</p>
+        <div class="scorrimento">
+          <table class="tabella">
+            <thead><tr><th>Bevanda</th><th class="num">Venduto</th><th>Come</th></tr></thead>
+            <tbody>
+              {% for b in dati.bar.bevande %}
+                <tr>
+                  <td><strong>{{ b.bevanda.nome }}</strong></td>
+                  <td class="num"><strong>{% if b.bevanda.unita == "l" %}{{ b.venduto|floatformat:1 }} l{% else %}{{ b.venduto|qta:b.bevanda.unita }}{% endif %}</strong></td>
+                  <td class="piccolo tenue">{% for nome, pezzi, q in b.articoli %}{{ pezzi }} × {{ nome }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+                </tr>
+                {% if b.spillato is not None %}
+                  <tr class="riga-dettaglio">
+                    <td colspan="3">
+                      Uscita dai fusti <strong>≈ {{ b.spillato|floatformat:1 }} l</strong> · differenza {{ b.differenza|floatformat:1 }} l{% if b.percentuale is not None %} ({{ b.percentuale }}%){% endif %}
+                      · <a href="{% url 'bar:conta_fusti' servizio.pk %}">fusti della serata</a>{% if dati.bar.da_pesare %} <span class="etichetta avviso">fusti da pesare</span>{% endif %}
+                    </td>
+                  </tr>
+                {% elif b.bevanda.a_fusti %}
+                  <tr class="riga-dettaglio"><td colspan="3" class="tenue">Fusti non ancora pesati: a fine serata <a href="{% url 'bar:conta_fusti' servizio.pk %}">pesa i fusti</a> per confrontare quello uscito con il venduto.</td></tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
           </table>
         </div>
       {% endif %}

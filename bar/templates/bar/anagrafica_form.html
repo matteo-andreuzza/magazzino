@@ -1,0 +1,15 @@
+{% extends "bar/base.html" %}
+{% block titolo %}{{ titolo }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'bar:bevande' %}">Bevande e fusti</a></p>
+  <h1>{{ titolo }}</h1>
+  <form method="post" class="scheda">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="box-errori" role="alert">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+    {% for campo in form %}{% include "magazzino/_campo.html" %}{% endfor %}
+    <div class="azioni">
+      <button type="submit" class="pulsante">Salva</button>
+      <a class="pulsante secondario" href="{% url 'bar:bevande' %}">Annulla</a>
+    </div>
+  </form>
+{% endblock %}

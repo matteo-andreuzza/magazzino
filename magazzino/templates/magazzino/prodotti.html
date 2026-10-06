@@ -12,16 +12,19 @@
         <div class="scheda">
           <ul class="elenco">
             {% for p, totale in voci %}
-              <li data-voce data-nome="{{ p.nome }}">
-                <div class="voce">
-                  <a class="voce-nome" href="{% url 'prodotto_dettaglio' p.pk %}">{{ p.nome }}</a>
-                  <span class="num">{{ totale|qta:p.unita }}</span>
-                </div>
-                <div class="tenue piccolo">
-                  in {{ p.unita|unita }}{% if p.scorta_minima is not None %} · scorta minima {{ p.scorta_minima|qta:p.unita }}{% endif %}
-                  {% if not p.attivo %} · <span class="etichetta">non attivo</span>{% endif %}
-                  {% if p.note %} · {{ p.note }}{% endif %}
-                  · <a href="{% url 'prodotto_modifica' p.pk %}">modifica</a>
+              <li class="con-foto" data-voce data-nome="{{ p.nome }}">
+                {% include "magazzino/_miniatura.html" %}
+                <div>
+                  <div class="voce">
+                    <a class="voce-nome" href="{% url 'prodotto_dettaglio' p.pk %}">{{ p.nome }}</a>
+                    <span class="num">{{ totale|qta:p.unita }}</span>
+                  </div>
+                  <div class="tenue piccolo">
+                    in {{ p.unita|unita }}{% if p.scorta_minima is not None %} · scorta minima {{ p.scorta_minima|qta:p.unita }}{% endif %}
+                    {% if not p.attivo %} · <span class="etichetta">non attivo</span>{% endif %}
+                    {% if p.note %} · {{ p.note }}{% endif %}
+                    · <a href="{% url 'prodotto_modifica' p.pk %}">modifica</a>
+                  </div>
                 </div>
               </li>
             {% endfor %}

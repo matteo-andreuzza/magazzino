@@ -74,6 +74,7 @@ def dati_monitor(servizio, reparto=Reparto.CUCINA):
             "id": c.pk,
             "numero": o.numero,
             "tavolo": o.tavolo,
+            "asporto": o.asporto,
             "nome": o.nome,
             "note": o.note,
             "coperti": o.coperti,

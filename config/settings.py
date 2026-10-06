@@ -64,7 +64,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "magazzino",
+    "bar",
     "cassa",
+    "assistente",
 ]
 
 MIDDLEWARE = [
@@ -139,11 +141,13 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# Fatture e bolle allegate ai carichi. Stanno nel volume dei dati e non sono
-# mai servite direttamente: si scaricano solo dall'app, dopo il login.
+# Fatture e bolle allegate ai carichi e foto dei prodotti. Stanno nel volume dei dati e
+# non sono mai servite direttamente: si scaricano solo dall'app, dopo il login.
 MEDIA_ROOT = BASE_DIR / "dati" / "allegati"
 ALLEGATI_MAX_MB = 20
 ALLEGATI_MAX_PER_INVIO = 10
+# Foto dei prodotti: si accettano grandi (quelle del telefono) e si salvano rimpicciolite.
+FOTO_MAX_MB = 25
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

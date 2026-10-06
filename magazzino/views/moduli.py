@@ -19,7 +19,7 @@ from ..models import (
     TipoUbicazione,
     Ubicazione,
 )
-from ..quantita import ZERO, formatta_numero
+from ..quantita import ZERO
 from ..services import ErroreMagazzino
 from .comuni import (
     RigaModulo,
@@ -363,124 +363,6 @@ def servizio_reso(request, pk):
         ubicazioni_scelta=ubicazioni_attive,
         placeholder_note="Note (facoltative)",
         elenco_vuoto="In questo servizio non c'è niente da far rientrare.",
-        annulla_url=reverse("servizio_dettaglio", args=[servizio.pk]),
-    )
-    return render(request, "magazzino/modulo_righe.html", contesto)
-
-
-def servizio_venduto(request, pk):
-    """Scarico dal magazzino di quanto venduto in cassa (articoli collegati a un prodotto)."""
-    from cassa.report import da_scaricare
-    from cassa.services import impostazioni
-
-    servizio = get_object_or_404(Servizio, pk=pk)
-    imp = impostazioni()
-    if not imp.scarico_magazzino:
-        messages.info(request, "Lo scarico del venduto non è attivo: si attiva dalle impostazioni della cassa.")
-        return redirect("servizio_dettaglio", pk=servizio.pk)
-    if servizio.chiuso:
-        return _servizio_terminato(request, servizio)
-
-    situazione = da_scaricare(servizio)
-    prodotti = Prodotto.objects.in_bulk(situazione.keys())
-    giacenze = services.giacenze(prodotti=prodotti.keys())
-    ubicazioni = Ubicazione.objects.in_bulk()
-    preferita = imp.ubicazione_scarico_id
-
-    def ordine_ubicazione(u):
-        return (u.pk != preferita, u.ordine, u.nome.lower())
-
-    def riga_per(prodotto, ubicazione):
-        disponibile = giacenze.get((prodotto.pk, ubicazione.pk), ZERO)
-        s = situazione.get(prodotto.pk, {"venduto": ZERO, "scaricato": ZERO, "mancante": ZERO})
-        info = [f"venduto: {prodotto.formatta(s['venduto'])}"]
-        if s["scaricato"] > ZERO:
-            info.append(f"già scaricato: {prodotto.formatta(s['scaricato'])}")
-        return RigaModulo(
-            chiave=f"{prodotto.pk}-{ubicazione.pk}",
-            prodotto=prodotto,
-            ubicazione=ubicazione,
-            attuale=disponibile,
-            massimo=max(disponibile, ZERO),
-            gruppo=prodotto.nome,
-            info=info,
-        )
-
-    def crea_riga(chiave):
-        m = _CHIAVE_DOPPIA.match(chiave)
-        if not m:
-            return None
-        prodotto = Prodotto.objects.filter(pk=int(m[1])).first()
-        ubicazione = ubicazioni.get(int(m[2]))
-        if prodotto is None or ubicazione is None:
-            return None
-        return riga_per(prodotto, ubicazione)
-
-    righe, proposte, avvisi = [], {}, []
-    for prodotto in ordina_per_categoria(prodotti.values()):
-        s = situazione[prodotto.pk]
-        if s["mancante"] < ZERO:
-            avvisi.append(
-                f"{prodotto.nome}: scaricato {prodotto.formatta(-s['mancante'])} più del venduto "
-                "(ordini annullati dopo lo scarico). Se serve, annulla la riga dallo storico."
-            )
-            continue
-        if s["mancante"] == ZERO:
-            continue
-        dove = sorted(
-            (ubicazioni[uid] for (pid, uid), q in giacenze.items() if pid == prodotto.pk and q > ZERO),
-            key=ordine_ubicazione,
-        )
-        resta = s["mancante"]
-        for ubicazione in dove:
-            riga = riga_per(prodotto, ubicazione)
-            quanto = min(resta, riga.attuale)
-            if quanto > ZERO:
-                proposte[riga.chiave] = quanto
-                resta -= quanto
-            righe.append(riga)
-        if resta > ZERO:
-            avvisi.append(
-                f"{prodotto.nome}: venduto {prodotto.formatta(s['mancante'])} da scaricare, ma in magazzino ne mancano "
-                f"{prodotto.formatta(resta)}. Registra prima il carico o correggi il conteggio."
-            )
-
-    def registra(valori, note, token):
-        return services.registra_vendita(
-            servizio=servizio,
-            prelievi=[(r.prodotto, r.ubicazione, v) for r, v in valori],
-            utente=request.user,
-            note=note,
-            token=token,
-        )
-
-    risposta, contesto = _elabora(
-        request,
-        righe,
-        crea_riga=crea_riga,
-        registra=registra,
-        messaggio=lambda op, valori: f"Venduto in cassa scaricato dal magazzino: {conta_righe(len(valori))}.",
-    )
-    if risposta:
-        return risposta
-    if request.method != "POST":
-        for r in righe:
-            if r.chiave in proposte:
-                r.testo = formatta_numero(proposte[r.chiave])
-    contesto.update(
-        titolo="Scarica il venduto",
-        servizio=servizio,
-        sottotitolo=(
-            "Quanto venduto in cassa degli articoli collegati a un prodotto (es. bevande), già diviso tra frighi e "
-            "dispensa partendo da quelli preferiti. Controlla e correggi se serve: puoi farlo più volte durante la serata."
-        ),
-        avvisi=avvisi,
-        etichetta_attuale="Disponibile",
-        etichetta_input="Scarico",
-        testo_pulsante="Registra: venduto in cassa",
-        gruppi=_gruppi(righe),
-        placeholder_note="Note (facoltative)",
-        elenco_vuoto="Non c'è niente da scaricare: tutto il venduto collegato al magazzino è già stato scaricato.",
         annulla_url=reverse("servizio_dettaglio", args=[servizio.pk]),
     )
     return render(request, "magazzino/modulo_righe.html", contesto)

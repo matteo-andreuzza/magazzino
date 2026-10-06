@@ -26,6 +26,8 @@ FORME_UNITA = {
     "bottiglia": ("bottiglia", "bottiglie"),
     "lattina": ("lattina", "lattine"),
     "mazzo": ("mazzo", "mazzi"),
+    # Solo per il magazzino del bar.
+    "fusto": ("fusto", "fusti"),
 }
 
 

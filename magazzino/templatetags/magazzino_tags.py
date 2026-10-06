@@ -1,4 +1,5 @@
 from django import template
+from django.utils.safestring import mark_safe
 
 from ..quantita import formatta_numero, formatta_quantita, nome_unita
 
@@ -38,3 +39,19 @@ def qta_segno(valore, unita):
         return ""
     testo = formatta_quantita(valore, unita)
     return f"+{testo}" if valore > 0 else testo
+
+
+@register.simple_tag(takes_context=True)
+def attiva(context, *nomi):
+    """ aria-current="page" se la pagina aperta è una di queste (nomi delle url; «bar:fusto_*» per un gruppo).
+
+    Serve alla barra di navigazione: la voce della pagina in cui si è resta evidenziata.
+    """
+    match = getattr(context.get("request"), "resolver_match", None)
+    if match is None:
+        return ""
+    aperta = match.view_name
+    for nome in nomi:
+        if aperta == nome or (nome.endswith("*") and aperta.startswith(nome[:-1])):
+            return mark_safe(' aria-current="page"')
+    return ""

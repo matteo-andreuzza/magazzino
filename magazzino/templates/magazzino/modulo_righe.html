@@ -67,6 +67,7 @@
           <h2 class="gruppo-titolo">{{ g.grouper }}</h2>
           {% for r in g.list %}
             <div class="riga{% if r.errore %} con-errore{% endif %}" data-riga data-nome="{{ r.prodotto.nome }}" data-gruppo="{{ r.gruppo }}" data-menu="{% if r.in_menu %}1{% else %}0{% endif %}" data-presente="{% if r.attuale %}1{% else %}0{% endif %}">
+              {% if r.prodotto.miniatura %}<img class="riga-foto" src="{{ r.prodotto.url_miniatura }}" alt="" width="44" height="44" loading="lazy" decoding="async">{% endif %}
               <div class="riga-testo">
                 <label class="riga-nome" for="{{ r.nome_campo }}">{{ r.prodotto.nome }}</label>
                 <div class="riga-info">

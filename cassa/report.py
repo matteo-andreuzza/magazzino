@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from django.utils import timezone
 
+from bar import services as bar
 from magazzino.models import Ingrediente, Movimento, Prodotto, Servizio, TipoOperazione
 from magazzino.quantita import ZERO
 
@@ -25,7 +26,7 @@ def _ordine_listino(articolo):
 def _vuoto():
     return {
         "ordini": 0, "coperti": 0, "contanti": EURO_ZERO, "carta": EURO_ZERO, "incassato": EURO_ZERO,
-        "omaggi": EURO_ZERO, "n_omaggi": 0, "paganti": 0, "scontrino_medio": None,
+        "omaggi": EURO_ZERO, "n_omaggi": 0, "paganti": 0, "scontrino_medio": None, "asporto": 0,
     }
 
 
@@ -39,8 +40,11 @@ def _completa(dati):
 def incassi(ordini):
     """Totali di un queryset di ordini (non annullati) divisi per pagamento."""
     dati = _vuoto()
-    for r in ordini.values("pagamento").annotate(n=Count("pk"), somma=Sum("totale"), persone=Sum("coperti")).order_by():
+    for r in ordini.values("pagamento").annotate(
+        n=Count("pk"), somma=Sum("totale"), persone=Sum("coperti"), asporto=Count("pk", filter=Q(asporto=True)),
+    ).order_by():
         dati["ordini"] += r["n"]
+        dati["asporto"] += r["asporto"]
         dati["coperti"] += r["persone"] or 0
         if r["pagamento"] == Pagamento.OMAGGIO:
             dati["omaggi"] += r["somma"]
@@ -56,8 +60,7 @@ def riepilogo_breve(servizio):
     n = Ordine.objects.filter(servizio=servizio, annullato_il__isnull=True).count()
     if not n and not Ordine.objects.filter(servizio=servizio).exists():
         return None
-    da_scaricare_ora = any(v["mancante"] > ZERO for v in da_scaricare(servizio).values())
-    return {"ordini": n, "da_scaricare": da_scaricare_ora}
+    return {"ordini": n}
 
 
 def venduto_articoli(righe):
@@ -207,6 +210,7 @@ def report_servizio(servizio):
         "orari": {"primo": orari.order_by("creato_il").first(), "ultimo": orari.order_by("-creato_il").first()},
         "cucina": tempi_cucina(servizio),
         "consumi": consumo_per_porzione([servizio]),
+        "bar": bar.riepilogo_servizio(servizio),
     }
 
 
@@ -217,11 +221,12 @@ def statistiche():
     for r in (
         Ordine.objects.filter(annullato_il__isnull=True)
         .values("servizio_id", "pagamento")
-        .annotate(n=Count("pk"), somma=Sum("totale"), persone=Sum("coperti"))
+        .annotate(n=Count("pk"), somma=Sum("totale"), persone=Sum("coperti"), asporto=Count("pk", filter=Q(asporto=True)))
         .order_by()
     ):
         d = per_servizio[r["servizio_id"]]
         d["ordini"] += r["n"]
+        d["asporto"] += r["asporto"]
         d["coperti"] += r["persone"] or 0
         if r["pagamento"] == Pagamento.OMAGGIO:
             d["omaggi"] += r["somma"]
@@ -233,7 +238,7 @@ def statistiche():
 
     totale = _vuoto()
     for riga in serate:
-        for chiave in ("ordini", "coperti", "contanti", "carta", "omaggi", "n_omaggi", "paganti"):
+        for chiave in ("ordini", "coperti", "contanti", "carta", "omaggi", "n_omaggi", "paganti", "asporto"):
             totale[chiave] += riga[chiave]
     _completa(totale)
 
@@ -261,34 +266,4 @@ def statistiche():
         "servizi": servizi,
         "articoli": righe,
         "consumi": consumo_per_porzione(servizi),
-    }
-
-
-def da_scaricare(servizio):
-    """{prodotto_id: {"venduto", "scaricato", "mancante"}} per gli articoli collegati a un prodotto del magazzino.
-
-    "scaricato" è quanto già registrato in magazzino come venduto in cassa per la serata.
-    """
-    venduto = defaultdict(lambda: ZERO)
-    for r in (
-        RigaOrdine.objects.filter(
-            ordine__servizio=servizio, ordine__annullato_il__isnull=True, articolo__prodotto__isnull=False
-        )
-        .values("articolo__prodotto_id", "articolo__quantita_prodotto")
-        .annotate(q=Sum("quantita"))
-        .order_by()
-    ):
-        venduto[r["articolo__prodotto_id"]] += r["q"] * r["articolo__quantita_prodotto"]
-    scaricato = defaultdict(lambda: ZERO)
-    for r in (
-        Movimento.objects.filter(operazione__servizio=servizio, operazione__tipo=TipoOperazione.VENDITA)
-        .values("prodotto_id")
-        .annotate(totale=Sum("quantita"))
-        .order_by()
-    ):
-        scaricato[r["prodotto_id"]] -= r["totale"]
-    return {
-        pid: {"venduto": venduto[pid], "scaricato": scaricato[pid], "mancante": venduto[pid] - scaricato[pid]}
-        for pid in set(venduto) | set(scaricato)
-        if venduto[pid] != scaricato[pid] or venduto[pid] > ZERO
     }

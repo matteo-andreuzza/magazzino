@@ -1,0 +1,11 @@
+# kubectl apply -k deploy/kubernetes   (dopo aver creato 10-segreti.yaml dall'esempio)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-namespace.yaml
+  - 10-segreti.yaml
+  - 20-impostazioni.yaml
+  - 30-database.yaml
+  - 40-app.yaml
+  - 50-ingress.yaml
+  - 60-backup.yaml

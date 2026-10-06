@@ -1,0 +1,5 @@
+# Esempio di installazione su Kubernetes: vedi docs/MANUTENZIONE.md, «Kubernetes».
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sagra

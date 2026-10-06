@@ -21,14 +21,14 @@
     <p class="tenue">In questo servizio non è stato messo niente a cucinare.</p>
   {% endif %}
 
-  {% if IMPOSTAZIONI_CASSA.scarico_magazzino and cassa.da_scaricare %}
+  {% if da_pesare %}
     <div class="box-avviso">
-      <p><strong>In cassa c'è del venduto non ancora scaricato dal magazzino</strong> (es. bevande). Scaricalo prima di terminare.</p>
-      <p><a class="pulsante secondario" href="{% url 'servizio_venduto' servizio.pk %}">Scarica il venduto</a></p>
+      <p><strong>{% if da_pesare|length == 1 %}Il fusto attaccato alla spina non è ancora stato pesato{% else %}{{ da_pesare|length }} fusti attaccati non sono ancora stati pesati{% endif %}.</strong> Si possono pesare anche dopo (finché non si registrano i fusti della serata dopo), ma è meglio farlo adesso.</p>
+      <p><a class="pulsante secondario" href="{% url 'bar:conta_fusti' servizio.pk %}">Pesa i fusti</a></p>
     </div>
   {% endif %}
   {% if cassa %}
-    <p class="tenue">Da terminat{{ servizio.desinenza }} anche la cassa non potrà più registrare ordini per {{ servizio.tipo_con_articolo }}.</p>
+    <p class="tenue">Da terminat{{ servizio.desinenza }} anche la cassa non potrà più registrare ordini per {{ servizio.tipo_con_articolo }}{% if not servizio.cassa_chiusa %} (di solito prima si chiude la cassa, dalla cassa){% endif %}.</p>
   {% endif %}
 
   <form method="post" class="azioni">

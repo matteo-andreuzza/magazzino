@@ -1,20 +1,23 @@
 {% extends "magazzino/base.html" %}
-{% load static %}
+{% load static magazzino_tags %}
 {% block testa %}
   <link rel="stylesheet" href="{% static 'cassa/cassa.css' %}">
   <script src="{% static 'cassa/grafici.js' %}" defer></script>
   {% block testa_cassa %}{% endblock %}
 {% endblock %}
+{% block sezione %}cassa{% endblock %}
+{% block ancora_guida %}#cassa{% endblock %}
 {% block sezione_magazzino %}{% endblock %}
 {% block sezione_cassa %} aria-current="true"{% endblock %}
 {% block nav %}
-  <nav class="nav" aria-label="Sezioni della cassa">
-    <a href="{% url 'cassa:inizio' %}">Oggi</a>
-    <a href="{% url 'cassa:statistiche' %}">Statistiche</a>
-    <a href="{% url 'cassa:listino' %}">Listino</a>
+  <nav class="nav" aria-label="Pagine della cassa">
+    <span class="nav-sezione" aria-hidden="true">{% include "magazzino/_icona_sezione.html" with sezione="cassa" %}Cassa</span>
+    <a href="{% url 'cassa:inizio' %}"{% attiva "cassa:inizio" "cassa:ordini" "cassa:ordine*" "cassa:report" "cassa:chiudi" "cassa:monitor" %}>Oggi</a>
+    <a href="{% url 'cassa:statistiche' %}"{% attiva "cassa:statistiche" %}>Statistiche</a>
+    <a href="{% url 'cassa:listino' %}"{% attiva "cassa:listino" "cassa:articolo_*" %}>Listino</a>
     {% if user.is_staff %}
-      <a href="{% url 'cassa:impostazioni' %}">Impostazioni</a>
-      <a href="{% url 'cassa:stampanti' %}">Stampanti</a>
+      <a href="{% url 'cassa:impostazioni' %}"{% attiva "cassa:impostazioni" %}>Impostazioni</a>
+      <a href="{% url 'cassa:stampanti' %}"{% attiva "cassa:stampant*" "cassa:token_rigenera" %}>Stampanti</a>
     {% endif %}
   </nav>
 {% endblock %}

@@ -4,6 +4,8 @@ from . import views
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("guida/", views.guida, name="guida"),
+    path("salute/", views.salute, name="salute"),
     path("giacenze/", views.giacenze, name="giacenze"),
     path("giacenze/giacenze.csv", views.giacenze_csv, name="giacenze_csv"),
     path("ubicazioni/", views.ubicazioni, name="ubicazioni"),
@@ -24,7 +26,6 @@ urlpatterns = [
     path("servizi/<int:pk>/elimina/", views.servizio_elimina, name="servizio_elimina"),
     path("servizi/<int:pk>/cucina/", views.servizio_cucina, name="servizio_cucina"),
     path("servizi/<int:pk>/rientro/", views.servizio_reso, name="servizio_reso"),
-    path("servizi/<int:pk>/venduto/", views.servizio_venduto, name="servizio_venduto"),
     path("servizi/<int:pk>/termina/", views.servizio_chiudi, name="servizio_chiudi"),
     path("servizi/<int:pk>/riapri/", views.servizio_riapri, name="servizio_riapri"),
     path("storico/", views.operazioni, name="operazioni"),
@@ -39,6 +40,8 @@ urlpatterns = [
     path("prodotti/nuovo/", views.prodotto_nuovo, name="prodotto_nuovo"),
     path("prodotti/<int:pk>/", views.prodotto_dettaglio, name="prodotto_dettaglio"),
     path("prodotti/<int:pk>/modifica/", views.prodotto_modifica, name="prodotto_modifica"),
+    path("prodotti/<int:pk>/foto/", views.prodotto_foto, name="prodotto_foto"),
+    path("prodotti/<int:pk>/foto/piccola/", views.prodotto_miniatura, name="prodotto_miniatura"),
     path("menu/", views.menu, name="menu"),
     path("riepilogo/", views.riepilogo, name="riepilogo"),
     path("riepilogo/consumi.csv", views.riepilogo_csv, name="riepilogo_csv"),

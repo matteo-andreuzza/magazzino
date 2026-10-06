@@ -100,8 +100,9 @@ def colonne_impilate(etichette, serie, *, titolo, formato, suggerimenti_titoli=N
     valore = 0
     while valore <= fondo + 1e-9:
         y = y_di(valore)
+        # Colori dal foglio di stile (g-asse, g-griglia): così vanno anche in modalità scura.
         parti.append(f'<line x1="{MARGINE_SX}" x2="{LARGHEZZA - MARGINE_DX}" y1="{y:.1f}" y2="{y:.1f}" '
-                     f'stroke="{ASSE if valore == 0 else GRIGLIA}" stroke-width="1"/>')
+                     f'class="{"g-asse" if valore == 0 else "g-griglia"}" stroke="{ASSE if valore == 0 else GRIGLIA}" stroke-width="1"/>')
         parti.append(f'<text x="{MARGINE_SX - 6}" y="{y + 4:.1f}" text-anchor="end" class="g-tacca">{_numero_asse(valore)}</text>')
         valore += passo
 

@@ -2,7 +2,8 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from magazzino.forms import CampoQuantita
-from magazzino.models import Piatto, Prodotto
+from bar.models import Bevanda
+from magazzino.models import Piatto
 
 from .formati import euro, leggi_euro
 from .models import Articolo, Connessione, ImpostazioniCassa, Stampante
@@ -27,15 +28,15 @@ class CampoEuro(forms.Field):
 
 class ArticoloForm(forms.ModelForm):
     prezzo = CampoEuro(required=False, label="Prezzo (€)", help_text=Articolo._meta.get_field("prezzo").help_text)
-    quantita_prodotto = CampoQuantita(
-        label=Articolo._meta.get_field("quantita_prodotto").verbose_name.capitalize(),
-        help_text=Articolo._meta.get_field("quantita_prodotto").help_text,
+    quantita_bevanda = CampoQuantita(
+        label=Articolo._meta.get_field("quantita_bevanda").verbose_name.capitalize(),
+        help_text=Articolo._meta.get_field("quantita_bevanda").help_text,
     )
 
     class Meta:
         model = Articolo
         fields = [
-            "nome", "categoria", "reparto", "prezzo", "piatto", "prodotto", "quantita_prodotto",
+            "nome", "categoria", "reparto", "prezzo", "piatto", "bevanda", "quantita_bevanda",
             "ordine", "attivo", "esaurito", "note",
         ]
         widgets = {"reparto": forms.RadioSelect}
@@ -44,15 +45,16 @@ class ArticoloForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["piatto"].queryset = Piatto.objects.select_related("menu").order_by("menu__ordine", "ordine", "nome")
         self.fields["piatto"].label_from_instance = lambda p: f"{p.nome} ({p.menu.nome})"
-        prodotti = Prodotto.objects.filter(attivo=True)
-        if self.instance.prodotto_id:
-            prodotti = prodotti | Prodotto.objects.filter(pk=self.instance.prodotto_id)
-        self.fields["prodotto"].queryset = prodotti.distinct()
+        bevande = Bevanda.objects.filter(attiva=True)
+        if self.instance.bevanda_id:
+            bevande = bevande | Bevanda.objects.filter(pk=self.instance.bevanda_id)
+        self.fields["bevanda"].queryset = bevande.distinct()
+        self.fields["bevanda"].label_from_instance = lambda b: f"{b.nome} ({b.come_si_vende})"
         if not self.instance.pk:
-            self.initial.setdefault("quantita_prodotto", 1)
+            self.initial.setdefault("quantita_bevanda", 1)
 
-    def clean_quantita_prodotto(self):
-        valore = self.cleaned_data.get("quantita_prodotto")
+    def clean_quantita_bevanda(self):
+        valore = self.cleaned_data.get("quantita_bevanda")
         if not valore:
             raise ValidationError("Scrivi una quantità maggiore di zero.")
         return valore
@@ -62,10 +64,10 @@ class ImpostazioniForm(forms.ModelForm):
     class Meta:
         model = ImpostazioniCassa
         fields = [
-            "monitor_cucina", "cassa_bar", "scarico_magazzino",
+            "monitor_cucina", "cassa_bar",
             "intestazione", "stampante_cucina", "stampante_bar",
             "ricevuta_cliente", "stampante_ricevute", "messaggio_ricevuta",
-            "stampante_cassa_bar", "stampa_comande_cassa_bar", "ubicazione_scarico",
+            "stampante_cassa_bar", "stampa_comande_cassa_bar",
         ]
 
 

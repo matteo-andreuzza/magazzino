@@ -1,4 +1,4 @@
-from .allegati import allegato_elimina, allegato_file, operazione_allegati  # noqa: F401
+from .allegati import allegato_elimina, allegato_file, operazione_allegati, prodotto_foto, prodotto_miniatura  # noqa: F401
 from .anagrafiche import (  # noqa: F401
     prodotto_modifica,
     prodotto_nuovo,
@@ -17,7 +17,6 @@ from .moduli import (  # noqa: F401
     scarto,
     servizio_cucina,
     servizio_reso,
-    servizio_venduto,
     spostamento,
 )
 from .pagine import (  # noqa: F401
@@ -39,3 +38,4 @@ from .pagine import (  # noqa: F401
     ubicazione_dettaglio,
     ubicazioni,
 )
+from .guida import guida, salute  # noqa: F401

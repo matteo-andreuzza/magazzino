@@ -37,6 +37,11 @@ from .models import (
 
 MAX_QUANTITA = 999
 MAX_RIGHE = 80
+# Gli omaggi ai volontari non hanno un cliente né un tavolo.
+NOME_OMAGGIO = "Volontario"
+TAVOLO_OMAGGIO = "XXX"
+# Gli ordini da asporto non hanno un tavolo: sulla comanda e negli elenchi c'è «ASP».
+TAVOLO_ASPORTO = "ASP"
 
 
 class ErroreCassa(Exception):
@@ -99,17 +104,25 @@ def _servizio_aperto(servizio_id, messaggio):
     if s.chiuso:
         d = s.desinenza
         raise ErroreCassa(f"{s.get_tipo_display()} terminat{d}: {messaggio} bisogna prima riaprirl{d} dal magazzino.")
+    if s.cassa_chiusa:
+        raise ErroreCassa(f"La cassa è chiusa: {messaggio} bisogna prima riaprirla.")
     return s
 
 
 def crea_ordine(
     *, servizio, postazione, voci, pagamento, utente, nome="", tavolo="", coperti=None, note="",
-    totale_atteso=None, token=None,
+    totale_atteso=None, token=None, asporto=False,
 ):
-    """Registra un ordine con comande e stampe. Restituisce (ordine, creato)."""
+    """Registra un ordine con comande e stampe. Restituisce (ordine, creato).
+
+    Da asporto (solo alla cassa dell'ingresso) il tavolo è «ASP» e non ci sono coperti.
+    """
     if postazione not in Postazione.values:
         raise ValueError(f"Postazione non valida: {postazione}")
     nome, tavolo, note = _pulisci(nome, 40), _pulisci(tavolo, 10), _pulisci(note, 200)
+    asporto = bool(asporto) and postazione == Postazione.INGRESSO
+    if asporto:
+        tavolo, coperti = TAVOLO_ASPORTO, None
     voci = [v for v in voci if v.quantita]
 
     if token is not None:
@@ -121,6 +134,8 @@ def crea_ordine(
     errori = []
     if postazione == Postazione.BAR and not imp.cassa_bar:
         raise ErroreCassa("La cassa al bar non è attiva: si attiva dalle impostazioni della cassa.")
+    if postazione == Postazione.INGRESSO and pagamento == Pagamento.OMAGGIO:
+        nome, tavolo = nome or NOME_OMAGGIO, tavolo or TAVOLO_OMAGGIO
     if postazione == Postazione.INGRESSO:
         if not nome:
             errori.append("Manca il nome del cliente.")
@@ -165,17 +180,10 @@ def crea_ordine(
 
             numero = (Ordine.objects.filter(servizio=s).aggregate(m=Max("numero"))["m"] or 0) + 1
             ordine = Ordine.objects.create(
-                servizio=s, numero=numero, postazione=postazione, nome=nome, tavolo=tavolo, coperti=coperti,
+                servizio=s, numero=numero, postazione=postazione, nome=nome, tavolo=tavolo, asporto=asporto, coperti=coperti,
                 note=note, pagamento=pagamento, totale=totale, utente=utente, token=token,
             )
-            righe = RigaOrdine.objects.bulk_create(
-                RigaOrdine(
-                    ordine=ordine, articolo=vendibili[v.articolo_id], descrizione=vendibili[v.articolo_id].nome,
-                    reparto=vendibili[v.articolo_id].reparto, prezzo=vendibili[v.articolo_id].prezzo,
-                    quantita=v.quantita, note=v.note,
-                )
-                for v in voci
-            )
+            righe = RigaOrdine.objects.bulk_create(_riga(ordine, vendibili[v.articolo_id], v) for v in voci)
             reparti = [r for r in Reparto.values if any(riga.reparto == r for riga in righe)]
             Comanda.objects.bulk_create(Comanda(ordine=ordine, reparto=r) for r in reparti)
             stampa.accoda_ordine(ordine, righe, imp)
@@ -187,6 +195,14 @@ def crea_ordine(
                 return esistente, False
         raise
     return ordine, True
+
+
+def _riga(ordine, articolo, voce):
+    return RigaOrdine(
+        ordine=ordine, articolo=articolo, descrizione=articolo.nome, reparto=articolo.reparto, prezzo=articolo.prezzo,
+        quantita=voce.quantita, note=voce.note,
+        bevanda_id=articolo.bevanda_id, quantita_bevanda=articolo.quantita_bevanda if articolo.bevanda_id else None,
+    )
 
 
 def annulla_ordine(*, ordine, utente, motivo=""):
@@ -207,6 +223,34 @@ def annulla_ordine(*, ordine, utente, motivo=""):
         o.save(update_fields=["annullato_il", "annullato_da", "motivo_annullamento"])
         stampa.accoda_annullo(o, list(o.righe.all()), impostazioni())
     return o, True
+
+
+def chiudi_cassa(*, servizio, utente):
+    """Fine serata: la cassa (ingresso e bar) non registra più ordini né annullamenti.
+
+    Il magazzino resta aperto per i rientri e la pesata dei fusti.
+    Restituisce True se è stata chiusa adesso, False se lo era già.
+    """
+    with transaction.atomic():
+        s = Servizio.objects.select_for_update(no_key=True).get(pk=servizio.pk)
+        if s.cassa_chiusa:
+            return False
+        s.cassa_chiusa_il = timezone.now()
+        s.cassa_chiusa_da = utente
+        s.save(update_fields=["cassa_chiusa_il", "cassa_chiusa_da"])
+    return True
+
+
+def riapri_cassa(*, servizio):
+    """Restituisce True se è stata riaperta adesso, False se era già aperta."""
+    with transaction.atomic():
+        s = Servizio.objects.select_for_update(no_key=True).get(pk=servizio.pk)
+        if not s.cassa_chiusa:
+            return False
+        s.cassa_chiusa_il = None
+        s.cassa_chiusa_da = None
+        s.save(update_fields=["cassa_chiusa_il", "cassa_chiusa_da"])
+    return True
 
 
 def ristampa(*, ordine, cosa):

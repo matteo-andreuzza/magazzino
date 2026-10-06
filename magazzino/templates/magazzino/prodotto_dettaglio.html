@@ -3,6 +3,11 @@
 {% block titolo %}{{ prodotto.nome }}{% endblock %}
 {% block contenuto %}
   <p class="tenue piccolo"><a href="{% url 'prodotti' %}">Prodotti</a></p>
+  <div class="prodotto-testa">
+    {% if prodotto.foto %}
+      <a class="prodotto-foto" href="{{ prodotto.url_foto }}" target="_blank" rel="noopener"><img src="{{ prodotto.url_foto }}" alt="Foto di {{ prodotto.nome }}"></a>
+    {% endif %}
+    <div>
   <h1>{{ prodotto.nome }}</h1>
   <p class="tenue">
     {{ prodotto.get_categoria_display }} · in {{ prodotto.unita|unita }}
@@ -10,7 +15,12 @@
     {% if not prodotto.attivo %} · <span class="etichetta">non attivo</span>{% endif %}
   </p>
   {% if prodotto.note %}<p>{{ prodotto.note }}</p>{% endif %}
-  <div class="azioni"><a class="pulsante secondario" href="{% url 'prodotto_modifica' prodotto.pk %}">Modifica</a></div>
+  <div class="azioni">
+    <a class="pulsante secondario" href="{% url 'prodotto_modifica' prodotto.pk %}">Modifica</a>
+    {% if not prodotto.foto %}<a class="pulsante secondario" href="{% url 'prodotto_modifica' prodotto.pk %}#id_foto">Aggiungi una foto</a>{% endif %}
+  </div>
+    </div>
+  </div>
 
   <div class="scheda">
     <h2>Dove si trova</h2>

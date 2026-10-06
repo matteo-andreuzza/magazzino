@@ -1,0 +1,52 @@
+# Backup del database ogni 30 minuti in un volume, tenuti 10 giorni (come il servizio «backup»
+# di Docker Compose). Copiali anche fuori dal cluster (es. con rclone su Google Drive o S3).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sagra-backup
+  namespace: sagra
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 5Gi}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sagra-backup
+  namespace: sagra
+spec:
+  schedule: "*/30 * * * *"
+  timeZone: Europe/Rome
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: backup
+              image: postgres:17-alpine
+              env:
+                - {name: PGHOST, valueFrom: {configMapKeyRef: {name: sagra-impostazioni, key: POSTGRES_HOST}}}
+                - {name: PGDATABASE, valueFrom: {configMapKeyRef: {name: sagra-impostazioni, key: POSTGRES_DB}}}
+                - {name: PGUSER, valueFrom: {configMapKeyRef: {name: sagra-impostazioni, key: POSTGRES_USER}}}
+                - {name: PGPASSWORD, valueFrom: {secretKeyRef: {name: sagra-segreti, key: POSTGRES_PASSWORD}}}
+                - {name: TZ, value: Europe/Rome}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eo pipefail
+                  nome="/backup/sagra-$(date +%Y%m%d-%H%M).sql.gz"
+                  pg_dump --no-owner --clean --if-exists | gzip > "$nome.tmp" && mv "$nome.tmp" "$nome"
+                  find /backup -maxdepth 1 -name 'sagra-*.sql.gz' -mtime +10 -delete
+                  echo "Backup salvato: $nome"
+              volumeMounts:
+                - {name: backup, mountPath: /backup}
+          volumes:
+            - name: backup
+              persistentVolumeClaim: {claimName: sagra-backup}

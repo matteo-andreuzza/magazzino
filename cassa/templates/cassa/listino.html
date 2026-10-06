@@ -1,5 +1,5 @@
 {% extends "cassa/base.html" %}
-{% load cassa_tags %}
+{% load cassa_tags magazzino_tags %}
 {% block titolo %}Listino{% endblock %}
 {% block contenuto %}
   <h1>Listino</h1>
@@ -34,7 +34,7 @@
                       {% if user.is_staff %}<a href="{% url 'cassa:articolo_modifica' a.pk %}">{{ a.nome }}</a>{% else %}{{ a.nome }}{% endif %}
                       <div class="tenue piccolo">
                         {% if a.piatto %}Piatto: {{ a.piatto.nome }}{% endif %}
-                        {% if a.prodotto %}{% if a.piatto %} · {% endif %}Scarica: {{ a.prodotto.nome }}{% endif %}
+                        {% if a.bevanda %}{% if a.piatto %} · {% endif %}Bar: {{ a.bevanda.nome }}, {{ a.quantita_bevanda|qta:a.bevanda.unita }}{% elif a.reparto == "bar" %}<span class="avviso-testo">non collegato al magazzino bar</span>{% endif %}
                       </div>
                       {% if a.errore_prezzo %}<p class="errore">{{ a.errore_prezzo }}</p>{% endif %}
                     </td>

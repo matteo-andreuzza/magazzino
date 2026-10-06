@@ -39,4 +39,6 @@ def classi_riga(stile):
         classi.append("b-alto")
     if "largo" in stile:
         classi.append("b-largo")
+    if "inverso" in stile:
+        classi.append("b-inverso")
     return " ".join(classi)

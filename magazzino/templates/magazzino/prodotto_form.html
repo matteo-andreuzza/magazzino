@@ -2,11 +2,27 @@
 {% block titolo %}{{ titolo }}{% endblock %}
 {% block contenuto %}
   <h1>{{ titolo }}</h1>
-  <form method="post" class="scheda">
+  <form method="post" class="scheda" enctype="multipart/form-data">
     {% csrf_token %}
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     {% if form.non_field_errors %}<div class="box-errori" role="alert">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
-    {% for campo in form %}{% include "magazzino/_campo.html" %}{% endfor %}
+    {% for campo in form.campi_dati %}{% include "magazzino/_campo.html" %}{% endfor %}
+
+    <div class="campo campo-foto{% if form.foto.errors %} con-errore{% endif %}">
+      <label for="{{ form.foto.id_for_label }}">{{ form.foto.label }}</label>
+      <div class="foto-scelta">
+        <span class="foto-anteprima" data-anteprima>
+          {% if prodotto.foto %}<img src="{{ prodotto.url_miniatura }}" alt="Foto attuale di {{ prodotto.nome }}" width="96" height="96">{% else %}<span class="foto-vuota" aria-hidden="true">📷</span>{% endif %}
+        </span>
+        <div class="foto-comandi">
+          {{ form.foto }}
+          {% if form.togli_foto %}<label class="campo-check-riga">{{ form.togli_foto }} {{ form.togli_foto.label }}</label>{% endif %}
+        </div>
+      </div>
+      <div class="aiuto">{{ form.foto.help_text }}</div>
+      {% for e in form.foto.errors %}<p class="errore">{{ e }}</p>{% endfor %}
+    </div>
+
     <div class="azioni">
       <button type="submit" class="pulsante">Salva</button>
       <a class="pulsante secondario" href="{% if prodotto %}{% url 'prodotto_dettaglio' prodotto.pk %}{% elif next %}{{ next }}{% else %}{% url 'prodotti' %}{% endif %}">Annulla</a>

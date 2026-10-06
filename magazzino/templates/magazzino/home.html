@@ -2,7 +2,7 @@
 {% load magazzino_tags %}
 {% block titolo %}Inizio{% endblock %}
 {% block contenuto %}
-  <h1>{{ oggi|date:"l j F"|capfirst }}</h1>
+  <h1>{{ oggi|date:"l j F"|lower|capfirst }}</h1>
 
   {% if servizi_oggi %}
     {% for s in servizi_oggi %}
@@ -16,6 +16,7 @@
             <a class="tessera" href="{% url 'servizio_reso' s.pk %}"><strong>Rientro dalla cucina</strong><span>Quello che torna in frigo</span></a>
             <a class="tessera" href="{% url 'servizio_dettaglio' s.pk %}"><strong>Riepilogo</strong><span>Cosa è uscito finora</span></a>
             <a class="tessera" href="{% url 'cassa:cassa' s.pk %}"><strong>Cassa</strong><span>Ordini e comande</span></a>
+            <a class="tessera" href="{% url 'bar:conta_fusti' s.pk %}"><strong>Fusti alla spina</strong><span>Birra e vino: cambi e pesate</span></a>
             <a class="tessera" href="{% url 'servizio_chiudi' s.pk %}"><strong>Termina {{ s.tipo_con_articolo }}</strong><span>Quando è tutto finito</span></a>
           </div>
         {% endif %}

@@ -1,0 +1,10 @@
+{% load magazzino_tags %}<nav class="nav" aria-label="Pagine del bar">
+  <span class="nav-sezione" aria-hidden="true">{% include "magazzino/_icona_sezione.html" with sezione="bar" %}Bar</span>
+  <a href="{% url 'bar:inizio' %}"{% attiva "bar:inizio" "cassa:ordini" "cassa:ordine*" %}>Oggi</a>
+  <a href="{% url 'bar:fusti' %}"{% attiva "bar:fusti" "bar:conta_fusti" %}>Fusti</a>
+  <a href="{% url 'bar:carico' %}"{% attiva "bar:carico" %}>Carica</a>
+  <a href="{% url 'bar:correggi' %}"{% attiva "bar:correggi" %}>Correggi</a>
+  <a href="{% url 'bar:consumi' %}"{% attiva "bar:consumi" %}>Consumi</a>
+  <a href="{% url 'bar:storico' %}"{% attiva "bar:storico" "bar:operazione*" %}>Storico</a>
+  <a href="{% url 'bar:bevande' %}"{% attiva "bar:bevand*" "bar:fusto_*" "bar:spina_*" "bar:spinatrice_*" %}>Bevande e fusti</a>
+</nav>

@@ -1,0 +1,311 @@
+/* Bar: si appoggia a magazzino/app.css (colori, pulsanti, schede). */
+
+:root {
+  --acciaio: #c7cfd6;
+  --acciaio-chiaro: #f3f6f8;
+  --acciaio-scuro: #8f99a2;
+  --acciaio-bordo: #5f6870;
+  --bionda: #d98c10;
+  --bionda-chiara: #f7c548;
+  --rossa: #9c3a12;
+  --rossa-chiara: #d96a2c;
+  --scura: #3b2210;
+  --scura-chiara: #6e4120;
+  --vino-bianco: #d8c25a;
+  --vino-bianco-chiaro: #f3eaa6;
+  --vino-rosato: #d4627a;
+  --vino-rosato-chiaro: #f1a4b4;
+  --vino-rosso: #6d0f22;
+  --vino-rosso-chiaro: #a8233f;
+  --schiuma: #fff8e4;
+  --fusto-bordo: #4f575e;
+  --finestra-fusto: rgba(20, 24, 28, .18);
+  --bancone: #b07443;
+  --bancone-bordo: #84522c;
+  --leva: #262626;
+  --tubo: #3a3f44;
+  --vetro: rgba(255, 255, 255, .55);
+  --vetro-bordo: #8f99a2;
+  --zona-pieni: #eaf3fb;
+  --zona-pieni-bordo: #c6dcef;
+  --zona-spine: #f8f1e6;
+  --zona-spine-bordo: #e6d5bd;
+  --zona-consumati: #f1f1ee;
+  --zona-consumati-bordo: #d9d9d2;
+}
+
+@media screen {
+  :root[data-tema="scuro"] {
+    --acciaio: #8b959e;
+    --acciaio-chiaro: #c9d0d6;
+    --acciaio-scuro: #5d666e;
+    --acciaio-bordo: #2f353a;
+    --bionda: #c97f0c;
+    --bionda-chiara: #eab43a;
+    --rossa: #a8441a;
+    --rossa-chiara: #d9753a;
+    --scura: #5a3518;
+    --scura-chiara: #8a5a30;
+    --vino-bianco: #cdb850;
+    --vino-bianco-chiaro: #e8df9a;
+    --vino-rosato: #d06a80;
+    --vino-rosato-chiaro: #e9a0b0;
+    --vino-rosso: #8a1a30;
+    --vino-rosso-chiaro: #b8344f;
+    --schiuma: #f1e5c4;
+    --fusto-bordo: #9aa4ad;
+    --finestra-fusto: rgba(0, 0, 0, .35);
+    --bancone: #7c5130;
+    --bancone-bordo: #5b3a21;
+    --leva: #0e0e0e;
+    --tubo: #7b848c;
+    --vetro: rgba(255, 255, 255, .12);
+    --vetro-bordo: #6f7a83;
+    --zona-pieni: #162330;
+    --zona-pieni-bordo: #263a4d;
+    --zona-spine: #241e16;
+    --zona-spine-bordo: #3c3226;
+    --zona-consumati: #1d1d1b;
+    --zona-consumati-bordo: #33332f;
+  }
+}
+
+.contenuto.contenuto-largo { max-width: 80rem; }
+
+/* Pagina dei fusti ----------------------------------------------------- */
+
+.definizioni-svg { position: absolute; width: 0; height: 0; overflow: hidden; }
+.fusti-testa { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .4rem 1rem; }
+.fusti-testa .schede-serata { margin: 0; }
+.fusti-stasera { margin: .6rem 0; }
+.tabella-spina td:first-child { white-space: nowrap; }
+.tabella-spina .corto { display: none; }
+@media (max-width: 40rem) {
+  .tabella-spina .lungo { display: none; }
+  .tabella-spina .corto { display: inline; }
+  .tabella-spina td, .tabella-spina th { padding-left: .3rem; padding-right: .3rem; }
+}
+.fusti-promemoria {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem .8rem;
+  margin: .4rem 0; padding: .55rem .8rem; border-radius: var(--raggio);
+  background: var(--avviso-chiaro); color: var(--avviso-testo); border: 1px solid var(--avviso-bordo);
+}
+.fusti-aiuto { margin: .3rem 0 0; }
+
+/* Il pallino del colore della bevanda, accanto ai nomi. */
+.pallino {
+  display: inline-block; width: .75em; height: .75em; margin-right: .35em; border-radius: 50%;
+  vertical-align: baseline; border: 1px solid var(--fusto-bordo); background: var(--acciaio);
+}
+.pallino.l-bionda { background: var(--bionda-chiara); }
+.pallino.l-rossa { background: var(--rossa-chiara); }
+.pallino.l-scura { background: var(--scura); }
+.pallino.l-bianco { background: var(--vino-bianco-chiaro); }
+.pallino.l-rosato { background: var(--vino-rosato); }
+.pallino.l-rosso { background: var(--vino-rosso); }
+
+.scena {
+  display: grid; gap: .8rem; margin: .6rem 0 1.2rem; align-items: stretch;
+  grid-template-columns: minmax(11rem, 1fr) minmax(0, 2.4fr) minmax(11rem, 1fr);
+  grid-template-areas: "pieni spine consumati";
+}
+.zona {
+  position: relative; min-width: 0; border-radius: 16px; padding: .7rem .8rem .8rem;
+  border: 2px solid var(--bordo); background: var(--carta);
+  transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+.zona-pieni { grid-area: pieni; background: var(--zona-pieni); border-color: var(--zona-pieni-bordo); }
+.zona-spine {
+  grid-area: spine; background: var(--zona-spine); border-color: var(--zona-spine-bordo);
+  display: flex; flex-wrap: wrap; gap: 1rem 1.2rem; align-items: flex-start; justify-content: center;
+}
+.zona-consumati { grid-area: consumati; background: var(--zona-consumati); border-color: var(--zona-consumati-bordo); }
+.zona-titolo { font-size: 1.05rem; margin: 0 0 .5rem; }
+.zona-titolo span { font-weight: 500; font-size: .85rem; color: var(--tenue); }
+.zona-sottotitolo { font-size: .85rem; margin: .5rem 0 .3rem; color: var(--tenue); font-weight: 700; }
+.zona-vuota { color: var(--tenue); font-size: .9rem; margin: .3rem 0; }
+.zona-piede { margin: .6rem 0 0; }
+
+@media (max-width: 75rem) {
+  .scena { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "spine spine" "pieni consumati"; }
+}
+@media (max-width: 40rem) {
+  .scena { grid-template-columns: minmax(0, 1fr); grid-template-areas: "spine" "pieni" "consumati"; gap: .6rem; }
+  .zona { padding: .6rem .55rem .7rem; }
+}
+
+/* Cose da toccare e trascinare: niente selezione del testo né menu del tasto lungo. */
+.pila, .fusto-attaccato, .fusto-consumato {
+  font: inherit; color: var(--testo); background: none; border: 1px solid transparent; border-radius: 12px; cursor: pointer;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.operabile [data-trascina] { cursor: grab; }
+.pila:hover, .fusto-attaccato:hover, .fusto-consumato:hover { border-color: var(--campo-bordo); background: color-mix(in srgb, var(--carta) 55%, transparent); }
+.pila:focus-visible, .fusto-attaccato:focus-visible, .fusto-consumato:focus-visible { outline: 3px solid var(--fuoco); outline-offset: 2px; }
+[data-trascina].pronto { transform: scale(1.05); transition: transform .12s; }
+[data-trascina].origine { opacity: .3; }
+
+.gruppi-pieni { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0 .6rem; }
+.pile { display: flex; flex-wrap: wrap; gap: .4rem; }
+.pila { display: grid; justify-items: center; gap: .15rem; padding: .4rem .45rem .35rem; min-width: 6rem; }
+.pila-fusti { display: flex; align-items: flex-end; min-height: 5.2rem; }
+.pila-fusti .fusto-svg { width: 3.3rem; }
+.pila-fusti .fusto-svg + .fusto-svg { margin-left: -1.8rem; }
+.pila.esaurita .fusto-svg { opacity: .35; filter: grayscale(1); }
+.pila-conta { font-weight: 800; font-size: 1.2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pila-nome { font-size: .8rem; color: var(--tenue); text-align: center; }
+
+/* Una spinatrice: il disegno e sotto le colonne dei fusti attaccati, una per spina. */
+.spinatrice { flex: 1 1 18rem; max-width: 26rem; min-width: 0; }
+.spinatrice-nome { font-size: 1rem; margin: 0 0 .2rem; text-align: center; }
+.spinatrice-svg { display: block; width: 100%; height: auto; }
+.attacchi { display: grid; grid-template-columns: repeat(var(--spine, 1), minmax(0, 1fr)); gap: 0 .3rem; }
+.stazione { display: grid; justify-items: center; align-content: start; min-width: 0; }
+.stazione-nome { font-weight: 700; font-size: .9rem; margin: .1rem 0 .15rem; text-align: center; }
+.tubo { width: 8px; height: 1.1rem; margin-top: -2px; background: var(--tubo); border-radius: 0 0 4px 4px; }
+.tubo.staccato { background: repeating-linear-gradient(var(--tubo) 0 5px, transparent 5px 9px); opacity: .55; }
+.attacco {
+  display: grid; place-items: center; width: 100%; min-height: 11.5rem; padding: .25rem;
+  border: 2px dashed transparent; border-radius: 16px; transition: background-color .15s, border-color .15s;
+}
+.attacco.libero { border-color: var(--campo-bordo); }
+.attacco-vuoto { color: var(--tenue); font-size: .85rem; text-align: center; padding: 0 .4rem; }
+.fusto-attaccato { display: grid; justify-items: center; gap: .25rem; padding: .3rem .35rem .4rem; max-width: 100%; }
+.fusto-attaccato .fusto-svg { width: 5.6rem; max-width: 100%; }
+.fusto-dida { display: grid; justify-items: center; gap: .12rem; text-align: center; font-size: .82rem; }
+.fusto-dida strong { font-size: .88rem; }
+
+.consumati-serata + .consumati-serata { margin-top: .4rem; padding-top: .3rem; border-top: 1px dashed var(--zona-consumati-bordo); }
+.fila-consumati { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .2rem .25rem; }
+.fusto-consumato { display: grid; justify-items: center; gap: .1rem; padding: .2rem .15rem .15rem; border-radius: 9px; }
+.fusto-consumato .fusto-svg { width: 2.3rem; }
+.fusto-consumato.stasera { border-color: var(--avviso-bordo); background: var(--avviso-chiaro); }
+.consumato-dida { font-size: .65rem; line-height: 1.1; color: var(--tenue); max-width: 3.4rem; text-align: center; overflow-wrap: anywhere; }
+
+/* Disegni: fusti. Il corpo ha il colore del tipo, dentro la bevanda col suo colore. */
+.fusto-svg { display: block; height: auto; overflow: visible; }
+.fusto-svg .f-valvola { fill: var(--acciaio-scuro); stroke: var(--fusto-bordo); stroke-width: 1.5; }
+.fusto-svg .f-valvola-centro { fill: var(--leva); }
+.fusto-svg .f-corpo, .fusto-svg .f-anello, .fusto-svg .f-nervatura { fill: url(#g-acciaio); stroke: var(--fusto-bordo); stroke-width: 2; }
+.fusto-svg .f-nervatura { stroke-width: 1.2; }
+.fusto-svg .c-nero { fill: url(#g-nero); }
+.fusto-svg .c-azzurro { fill: url(#g-azzurro); }
+.fusto-svg .c-blu { fill: url(#g-blu); }
+.fusto-svg .c-rosso { fill: url(#g-rosso); }
+.fusto-svg .c-verde { fill: url(#g-verde); }
+.fusto-svg .c-giallo { fill: url(#g-giallo); }
+.fusto-svg .c-bianco { fill: url(#g-bianco); }
+.fusto-svg .f-finestra { fill: var(--finestra-fusto); }
+.fusto-svg .f-liquido.l-bionda { fill: url(#g-bionda); }
+.fusto-svg .f-liquido.l-rossa { fill: url(#g-rossa); }
+.fusto-svg .f-liquido.l-scura { fill: url(#g-scura); }
+.fusto-svg .f-liquido.l-bianco { fill: url(#g-vino-bianco); }
+.fusto-svg .f-liquido.l-rosato { fill: url(#g-vino-rosato); }
+.fusto-svg .f-liquido.l-rosso { fill: url(#g-vino-rosso); }
+.fusto-svg .f-schiuma { fill: var(--schiuma); }
+.fusto-svg .f-schiuma.l-bianco, .fusto-svg .f-schiuma.l-rosato, .fusto-svg .f-schiuma.l-rosso { fill: #fff; opacity: .35; }
+.fusto-svg .f-maniglia { fill: var(--fusto-bordo); }
+.fusto-svg .f-riflesso { fill: #fff; opacity: .35; }
+.fusto-svg .f-bollino { stroke: #fff; stroke-width: 2.5; fill: var(--bionda); }
+.fusto-svg .f-bollino.l-rossa { fill: var(--rossa); }
+.fusto-svg .f-bollino.l-scura { fill: var(--scura); }
+.fusto-svg .f-bollino.l-bianco { fill: var(--vino-bianco); }
+.fusto-svg .f-bollino.l-rosato { fill: var(--vino-rosato); }
+.fusto-svg .f-bollino.l-rosso { fill: var(--vino-rosso); }
+.fusto-svg .f-litri { fill: #fff; font-weight: 800; font-family: system-ui, sans-serif; }
+.fusto-svg .f-litri.l-bionda, .fusto-svg .f-litri.l-bianco { fill: #2b1d00; }
+.fusto-svg.vuoto { opacity: .6; filter: grayscale(.6); }
+
+/* Disegni: spinatrici */
+.spinatrice-svg .s-bancone { fill: var(--bancone); }
+.spinatrice-svg .s-bancone-bordo { fill: var(--bancone-bordo); }
+.spinatrice-svg .s-vaschetta { fill: var(--acciaio-scuro); stroke: var(--acciaio-bordo); stroke-width: 1.5; }
+.spinatrice-svg .s-griglia { fill: var(--acciaio-bordo); }
+.spinatrice-svg .s-colonna, .spinatrice-svg .s-testa { fill: url(#g-acciaio); stroke: var(--acciaio-bordo); stroke-width: 2; }
+.spinatrice-svg .s-riflesso { fill: #fff; opacity: .45; }
+.spinatrice-svg .s-leva { fill: var(--leva); }
+.spinatrice-svg .s-pomello { fill: var(--acciaio); stroke: var(--leva); stroke-width: 2; }
+.spinatrice-svg .s-pomello.l-bionda { fill: var(--bionda-chiara); }
+.spinatrice-svg .s-pomello.l-rossa { fill: var(--rossa-chiara); }
+.spinatrice-svg .s-pomello.l-scura { fill: var(--scura-chiara); }
+.spinatrice-svg .s-pomello.l-bianco { fill: var(--vino-bianco-chiaro); }
+.spinatrice-svg .s-pomello.l-rosato { fill: var(--vino-rosato); }
+.spinatrice-svg .s-pomello.l-rosso { fill: var(--vino-rosso-chiaro); }
+.spinatrice-svg .s-beccuccio { fill: var(--acciaio-scuro); stroke: var(--acciaio-bordo); stroke-width: 1.5; }
+.spinatrice-svg .s-bicchiere { fill: var(--vetro); stroke: var(--vetro-bordo); stroke-width: 2; stroke-linejoin: round; }
+.spinatrice-svg .s-getto, .spinatrice-svg .s-liquido { fill: url(#g-bionda); }
+.spinatrice-svg .l-rossa { fill: url(#g-rossa); }
+.spinatrice-svg .l-scura { fill: url(#g-scura); }
+.spinatrice-svg .s-getto.l-bianco, .spinatrice-svg .s-liquido.l-bianco { fill: url(#g-vino-bianco); }
+.spinatrice-svg .s-getto.l-rosato, .spinatrice-svg .s-liquido.l-rosato { fill: url(#g-vino-rosato); }
+.spinatrice-svg .s-getto.l-rosso, .spinatrice-svg .s-liquido.l-rosso { fill: url(#g-vino-rosso); }
+.spinatrice-svg .s-schiuma { fill: var(--schiuma); }
+
+/* Trascinamento */
+body.trascinando, body.trascinando * { cursor: grabbing !important; }
+body.trascinando { -webkit-user-select: none; user-select: none; }
+.trascinato {
+  position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; will-change: transform;
+  filter: drop-shadow(0 10px 14px var(--ombra-forte));
+}
+.trascinato .fusto-svg { width: 100%; }
+.bersaglio { box-shadow: 0 0 0 3px var(--fuoco); }
+.attacco.bersaglio { border-color: var(--fuoco); box-shadow: none; }
+.bersaglio.sopra { background: var(--primario-chiaro); }
+.fusti-in-corso .scena { opacity: .75; pointer-events: none; }
+
+/* Finestre (toccando un fusto) */
+dialog.finestra {
+  width: min(31rem, calc(100vw - 1.5rem)); max-height: calc(100dvh - 2rem); overflow: auto;
+  padding: 1rem 1.1rem 1.1rem; border: 1px solid var(--bordo); border-radius: 18px;
+  background: var(--carta); color: var(--testo); box-shadow: 0 24px 60px var(--ombra-forte);
+}
+dialog.finestra::backdrop { background: rgba(8, 12, 6, .55); }
+.finestra-chiudi { position: absolute; top: .45rem; right: .5rem; margin: 0; }
+.finestra-chiudi button {
+  width: 2.5rem; height: 2.5rem; border: 0; border-radius: 999px; background: var(--sfondo); color: var(--testo);
+  font-size: 1.5rem; line-height: 1; cursor: pointer;
+}
+.finestra h2 { font-size: 1.2rem; margin: 0 2.4rem .25rem 0; }
+.finestra-testa { display: flex; gap: .9rem; align-items: flex-start; margin-bottom: .4rem; }
+.finestra-testa h2 { margin-right: 2.4rem; }
+.finestra-testa p { margin: .2rem 0; }
+.finestra-fusto { width: 4.4rem; flex: none; }
+.finestra form { margin: 0; }
+.finestra-pesata { display: grid; gap: .35rem; margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--bordo); }
+.finestra-pesata label, .pesata-tutti label { font-weight: 600; }
+.finestra-anteprima { min-height: 1.4em; margin: 0; font-weight: 600; color: var(--accento); }
+.finestra-anteprima.attenzione { color: var(--avviso); }
+.finestra-altre { display: grid; gap: .25rem; justify-items: start; margin-top: .6rem; }
+.finestra-altre form { width: 100%; }
+.pulsante.largo { width: 100%; margin-top: .35rem; }
+dialog.finestra-larga { width: min(36rem, calc(100vw - 1rem)); }
+.pesata-tutti { display: grid; gap: .3rem; margin-top: .4rem; }
+.pesata-riga { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: .6rem; align-items: start; padding: .45rem 0; border-top: 1px solid var(--bordo); }
+.pesata-fusto { width: 2.6rem; }
+.campo-peso { display: grid; gap: .2rem; }
+
+.campo-kg { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .55rem; margin: .2rem 0; }
+.campo-kg > input { width: 7.5rem; min-width: 0; text-align: right; font-size: 1.3rem; font-weight: 700; }
+.campo-kg .unita { color: var(--tenue); }
+
+.avviso-volante {
+  position: fixed; left: 50%; bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 900; transform: translateX(-50%);
+  width: max-content; max-width: calc(100vw - 2rem); padding: .7rem 1rem; border-radius: 12px;
+  background: var(--testo); color: var(--carta); font-weight: 600; box-shadow: 0 8px 24px var(--ombra-forte);
+}
+.avviso-volante.errore { background: var(--pericolo-forte); color: #fff; }
+
+.tabella tfoot .sticky-col { background: var(--carta); }
+
+@media print {
+  .scena, dialog, .fusti-aiuto { display: none !important; }
+}
+
+/* Bevande e fusti, Oggi */
+.titolo-spina { font-size: 1.05rem; margin: .8rem 0 .3rem; }
+.elenco-fusti .voce { align-items: center; }
+.voce-fusto { display: inline-flex; align-items: center; gap: .55rem; }
+.fusto-elenco { width: 1.7rem; flex: none; }
+.scorta-spina { margin: .5rem 0 0; padding-top: .45rem; border-top: 1px dashed var(--bordo); }

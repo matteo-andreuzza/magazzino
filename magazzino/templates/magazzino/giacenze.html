@@ -22,19 +22,22 @@
         <div class="scheda">
           <ul class="elenco">
             {% for s in schede %}
-              <li data-voce data-nome="{{ s.prodotto.nome }}">
-                <div class="voce">
-                  <a class="voce-nome" href="{% url 'prodotto_dettaglio' s.prodotto.pk %}">{{ s.prodotto.nome }}</a>
-                  <strong class="num{% if s.totale < 0 %} negativo{% endif %}">
-                    {% if s.totale %}{{ s.totale|qta:s.prodotto.unita }}{% else %}<span class="etichetta pericolo">esaurito</span>{% endif %}
-                  </strong>
-                </div>
-                {% if s.sotto_scorta %}<span class="etichetta avviso">sotto scorta (minimo {{ s.prodotto.scorta_minima|qta:s.prodotto.unita }})</span>{% endif %}
-                {% if s.dettagli %}
-                  <div class="chip-ubicazioni">
-                    {% for u, q in s.dettagli %}<span{% if q < 0 %} class="negativo"{% endif %}>{{ u.nome }}: <strong>{{ q|qta:s.prodotto.unita }}</strong></span>{% endfor %}
+              <li class="con-foto" data-voce data-nome="{{ s.prodotto.nome }}">
+                {% include "magazzino/_miniatura.html" with p=s.prodotto %}
+                <div>
+                  <div class="voce">
+                    <a class="voce-nome" href="{% url 'prodotto_dettaglio' s.prodotto.pk %}">{{ s.prodotto.nome }}</a>
+                    <strong class="num{% if s.totale < 0 %} negativo{% endif %}">
+                      {% if s.totale %}{{ s.totale|qta:s.prodotto.unita }}{% else %}<span class="etichetta pericolo">esaurito</span>{% endif %}
+                    </strong>
                   </div>
-                {% endif %}
+                  {% if s.sotto_scorta %}<span class="etichetta avviso">sotto scorta (minimo {{ s.prodotto.scorta_minima|qta:s.prodotto.unita }})</span>{% endif %}
+                  {% if s.dettagli %}
+                    <div class="chip-ubicazioni">
+                      {% for u, q in s.dettagli %}<span{% if q < 0 %} class="negativo"{% endif %}>{{ u.nome }}: <strong>{{ q|qta:s.prodotto.unita }}</strong></span>{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
               </li>
             {% endfor %}
           </ul>

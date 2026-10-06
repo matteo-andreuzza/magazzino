@@ -44,6 +44,7 @@ services:
   # Ogni 30 minuti copia database e allegati in ./backup. Le copie del database
   # restano 10 giorni; i nomi iniziano con il nome del progetto (magazzino-sagra),
   # così non si confondono con quelli di altre installazioni sullo stesso computer.
+  # Ogni quanto e per quanti giorni si cambiano nel file .env (BACKUP_OGNI_MINUTI, BACKUP_GIORNI).
   backup:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -56,6 +57,8 @@ services:
       PGDATABASE: magazzino
       PGPASSWORD: ${POSTGRES_PASSWORD:-magazzino}
       PROGETTO: ${COMPOSE_PROJECT_NAME}
+      OGNI_MINUTI: ${BACKUP_OGNI_MINUTI:-30}
+      GIORNI: ${BACKUP_GIORNI:-10}
       TZ: Europe/Rome
     volumes:
       - ./backup:/backup
@@ -86,8 +89,8 @@ services:
               fi
             done
           fi
-          find /backup -maxdepth 1 -name "$$PROGETTO-*.sql.gz" -mtime +10 -delete
-          sleep 1800
+          find /backup -maxdepth 1 -name "$$PROGETTO-*.sql.gz" -mtime +$$GIORNI -delete
+          sleep $$((OGNI_MINUTI * 60))
         done
 
   # Carica su Google Drive quello che c'è in ./backup. Facoltativo: finché non

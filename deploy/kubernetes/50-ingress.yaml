@@ -1,0 +1,23 @@
+# Indirizzo pubblico con HTTPS. L'esempio usa ingress-nginx e cert-manager (Let's Encrypt):
+# adattalo a quello che c'è nel cluster.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sagra
+  namespace: sagra
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: "60m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [sagra.esempio.it]
+      secretName: sagra-tls
+  rules:
+    - host: sagra.esempio.it
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: sagra-web, port: {number: 80}}

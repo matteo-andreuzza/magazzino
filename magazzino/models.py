@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.db.models.functions import Lower
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.urls import reverse
 from django.utils import formats, timezone
 
 from .quantita import ZERO, formatta_quantita
@@ -69,6 +70,11 @@ class Unita(models.TextChoices):
     MAZZI = "mazzo", "mazzi"
 
 
+def percorso_foto(prodotto, nome_file):
+    # Il nome (casuale) lo sceglie chi salva la foto: vedi services.salva_foto.
+    return f"prodotti/{nome_file}"
+
+
 class Prodotto(models.Model):
     nome = models.CharField(max_length=100)
     categoria = models.CharField(max_length=20, choices=Categoria.choices, default=Categoria.ALTRO)
@@ -88,6 +94,10 @@ class Prodotto(models.Model):
     )
     note = models.CharField(max_length=200, blank=True)
     attivo = models.BooleanField(default=True, help_text="I prodotti non attivi non compaiono nei moduli di carico.")
+    # Foto ridimensionata (JPEG) e miniatura quadrata per gli elenchi. Come gli allegati
+    # stanno nel volume dei dati e si vedono solo dall'app, dopo il login.
+    foto = models.FileField(upload_to=percorso_foto, max_length=200, blank=True, editable=False)
+    miniatura = models.FileField(upload_to=percorso_foto, max_length=200, blank=True, editable=False)
 
     class Meta:
         ordering = [Lower("nome")]
@@ -106,6 +116,25 @@ class Prodotto(models.Model):
 
     def formatta(self, valore):
         return formatta_quantita(valore, self.unita)
+
+    @property
+    def foto_versione(self):
+        # Il nome del file cambia a ogni foto nuova: nell'indirizzo fa ricaricare quella giusta.
+        return self.foto.name.rsplit("/", 1)[-1].split(".", 1)[0] if self.foto else ""
+
+    def url_foto(self):
+        return f"{reverse('prodotto_foto', args=[self.pk])}?v={self.foto_versione}" if self.foto else ""
+
+    def url_miniatura(self):
+        return f"{reverse('prodotto_miniatura', args=[self.pk])}?v={self.foto_versione}" if self.miniatura else ""
+
+
+@receiver(post_delete, sender=Prodotto)
+def elimina_foto_prodotto(sender, instance, **kwargs):
+    for campo in (instance.foto, instance.miniatura):
+        nome, storage = campo.name, campo.storage
+        if nome:
+            transaction.on_commit(lambda nome=nome, storage=storage: storage.delete(nome), using=kwargs.get("using"))
 
 
 class Menu(models.Model):
@@ -191,6 +220,15 @@ class Servizio(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
         verbose_name="terminato da",
     )
+    # La cassa si chiude a fine serata (niente più ordini) mentre il magazzino resta
+    # aperto per i rientri dalla cucina e la pesata dei fusti.
+    cassa_chiusa_il = models.DateTimeField(
+        "cassa chiusa il", null=True, blank=True, help_text="Da chiusa la cassa non registra più ordini."
+    )
+    cassa_chiusa_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        verbose_name="cassa chiusa da",
+    )
 
     class Meta:
         ordering = ["-data", "tipo", "nome"]
@@ -215,6 +253,10 @@ class Servizio(models.Model):
         return self.chiuso_il is not None
 
     @property
+    def cassa_chiusa(self):
+        return self.cassa_chiusa_il is not None
+
+    @property
     def tipo_con_articolo(self):
         return "il pranzo" if self.tipo == TipoServizio.PRANZO else "la serata"
 
@@ -232,10 +274,9 @@ class TipoOperazione(models.TextChoices):
     SPOSTAMENTO = "spostamento", "Spostamento"
     SCARTO = "scarto", "Scarto"
     RETTIFICA = "rettifica", "Correzione conteggio"
-    VENDITA = "vendita", "Venduto in cassa"
 
 
-TIPI_CON_SERVIZIO = [TipoOperazione.CUCINA, TipoOperazione.RESO, TipoOperazione.VENDITA]
+TIPI_CON_SERVIZIO = [TipoOperazione.CUCINA, TipoOperazione.RESO]
 TIPI_CON_ALLEGATI = [TipoOperazione.INVENTARIO, TipoOperazione.ACQUISTO]
 
 

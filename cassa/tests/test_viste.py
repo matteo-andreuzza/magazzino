@@ -51,7 +51,7 @@ class PagineTest(BaseCassa):
         self.client.force_login(self.staff)
 
     def test_tutte_le_pagine_si_aprono(self):
-        self.imposta(monitor_cucina=True, cassa_bar=True, scarico_magazzino=True, ricevuta_cliente=True, stampante_ricevute=self.st_bar)
+        self.imposta(monitor_cucina=True, cassa_bar=True, ricevuta_cliente=True, stampante_ricevute=self.st_bar)
         ordine, _ = self.ordina([(self.grigliata, 2, "senza sale"), (self.coca, 1)], coperti=3)
         self.ordina([(self.patatine, 1)], pagamento="omaggio")
         annullato, _ = self.ordina([(self.coca, 1)])
@@ -68,7 +68,9 @@ class PagineTest(BaseCassa):
             ("cassa:stampanti", []), ("cassa:stampante_nuova", []), ("cassa:stampante_modifica", [self.st_bar.pk]),
             ("cassa:stato", [self.serata.pk]), ("cassa:stampe_browser", []),
             ("servizio_dettaglio", [self.serata.pk]), ("servizio_chiudi", [self.serata.pk]),
-            ("servizio_venduto", [self.serata.pk]), ("home", []), ("riepilogo", []),
+            ("home", []), ("riepilogo", []), ("cassa:chiudi", [self.serata.pk]),
+            ("bar:inizio", []), ("bar:carico", []), ("bar:correggi", []), ("bar:consumi", []), ("bar:storico", []),
+            ("bar:bevande", []), ("bar:conta_fusti", [self.serata.pk]),
         ]
         for nome, args in pagine:
             with self.subTest(pagina=nome, args=args):
@@ -248,13 +250,13 @@ class GestioneTest(BaseCassa):
     def test_nuovo_articolo(self):
         risposta = self.client.post(reverse("cassa:articolo_nuovo"), {
             "nome": "Birra media", "categoria": self.coca.categoria_id, "reparto": "bar", "prezzo": "4,00",
-            "quantita_prodotto": "1", "ordine": "0", "attivo": "on",
+            "quantita_bevanda": "1", "ordine": "0", "attivo": "on",
         })
         self.assertRedirects(risposta, reverse("cassa:listino"))
         self.assertEqual(Articolo.objects.get(nome="Birra media").prezzo, D("4.00"))
         risposta = self.client.post(reverse("cassa:articolo_nuovo"), {
             "nome": "birra MEDIA", "categoria": self.coca.categoria_id, "reparto": "bar", "prezzo": "4,001",
-            "quantita_prodotto": "0", "ordine": "0",
+            "quantita_bevanda": "0", "ordine": "0",
         })
         self.assertContains(risposta, "Esiste già un articolo con questo nome.")
         self.assertContains(risposta, "al massimo due decimali")

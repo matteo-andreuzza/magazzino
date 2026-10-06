@@ -15,7 +15,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from magazzino.models import Servizio
 from magazzino.views.comuni import giorno_servizio
 
-from .. import services, stampa
+from .. import report, services, stampa
 from ..formati import euro
 from ..models import (
     Articolo,
@@ -80,6 +80,7 @@ def _ordine_json(ordine, stampe=None):
         "numero": ordine.numero,
         "nome": ordine.nome,
         "tavolo": ordine.tavolo,
+        "asporto": ordine.asporto,
         "totale": centesimi(ordine.totale),
         "totaleTesto": euro(ordine.totale),
         "pagamento": ordine.get_pagamento_display(),
@@ -95,7 +96,7 @@ def _ordine_json(ordine, stampe=None):
 
 
 def _pagina_cassa(request, servizio_pk, postazione):
-    servizio = get_object_or_404(Servizio, pk=servizio_pk)
+    servizio = get_object_or_404(Servizio.objects.select_related("cassa_chiusa_da"), pk=servizio_pk)
     imp = impostazioni()
     articoli = list(articoli_in_vendita(servizio, postazione))
     categorie = []
@@ -111,7 +112,8 @@ def _pagina_cassa(request, servizio_pk, postazione):
             righe = list(originale.righe.all())
             copia = {
                 "nome": originale.nome,
-                "tavolo": originale.tavolo,
+                "tavolo": "" if originale.asporto else originale.tavolo,
+                "asporto": originale.asporto,
                 "coperti": originale.coperti,
                 "note": originale.note,
                 "righe": [{"a": r.articolo_id, "q": r.quantita, "n": r.note} for r in righe if r.articolo_id in vendibili],
@@ -129,6 +131,8 @@ def _pagina_cassa(request, servizio_pk, postazione):
             for a in articoli
         },
         "copia": copia,
+        "omaggio": {"nome": services.NOME_OMAGGIO, "tavolo": services.TAVOLO_OMAGGIO},
+        "asporto": {"tavolo": services.TAVOLO_ASPORTO, "ammesso": postazione == Postazione.INGRESSO},
         "url": {
             "ordina": reverse("cassa:ordina", args=[servizio.pk]),
             "stato": reverse("cassa:stato", args=[servizio.pk]) + f"?postazione={postazione}",
@@ -148,6 +152,7 @@ def _pagina_cassa(request, servizio_pk, postazione):
             "pagamenti": Pagamento.choices,
             "dati": dati,
             "imp": imp,
+            "bloccata": servizio.chiuso or servizio.cassa_chiusa,
             "senza_prezzo": Articolo.objects.filter(attivo=True, prezzo__isnull=True).count() if request.user.is_staff else 0,
         },
     )
@@ -209,6 +214,7 @@ def ordina(request, servizio_pk):
             note=str(dati.get("note") or ""),
             totale_atteso=None if totale is None else Decimal(totale) / 100,
             token=token,
+            asporto=dati.get("asporto") is True,
         )
     except ErroreCassa as e:
         return errore_json(e.messaggi, status=409, ricarica=e.ricarica)
@@ -231,7 +237,7 @@ def stato(request, servizio_pk):
     return JsonResponse({
         "ok": True,
         "versione": versione_listino(articoli_in_vendita(servizio, postazione)),
-        "chiuso": servizio.chiuso,
+        "chiuso": servizio.chiuso or servizio.cassa_chiusa,
         "stampa": {
             "avviso": stato_stampa["servono_agenti"] and not stato_stampa["collegato"],
             "errori": stato_stampa["errori"],
@@ -258,8 +264,13 @@ def articolo_esaurito(request, pk):
 @require_GET
 def ordini(request, servizio_pk):
     servizio = get_object_or_404(Servizio, pk=servizio_pk)
+    # Dalla cassa del bar si vedono solo gli ordini del bar (e la pagina sta nella sezione Bar).
+    solo_bar = request.GET.get("postazione") == Postazione.BAR
+    ordini_serata = Ordine.objects.filter(servizio=servizio)
+    if solo_bar:
+        ordini_serata = ordini_serata.filter(postazione=Postazione.BAR)
     elenco = list(
-        Ordine.objects.filter(servizio=servizio)
+        ordini_serata
         .select_related("utente")
         .prefetch_related("righe", "stampe")
         .order_by("-numero")
@@ -269,7 +280,7 @@ def ordini(request, servizio_pk):
     return render(
         request,
         "cassa/ordini.html",
-        {"servizio": servizio, "elenco": elenco, "n_annullati": sum(1 for o in elenco if o.annullato)},
+        {"servizio": servizio, "elenco": elenco, "n_annullati": sum(1 for o in elenco if o.annullato), "bar": solo_bar},
     )
 
 
@@ -286,6 +297,7 @@ def ordine(request, pk):
             "stampe": o.stampe.select_related("stampante"),
             "ristampabili": services.documenti_ristampabili(o),
             "monitor": impostazioni().monitor_cucina,
+            "bar": o.postazione == Postazione.BAR,
             "url_cassa": reverse(
                 "cassa:cassa_bar" if o.postazione == Postazione.BAR else "cassa:cassa", args=[o.servizio_id]
             ),
@@ -314,6 +326,9 @@ def ordine_annulla(request, pk):
     if o.annullato:
         messages.info(request, f"L'ordine n. {o.numero} è già annullato.")
         return redirect("cassa:ordine", pk=o.pk)
+    if o.servizio.cassa_chiusa and not o.servizio.chiuso:
+        messages.info(request, "La cassa è chiusa: per annullare o correggere un ordine riaprila.")
+        return redirect("cassa:ordine", pk=o.pk)
     stampate = o.stampe.filter(stato__in=[StatoStampa.IN_STAMPA, StatoStampa.STAMPATA, StatoStampa.ERRORE]).exists()
     return render(request, "cassa/ordine_annulla.html", {"ordine": o, "righe": o.righe.all(), "stampate": stampate})
 
@@ -337,3 +352,45 @@ def ordine_ristampa(request, pk):
         return redirect(reverse("cassa:stampe_browser") + "?" + parametri)
     messages.success(request, "Ristampa inviata alla stampante.")
     return redirect("cassa:ordine", pk=o.pk)
+
+
+# ---------------------------------------------------------------------------
+# Chiusura della cassa a fine serata
+# ---------------------------------------------------------------------------
+
+
+@require_http_methods(["GET", "POST"])
+def cassa_chiudi(request, servizio_pk):
+    servizio = get_object_or_404(Servizio, pk=servizio_pk)
+    if request.method == "POST":
+        if services.chiudi_cassa(servizio=servizio, utente=request.user):
+            messages.success(request, "Cassa chiusa: non si registrano più ordini. Ecco il riepilogo della serata.")
+        else:
+            messages.info(request, "La cassa era già chiusa.")
+        return redirect("cassa:report", servizio_pk=servizio.pk)
+    if servizio.cassa_chiusa or servizio.chiuso:
+        return redirect("cassa:report", servizio_pk=servizio.pk)
+    ordini = Ordine.objects.filter(servizio=servizio)
+    return render(
+        request,
+        "cassa/chiudi.html",
+        {
+            "servizio": servizio,
+            "totali": report.incassi(ordini.filter(annullato_il__isnull=True)),
+            "in_stampa": ordini.filter(stampe__stato__in=[StatoStampa.IN_CODA, StatoStampa.IN_STAMPA]).distinct().count(),
+            "errori_stampa": ordini.filter(stampe__stato=StatoStampa.ERRORE).distinct().count(),
+        },
+    )
+
+
+@require_POST
+def cassa_riapri(request, servizio_pk):
+    servizio = get_object_or_404(Servizio, pk=servizio_pk)
+    if servizio.chiuso:
+        d = servizio.desinenza
+        messages.error(request, f"{servizio.get_tipo_display()} terminat{d}: si riapre dal magazzino.")
+    elif services.riapri_cassa(servizio=servizio):
+        messages.success(request, "Cassa riaperta: si possono di nuovo registrare ordini.")
+    else:
+        messages.info(request, "La cassa era già aperta.")
+    return redirect("cassa:cassa", servizio_pk=servizio.pk)

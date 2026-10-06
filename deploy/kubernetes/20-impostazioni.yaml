@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sagra-impostazioni
+  namespace: sagra
+data:
+  APP_NOME: "Magazzino Sagra"
+  ADMIN_USERNAME: "admin"
+  POSTGRES_HOST: "sagra-db"
+  POSTGRES_DB: "magazzino"
+  POSTGRES_USER: "magazzino"
+  DJANGO_ALLOWED_HOSTS: "sagra.esempio.it"
+  DJANGO_CSRF_TRUSTED_ORIGINS: "https://sagra.esempio.it"
+  # L'HTTPS lo fa l'ingress davanti all'app.
+  DJANGO_COOKIE_SICURI: "1"
+  DJANGO_DIETRO_PROXY_HTTPS: "1"
+  TZ: "Europe/Rome"

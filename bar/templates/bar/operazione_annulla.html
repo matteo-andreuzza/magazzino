@@ -1,0 +1,20 @@
+{% extends "bar/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Annulla {{ operazione.get_tipo_display|lower }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'bar:operazione' operazione.pk %}">{{ operazione.get_tipo_display }}</a></p>
+  <h1>Annullare l'operazione?</h1>
+  <p>Le giacenze del bar tornano come prima: dopo registra di nuovo quella giusta.</p>
+  <div class="scheda">
+    <ul class="elenco">
+      {% for m in movimenti %}
+        <li class="voce"><span>{{ m.cosa.nome }}</span><strong class="num">{{ m.quantita|qta_segno:m.cosa.unita }}</strong></li>
+      {% endfor %}
+    </ul>
+  </div>
+  <form method="post" class="azioni">
+    {% csrf_token %}
+    <button type="submit" class="pulsante pericolo">Sì, annulla</button>
+    <a class="pulsante secondario" href="{% url 'bar:operazione' operazione.pk %}">No, torna indietro</a>
+  </form>
+{% endblock %}

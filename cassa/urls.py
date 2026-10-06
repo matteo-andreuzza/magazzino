@@ -12,6 +12,8 @@ urlpatterns = [
     path("serate/<int:servizio_pk>/ordina/", views.ordina, name="ordina"),
     path("serate/<int:servizio_pk>/stato/", views.stato, name="stato"),
     path("articoli/<int:pk>/esaurito/", views.articolo_esaurito, name="articolo_esaurito"),
+    path("serate/<int:servizio_pk>/chiudi/", views.cassa_chiudi, name="chiudi"),
+    path("serate/<int:servizio_pk>/riapri/", views.cassa_riapri, name="riapri"),
     # Ordini
     path("serate/<int:servizio_pk>/ordini/", views.ordini, name="ordini"),
     path("serate/<int:servizio_pk>/ordini.csv", views.ordini_csv, name="ordini_csv"),

@@ -5,16 +5,18 @@ from datetime import timedelta
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import formats, timezone
 from django.views.decorators.http import require_GET
 
+from bar.models import TipoFusto
+from magazzino import services as magazzino
 from magazzino.models import Servizio
 from magazzino.quantita import formatta_numero
 
 from .. import grafici, report
 from ..formati import euro
 from ..models import Ordine, Postazione
-from ..services import impostazioni
 
 
 def _grafico_andamento(fasce):
@@ -50,9 +52,34 @@ def _grafico_articoli(venduti, quanti=12):
     )
 
 
+def _fine_serata(servizio, dati):
+    """Cosa resta da fare a fine serata, dopo aver chiuso la cassa."""
+    consumi = magazzino.consumi_servizio(servizio)
+    return [
+        {
+            "fatto": not dati["bar"]["da_pesare"],
+            "testo": "Pesa i fusti rimasti attaccati (birra e vino)",
+            "url": reverse("bar:conta_fusti", args=[servizio.pk]),
+            "serve": TipoFusto.objects.exists() and (dati["bar"]["conta"] is not None or bool(dati["bar"]["da_pesare"])),
+        },
+        {
+            "fatto": not any(c["preso"] > c["rientrato"] for c in consumi.values()),
+            "testo": "Rientro dalla cucina e scongelati",
+            "url": reverse("servizio_reso", args=[servizio.pk]),
+            "serve": bool(consumi),
+        },
+        {
+            "fatto": servizio.chiuso,
+            "testo": f"Termina {servizio.tipo_con_articolo} nel magazzino",
+            "url": reverse("servizio_chiudi", args=[servizio.pk]),
+            "serve": True,
+        },
+    ]
+
+
 @require_GET
 def report_serata(request, servizio_pk):
-    servizio = get_object_or_404(Servizio, pk=servizio_pk)
+    servizio = get_object_or_404(Servizio.objects.select_related("cassa_chiusa_da"), pk=servizio_pk)
     dati = report.report_servizio(servizio)
     return render(
         request,
@@ -62,9 +89,7 @@ def report_serata(request, servizio_pk):
             "dati": dati,
             "grafico_andamento": _grafico_andamento(dati["andamento"]),
             "grafico_articoli": _grafico_articoli(dati["venduti"]),
-            "da_scaricare": impostazioni().scarico_magazzino and any(
-                v["mancante"] > 0 for v in report.da_scaricare(servizio).values()
-            ),
+            "fine_serata": [p for p in _fine_serata(servizio, dati) if p["serve"]] if servizio.cassa_chiusa else [],
         },
     )
 

@@ -1,0 +1,12 @@
+{% extends "magazzino/base.html" %}
+{% load static %}
+{% block ancora_guida %}#bar{% endblock %}
+{% block testa %}
+  <link rel="stylesheet" href="{% static 'bar/bar.css' %}">
+  <script src="{% static 'bar/bar.js' %}" defer></script>
+  {% block testa_bar %}{% endblock %}
+{% endblock %}
+{% block sezione %}bar{% endblock %}
+{% block sezione_magazzino %}{% endblock %}
+{% block sezione_bar %} aria-current="true"{% endblock %}
+{% block nav %}{% include "bar/_nav.html" %}{% endblock %}

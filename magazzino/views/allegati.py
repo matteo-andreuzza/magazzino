@@ -1,12 +1,12 @@
-"""Fatture e bolle allegate ai carichi."""
+"""Fatture e bolle allegate ai carichi, foto dei prodotti."""
 
 from django.contrib import messages
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .. import services
-from ..models import Allegato, Operazione
+from ..models import Allegato, Operazione, Prodotto
 from ..services import ErroreMagazzino
 
 
@@ -23,6 +23,34 @@ def allegato_file(request, pk):
     )
     risposta["Cache-Control"] = "private, max-age=3600"
     return risposta
+
+
+def _foto(request, pk, campo):
+    prodotto = get_object_or_404(Prodotto, pk=pk)
+    file = getattr(prodotto, campo)
+    if not file:
+        raise Http404("Questo prodotto non ha la foto.")
+    try:
+        contenuto = file.storage.open(file.name, "rb")
+    except FileNotFoundError:
+        raise Http404("La foto non si trova più sul disco.")
+    risposta = FileResponse(contenuto, content_type="image/jpeg")
+    # L'indirizzo cambia con la foto (?v=…): quella giusta si può tenere a lungo nel telefono.
+    if request.GET.get("v") == prodotto.foto_versione:
+        risposta["Cache-Control"] = "private, max-age=31536000, immutable"
+    else:
+        risposta["Cache-Control"] = "private, no-cache"
+    return risposta
+
+
+@require_GET
+def prodotto_foto(request, pk):
+    return _foto(request, pk, "foto")
+
+
+@require_GET
+def prodotto_miniatura(request, pk):
+    return _foto(request, pk, "miniatura")
 
 
 @require_POST

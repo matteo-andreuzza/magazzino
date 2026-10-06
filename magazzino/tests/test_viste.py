@@ -518,3 +518,34 @@ class AdminTest(BaseViste):
         self.assertEqual(
             self.client.get(reverse("admin:magazzino_piatto_change", args=[Piatto.objects.first().pk])).status_code, 200
         )
+
+
+class GuidaENavigazioneTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.utente = get_user_model().objects.create_user("guida", password="x")
+
+    def setUp(self):
+        self.client.force_login(self.utente)
+
+    def test_guida(self):
+        risposta = self.client.get(reverse("guida"))
+        self.assertContains(risposta, "Prima della sagra")
+        self.assertContains(risposta, 'id="tara"')
+        self.assertContains(risposta, 'id="coca-cola"')
+        self.assertContains(risposta, 'id="asporto"')
+        self.assertContains(risposta, 'class="sezione-guida')
+
+    def test_salute_senza_login(self):
+        self.client.logout()
+        risposta = self.client.get(reverse("salute"))
+        self.assertEqual((risposta.status_code, risposta.content), (200, b"ok\n"))
+
+    def test_la_barra_dice_dove_si_e(self):
+        risposta = self.client.get(reverse("giacenze"))
+        self.assertContains(risposta, 'class="sezione-magazzino')
+        self.assertContains(risposta, f'<a href="{reverse("giacenze")}" aria-current="page">Giacenze</a>', html=True)
+        self.assertNotContains(risposta, f'<a href="{reverse("prodotti")}" aria-current="page">Prodotti</a>', html=True)
+        risposta = self.client.get(reverse("bar:storico"))
+        self.assertContains(risposta, 'class="sezione-bar')
+        self.assertContains(risposta, f'<a href="{reverse("bar:storico")}" aria-current="page">Storico</a>', html=True)

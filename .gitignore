@@ -7,3 +7,14 @@ staticfiles/
 backup/
 # Contiene l'accesso a Google Drive: non va mai condiviso.
 rclone/
+
+# Trasloco su un altro server (scripts/esporta-dati.sh): contiene password e dati.
+trasloco-*.tar
+
+# Segreti di Kubernetes (si crea da 10-segreti.esempio.yaml).
+deploy/kubernetes/10-segreti.yaml
+/graphify-out
+# graphify: cache e percorsi di questo computer (il grafo e il report invece si tengono).
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root

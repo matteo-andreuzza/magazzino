@@ -11,6 +11,50 @@
     return parseFloat(t);
   }
 
+  // Modalità scura: il pulsante in alto la accende e spegne e la scelta resta sul telefono.
+  // Finché non si sceglie, segue il tema del telefono (anche se cambia a pagina aperta).
+  var radice = document.documentElement;
+  var sistemaScuro = window.matchMedia("(prefers-color-scheme: dark)");
+  var coloreTestata = document.querySelector("meta[name=theme-color]");
+
+  function temaScelto() {
+    try { return localStorage.getItem("tema"); } catch (e) { return null; }
+  }
+
+  function applicaTema(scuro) {
+    radice.dataset.tema = scuro ? "scuro" : "chiaro";
+    var testata = document.querySelector(".testata");
+    if (coloreTestata && testata) coloreTestata.content = getComputedStyle(testata).backgroundColor;
+    document.querySelectorAll("[data-cambia-tema]").forEach(function (b) {
+      b.setAttribute("aria-pressed", scuro ? "true" : "false");
+      b.title = scuro ? "Modalità chiara" : "Modalità scura";
+      b.setAttribute("aria-label", b.title);
+    });
+  }
+
+  applicaTema(radice.dataset.tema === "scuro");
+
+  // Sul telefono la barra delle pagine scorre di lato: si porta in vista la pagina aperta.
+  var paginaAperta = document.querySelector(".nav [aria-current]");
+  if (paginaAperta && paginaAperta.scrollIntoView) {
+    var barra = paginaAperta.parentElement;
+    if (barra.scrollWidth > barra.clientWidth) {
+      barra.scrollLeft = paginaAperta.offsetLeft - (barra.clientWidth - paginaAperta.offsetWidth) / 2;
+    }
+  }
+  document.querySelectorAll("[data-cambia-tema]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var scuro = radice.dataset.tema !== "scuro";
+      try { localStorage.setItem("tema", scuro ? "scuro" : "chiaro"); } catch (e) { /* resta solo per questa pagina */ }
+      applicaTema(scuro);
+    });
+  });
+  if (sistemaScuro.addEventListener) {
+    sistemaScuro.addEventListener("change", function (evento) {
+      if (!temaScelto()) applicaTema(evento.matches);
+    });
+  }
+
   // Ogni modulo POST si può inviare una sola volta (doppio tocco sul telefono).
   document.querySelectorAll("form[method=post]").forEach(function (form) {
     form.addEventListener("submit", function (evento) {
@@ -159,6 +203,86 @@
       gruppo.querySelectorAll("input[type=checkbox]").forEach(function (c) { c.checked = valore; });
     });
   });
+
+  // Foto dei prodotti: anteprima e, se il browser ci riesce, foto rimpicciolita prima
+  // dell'invio (dal telefono arrivano anche 10 MB: col Wi-Fi della sagra ci si mette troppo).
+  // Se qualcosa non va si manda la foto originale: la rimpicciolisce comunque il server.
+  var LATO_MASSIMO = 1600;
+  document.querySelectorAll("input[type=file][data-foto]").forEach(function (campo) {
+    var anteprima = campo.closest("form").querySelector("[data-anteprima]");
+    var lavoro = 0;
+
+    function mostra(file) {
+      if (!anteprima) return;
+      var img = document.createElement("img");
+      img.alt = "Foto scelta";
+      img.src = URL.createObjectURL(file);
+      img.onerror = function () { anteprima.textContent = "📷"; };
+      anteprima.replaceChildren(img);
+    }
+
+    function rimpicciolisci(file) {
+      if (!window.createImageBitmap || !window.DataTransfer || !HTMLCanvasElement.prototype.toBlob) {
+        return Promise.resolve(null);
+      }
+      return createImageBitmap(file, { imageOrientation: "from-image" }).then(function (bitmap) {
+        var scala = Math.min(1, LATO_MASSIMO / Math.max(bitmap.width, bitmap.height));
+        var tela = document.createElement("canvas");
+        tela.width = Math.round(bitmap.width * scala);
+        tela.height = Math.round(bitmap.height * scala);
+        var ctx = tela.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, tela.width, tela.height);
+        ctx.drawImage(bitmap, 0, 0, tela.width, tela.height);
+        if (bitmap.close) bitmap.close();
+        return new Promise(function (risolvi) { tela.toBlob(risolvi, "image/jpeg", 0.85); });
+      });
+    }
+
+    campo.addEventListener("change", function () {
+      var file = campo.files && campo.files[0];
+      if (!file || file.type.indexOf("image/") !== 0) return;
+      var mio = ++lavoro;
+      mostra(file);
+      if (file.size < 1.5 * 1024 * 1024) return;
+      var pulsanti = campo.form.querySelectorAll("button[type=submit]");
+      pulsanti.forEach(function (b) { b.disabled = true; });
+      rimpicciolisci(file).then(function (blob) {
+        if (mio !== lavoro || !blob || blob.size >= file.size) return;
+        var nome = file.name.replace(/\.[^.]*$/, "") + ".jpg";
+        var scatola = new DataTransfer();
+        scatola.items.add(new File([blob], nome, { type: "image/jpeg" }));
+        campo.files = scatola.files;
+      }).catch(function () { /* resta l'originale */ }).then(function () {
+        if (mio === lavoro) pulsanti.forEach(function (b) { b.disabled = false; });
+      });
+    });
+  });
+
+  // Pulsanti «Copia» (chiavi e comandi per collegare Claude).
+  document.querySelectorAll("[data-copia]").forEach(function (pulsante) {
+    pulsante.addEventListener("click", function () {
+      var testo = pulsante.parentNode.querySelector("[data-testo-copia]").textContent;
+      var fatto = function () {
+        pulsante.textContent = "Copiato";
+        setTimeout(function () { pulsante.textContent = "Copia"; }, 2000);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(testo).then(fatto, function () { seleziona(pulsante); });
+      } else {
+        seleziona(pulsante);
+      }
+    });
+  });
+  // Senza HTTPS il browser non lascia copiare: si seleziona il testo, poi Ctrl+C.
+  function seleziona(pulsante) {
+    var r = document.createRange();
+    r.selectNodeContents(pulsante.parentNode.querySelector("[data-testo-copia]"));
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    pulsante.textContent = "Selezionato: Ctrl+C";
+  }
 
   var errori = document.getElementById("errori");
   if (errori) errori.focus();

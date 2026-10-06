@@ -7,6 +7,7 @@ mostrare nel browser, e una ristampa esce identica.
 Ogni riga è un dizionario con lo stile "s" e i suoi dati:
 
     {"s": "titolo", "t": "CUCINA"}                    grande e centrato
+    {"s": "evidenza", "t": "ASPORTO"}                 grande, bianco su nero, su tutta la riga
     {"s": "grande", "t": "N. 57  TAV. 12"}            grande, a sinistra
     {"s": "testo", "t": "…", "b": true}               normale (b = grassetto)
     {"s": "centro", "t": "…"}                         centrato
@@ -81,13 +82,19 @@ def _voci(righe, *, prezzi=False, alta=False):
     return contenuto
 
 
+ASPORTO = {"s": "evidenza", "t": "ASPORTO"}
+
+
 def contenuto_comanda(ordine, reparto, righe, imp, *, copia=False):
     titolo = Reparto(reparto).label.upper()
     contenuto = [
         {"s": "centro", "t": _intestazione(imp)},
         {"s": "titolo", "t": f"COPIA {titolo}" if copia else titolo},
-        {"s": "grande", "t": _numero_tavolo(ordine)},
     ]
+    # Da asporto: si vede subito, in alto e in fondo (la comanda si piega o si infilza).
+    if ordine.asporto:
+        contenuto.append(ASPORTO)
+    contenuto.append({"s": "grande", "t": _numero_tavolo(ordine)})
     if ordine.nome:
         contenuto.append({"s": "testo", "t": ordine.nome, "b": True})
     dettagli = [_quando(ordine.creato_il)]
@@ -100,6 +107,8 @@ def contenuto_comanda(ordine, reparto, righe, imp, *, copia=False):
     contenuto.append({"s": "linea"})
     if ordine.note:
         contenuto.append({"s": "testo", "t": f"NOTE: {ordine.note}", "b": True})
+    if ordine.asporto:
+        contenuto.append({"s": "evidenza", "t": "DA PORTARE VIA"})
     return contenuto
 
 
@@ -110,6 +119,8 @@ def contenuto_ricevuta(ordine, righe, imp, *, copia=False):
         {"s": "vuota"},
         {"s": "grande", "t": _numero_tavolo(ordine)},
     ]
+    if ordine.asporto:
+        contenuto.append({"s": "centro", "t": "DA ASPORTO", "b": True})
     if ordine.nome:
         contenuto.append({"s": "testo", "t": ordine.nome, "b": True})
     contenuto += [{"s": "testo", "t": _quando(ordine.creato_il)}, {"s": "linea"}]
@@ -128,6 +139,7 @@ def contenuto_annullo(ordine, reparto, righe, imp):
     contenuto = [
         {"s": "centro", "t": _intestazione(imp)},
         {"s": "titolo", "t": "ANNULLATO"},
+        *([ASPORTO] if ordine.asporto else []),
         {"s": "grande", "t": _numero_tavolo(ordine)},
     ]
     if ordine.nome:
@@ -292,7 +304,8 @@ def _spezza(testo, larghezza):
 def impagina(contenuto, colonne=42, accenti=True):
     """[(stile, allineamento, testo)] riga per riga.
 
-    stile: insieme di "b" (grassetto), "alto" (altezza doppia), "largo" (larghezza doppia).
+    stile: insieme di "b" (grassetto), "alto" (altezza doppia), "largo" (larghezza doppia),
+    "inverso" (bianco su nero).
     allineamento: "sx" o "centro". Il testo è già tagliato alla larghezza della riga.
     """
     righe = []
@@ -304,6 +317,9 @@ def impagina(contenuto, colonne=42, accenti=True):
             righe += [({"b", "alto", "largo"}, "centro", r) for r in _spezza(t, colonne // 2)]
         elif s == "grande":
             righe += [({"b", "alto", "largo"}, "sx", r) for r in _spezza(t, colonne // 2)]
+        elif s == "evidenza":
+            # La fascia nera va da un bordo all'altro: il testo è centrato con gli spazi.
+            righe += [({"b", "alto", "largo", "inverso"}, "sx", r.center(colonne // 2)) for r in _spezza(t, colonne // 2)]
         elif s == "centro":
             righe += [(grassetto, "centro", r) for r in _spezza(t, colonne)]
         elif s == "testo":
@@ -351,8 +367,10 @@ def escpos(contenuto, *, colonne=42, accenti=True):
         modo = (0x08 if "b" in stile else 0) | (0x10 if "alto" in stile else 0) | (0x20 if "largo" in stile else 0)
         dati += ESC + b"a" + bytes([1 if allineamento == "centro" else 0])
         dati += ESC + b"!" + bytes([modo])
+        # GS B: stampa in negativo (bianco su nero).
+        dati += GS + b"B" + bytes([1 if "inverso" in stile else 0])
         dati += testo.encode("cp858" if accenti else "ascii", "replace") + b"\n"
-    dati += ESC + b"!\x00" + ESC + b"a\x00"
+    dati += ESC + b"!\x00" + ESC + b"a\x00" + GS + b"B\x00"
     # Avanza la carta oltre la taglierina e taglia.
     dati += ESC + b"d\x04" + GS + b"V" + bytes([66, 0])
     return bytes(dati)

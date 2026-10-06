@@ -1,0 +1,14 @@
+{# Il peso di fine serata di un fusto attaccato (s: StatoFusto), con i litri calcolati al volo da bar.js. Con «tutti» è una riga della pesata di tutti i fusti. #}
+{% load magazzino_tags %}
+<div class="campo-peso" data-pesata data-prima="{{ s.prima_di_stasera|default_if_none:''|stringformat:'s' }}" data-tara="{{ s.tara|default_if_none:''|stringformat:'s' }}"
+     data-densita="{{ s.densita|stringformat:'s' }}" data-capienza="{{ s.tipo.litri|stringformat:'s' }}"
+     data-da-pieno="{% if s.pesato_prima %}0{% else %}1{% endif %}" data-provvisori="{% if s.dati_provvisori %}1{% else %}0{% endif %}">
+  <label for="peso-{% if tutti %}t{% endif %}{{ s.fusto.pk }}">{{ etichetta }}{% if s.pesata_stasera %} <span class="tenue piccolo">(pesato alle {{ s.pesata_stasera.registrata_il|time:"H:i" }}: per correggere scrivi quello giusto)</span>{% endif %}</label>
+  <div class="campo-kg">
+    <input id="peso-{% if tutti %}t{% endif %}{{ s.fusto.pk }}" name="{% if tutti %}peso_{{ s.fusto.pk }}{% else %}peso{% endif %}" type="text" inputmode="decimal" autocomplete="off"
+           enterkeyhint="{% if tutti %}next{% else %}done{% endif %}" placeholder="kg" value="{% if s.pesata_stasera %}{{ s.pesata_stasera.peso|num }}{% endif %}" data-peso>
+    <span class="unita">kg</span>
+    {% if s.pesato_prima %}<button type="button" class="pulsante secondario piccolo" data-stesso-peso="{{ s.prima_di_stasera|num }}">Non usato: {{ s.prima_di_stasera|num }} kg</button>{% endif %}
+  </div>
+  <p class="finestra-anteprima" data-anteprima-peso aria-live="polite"></p>
+</div>

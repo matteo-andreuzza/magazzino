@@ -1,7 +1,11 @@
 {% extends "cassa/base.html" %}
 {% load static cassa_tags %}
-{% block titolo %}{% if bar %}Cassa bar{% else %}Cassa{% endif %}{% endblock %}
-{% block classe_pagina %}pagina-pos{% endblock %}
+{% block titolo %}{% if bar %}Cassa BAR{% else %}Cassa ingresso{% endif %}{% endblock %}
+{% block icona %}{% if bar %}<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23f4b223%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27%233d2600%27 font-family=%27Arial%27 font-weight=%27bold%27%3EB%3C/text%3E%3C/svg%3E">{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block sezione %}{% if bar %}bar{% else %}cassa{% endif %}{% endblock %}
+{% block sezione_cassa %}{% if not bar %} aria-current="true"{% endif %}{% endblock %}
+{% block sezione_bar %}{% if bar %} aria-current="true"{% endif %}{% endblock %}
+{% block classe_pagina %}pagina-pos {% if bar %}pos-bar{% else %}pos-ingresso{% endif %}{% endblock %}
 {% block classe_contenuto %} contenuto-pos{% endblock %}
 {% block testa_cassa %}<script src="{% static 'cassa/pos.js' %}" defer></script>{% endblock %}
 {% block nav %}{% endblock %}
@@ -9,14 +13,24 @@
   {{ dati|json_script:"pos-dati" }}
   <div class="pos-barra">
     <div class="pos-titolo">
-      <strong>{% if bar %}Cassa bar{% else %}Cassa{% endif %}</strong>
-      <span class="tenue">{{ servizio }}</span>
+      <span class="pos-postazione">
+        {% if bar %}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4h11v3h2.5A2.5 2.5 0 0 1 21 9.5v5a2.5 2.5 0 0 1-2.5 2.5H16v2a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4zm11 5v6h2.5a.5.5 0 0 0 .5-.5v-5a.5.5 0 0 0-.5-.5H16zM7.5 8v9h1.6V8H7.5zm3.6 0v9h1.6V8h-1.6z"/></svg>
+          Cassa BAR
+        {% else %}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 2h1.6v6.5a1.6 1.6 0 0 0 1.4 1.6V2h1.6v8.1A1.6 1.6 0 0 0 13 8.5V2h1.6v6.5a3.3 3.3 0 0 1-2.6 3.2V22H10V11.7a3.3 3.3 0 0 1-3-3.2V2zm10 0c1.7 0 3 2.3 3 6v4h-1.5v10h-2V2h.5z"/></svg>
+          Cassa ingresso
+        {% endif %}
+      </span>
+      <span class="pos-sottotitolo">{% if bar %}Solo bevande · si paga qui al bar{% else %}Cibo e bevande · comande in cucina{% endif %} · {{ servizio }}</span>
     </div>
-    <div class="pos-link">
-      <a href="{% url 'cassa:ordini' servizio.pk %}">Ordini</a>
+    <nav class="pos-link" aria-label="Pagine della serata">
+      <a href="{% url 'cassa:ordini' servizio.pk %}{% if bar %}?postazione=bar{% endif %}">Ordini{% if bar %} del bar{% endif %}</a>
       <a href="{% url 'cassa:report' servizio.pk %}">Report</a>
-      <a href="{% url 'cassa:inizio' %}">Esci</a>
-    </div>
+      {# Chiudere la cassa la chiude per tutti (anche all'ingresso): si fa solo dalla cassa dell'ingresso. #}
+      {% if not bloccata and not bar %}<a class="pulsante secondario piccolo" href="{% url 'cassa:chiudi' servizio.pk %}">Chiudi cassa</a>{% endif %}
+      <a href="{% if bar %}{% url 'bar:inizio' %}{% else %}{% url 'cassa:inizio' %}{% endif %}">← Esci</a>
+    </nav>
   </div>
 
   <div class="box-errori pos-avviso-stampa" data-avviso-stampa hidden role="alert"></div>
@@ -26,41 +40,56 @@
   </div>
   <div class="box-avviso" data-avviso role="status" hidden></div>
   {% if servizio.chiuso %}
-    <div class="box-errori" role="alert">
-      <strong>{{ servizio.get_tipo_display }} terminat{{ servizio.desinenza }}:</strong> non si possono registrare ordini.
-      Per riaprirl{{ servizio.desinenza }} vai al <a href="{% url 'servizio_dettaglio' servizio.pk %}">magazzino</a>.
+    <div class="box-errori pos-chiusa" role="alert">
+      <span><strong>{{ servizio.get_tipo_display }} terminat{{ servizio.desinenza }}:</strong> non si possono registrare ordini.
+      Per riaprirl{{ servizio.desinenza }} vai al <a href="{% url 'servizio_dettaglio' servizio.pk %}">magazzino</a>.</span>
+    </div>
+  {% elif servizio.cassa_chiusa %}
+    <div class="box-errori pos-chiusa" role="alert">
+      <span><strong>Cassa chiusa</strong> alle {{ servizio.cassa_chiusa_il|time:"H:i" }}{% if servizio.cassa_chiusa_da %} da {{ servizio.cassa_chiusa_da.get_username }}{% endif %}: non si registrano ordini{% if bar %} (la cassa si riapre da quella dell'ingresso){% endif %}.</span>
+      <span class="azioni">
+        <a class="pulsante piccolo" href="{% url 'cassa:report' servizio.pk %}">Riepilogo della serata</a>
+        {% if not bar %}<form method="post" action="{% url 'cassa:riapri' servizio.pk %}">{% csrf_token %}<button type="submit" class="pulsante secondario piccolo">Riapri la cassa</button></form>{% endif %}
+      </span>
     </div>
   {% endif %}
   {% if senza_prezzo %}
-    <p class="piccolo tenue">{{ senza_prezzo }} articol{{ senza_prezzo|pluralize:"o,i" }} senza prezzo non compa{{ senza_prezzo|pluralize:"re,iono" }}: <a href="{% url 'cassa:listino' %}">listino</a>.</p>
+    <p class="piccolo tenue pos-senza-prezzo">{{ senza_prezzo }} articol{{ senza_prezzo|pluralize:"o,i" }} senza prezzo non compa{{ senza_prezzo|pluralize:"re,iono" }}: <a href="{% url 'cassa:listino' %}">listino</a>.</p>
   {% endif %}
 
-  <form class="pos{% if servizio.chiuso %} pos-bloccata{% endif %}" data-pos autocomplete="off" novalidate>
+  <section class="pos-ultimi" aria-label="Ultimi ordini">
+    <span class="pos-ultimi-titolo">Ultimi{% if bar %} al bar{% endif %}:</span>
+    <ol class="pos-ultimi-elenco" data-ultimi><li class="tenue">nessun ordine</li></ol>
+  </section>
+
+  <form class="pos{% if bloccata %} pos-bloccata{% endif %}" data-pos autocomplete="off" novalidate>
     {% csrf_token %}
     <section class="pos-listino" aria-label="Articoli">
       <div class="pos-strumenti">
         <input type="search" data-cerca placeholder="Cerca articolo (F2)" aria-label="Cerca articolo" enterkeyhint="done">
+        <button type="button" class="pulsante secondario piccolo" data-modo-esauriti aria-pressed="false">Segna esauriti</button>
         {% if categorie|length > 1 %}
           <div class="chips" data-categorie>
             <button type="button" class="chip attivo" data-categoria="">Tutti</button>
-            {% for c in categorie %}<button type="button" class="chip" data-categoria="{{ c.pk }}">{{ c.nome }}</button>{% endfor %}
+            {% for c in categorie %}<button type="button" class="chip colore-{{ c.colore }}" data-categoria="{{ c.pk }}"><span class="pallino" aria-hidden="true"></span>{{ c.nome }}</button>{% endfor %}
           </div>
         {% endif %}
-        <button type="button" class="pulsante secondario piccolo" data-modo-esauriti aria-pressed="false">Segna esauriti</button>
       </div>
       <p class="box-avviso piccolo" data-avviso-esauriti hidden>
         Tocca un articolo per segnarlo <strong>esaurito</strong> o di nuovo disponibile.
         <button type="button" class="pulsante piccolo" data-modo-esauriti-fine>Fatto</button>
       </p>
+      {# Tutti gli articoli scorrono in un'unica griglia (la categoria si vede dal colore): ne stanno di più in una schermata. #}
+      <div class="pos-articoli">
       {% regroup articoli by categoria as gruppi %}
       {% for g in gruppi %}
         <div class="pos-gruppo" data-gruppo="{{ g.grouper.pk }}">
-          <h2 class="gruppo-titolo">{{ g.grouper.nome }}</h2>
+          <h2 class="gruppo-titolo visually-hidden">{{ g.grouper.nome }}</h2>
           <div class="pos-griglia">
             {% for a in g.list %}
               <button type="button" class="pos-articolo colore-{{ a.categoria.colore }}{% if a.esaurito %} esaurito{% endif %}" data-articolo="{{ a.pk }}" data-nome="{{ a.nome }}">
-                <span class="pos-articolo-nome">{{ a.nome }}</span>
                 <span class="pos-articolo-prezzo">{{ a.prezzo|euro }}</span>
+                <span class="pos-articolo-nome">{{ a.nome }}</span>
                 <span class="pos-articolo-conteggio" data-conteggio hidden></span>
                 <span class="pos-articolo-esaurito">Esaurito</span>
               </button>
@@ -74,6 +103,7 @@
           {% if user.is_staff %}<p><a class="pulsante secondario" href="{% url 'cassa:listino' %}">Vai al listino</a></p>{% endif %}
         </div>
       {% endfor %}
+      </div>
       <p class="tenue piccolo" data-nessun-risultato hidden>Nessun articolo trovato.</p>
     </section>
 
@@ -82,15 +112,20 @@
         <label class="pos-campo pos-campo-nome">Nome{% if not bar %} *{% endif %}
           <input type="text" data-campo="nome" maxlength="40" autocapitalize="words" enterkeyhint="next" spellcheck="false">
         </label>
-        <label class="pos-campo pos-campo-tavolo">Tavolo{% if not bar %} *{% endif %}
+        <label class="pos-campo pos-campo-tavolo">Tavolo{% if not bar %}<span class="pos-obbligatorio"> *</span>{% endif %}
           <input type="text" data-campo="tavolo" maxlength="10" enterkeyhint="next">
         </label>
         {% if not bar %}
           <label class="pos-campo pos-campo-coperti">Coperti
             <input type="text" data-campo="coperti" maxlength="3" inputmode="numeric" pattern="[0-9]*" enterkeyhint="next">
           </label>
+          <button type="button" class="pos-asporto" data-asporto aria-pressed="false" title="Ordine da portare via: tavolo {{ dati.asporto.tavolo }}, la comanda lo dice in grande">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 7V6a5 5 0 0 1 10 0v1h2.2a1 1 0 0 1 1 .9l1.2 12a1 1 0 0 1-1 1.1H3.6a1 1 0 0 1-1-1.1l1.2-12a1 1 0 0 1 1-.9H7zm2 0h6V6a3 3 0 0 0-6 0v1zm-2 3v1.5a1 1 0 1 0 2 0V10H7zm8 0v1.5a1 1 0 1 0 2 0V10h-2z"/></svg>
+            <span>Asporto</span>
+          </button>
         {% endif %}
       </div>
+      {% if not bar %}<p class="pos-banner-asporto" data-banner-asporto hidden>Da asporto · tavolo {{ dati.asporto.tavolo }}</p>{% endif %}
 
       <div class="pos-carrello">
         <div class="pos-esito" data-esito hidden role="status" tabindex="-1"></div>
@@ -98,45 +133,41 @@
         <p class="pos-vuoto tenue" data-vuoto>Tocca gli articoli per aggiungerli all'ordine.</p>
       </div>
 
-      <label class="pos-campo pos-campo-note">Note per la cucina
-        <input type="text" data-campo="note" maxlength="200" enterkeyhint="done">
-      </label>
+      <div class="pos-chiusura">
+        <input type="text" class="pos-note" data-campo="note" maxlength="200" enterkeyhint="done" placeholder="{% if bar %}Note…{% else %}Note per la cucina…{% endif %}" aria-label="{% if bar %}Note{% else %}Note per la cucina{% endif %}">
 
-      <div class="pos-totale"><span>Totale</span><strong data-totale>0,00 €</strong></div>
+        <div class="pos-totale"><span>Totale</span><strong data-totale>0,00 €</strong></div>
 
-      <fieldset class="pos-pagamento">
-        <legend class="visually-hidden">Pagamento</legend>
-        {% for valore, etichetta in pagamenti %}
-          <label class="pos-pagamento-{{ valore }}"><input type="radio" name="pagamento" value="{{ valore }}" data-pagamento> {{ etichetta }}</label>
-        {% endfor %}
-      </fieldset>
+        <fieldset class="pos-pagamento">
+          <legend class="visually-hidden">Pagamento</legend>
+          {% for valore, etichetta in pagamenti %}
+            <label class="pos-pagamento-{{ valore }}"><input type="radio" name="pagamento" value="{{ valore }}" data-pagamento> {% if valore == "carta" %}Carta{% elif valore == "omaggio" %}Omaggio{% else %}{{ etichetta }}{% endif %}</label>
+          {% endfor %}
+        </fieldset>
 
-      <div class="pos-resto" data-resto hidden>
-        <label class="pos-campo">Ricevuti
-          <input type="text" inputmode="decimal" data-campo="ricevuti" placeholder="0,00">
-        </label>
-        <div class="pos-banconote">
-          <button type="button" class="chip" data-banconota="esatto">Esatto</button>
-          <button type="button" class="chip" data-banconota="500">5 €</button>
-          <button type="button" class="chip" data-banconota="1000">10 €</button>
-          <button type="button" class="chip" data-banconota="2000">20 €</button>
-          <button type="button" class="chip" data-banconota="5000">50 €</button>
-          <button type="button" class="chip" data-banconota="10000">100 €</button>
+        <div class="pos-resto" data-resto hidden>
+          <label class="pos-campo pos-ricevuti">Ricevuti
+            <input type="text" inputmode="decimal" data-campo="ricevuti" placeholder="0,00">
+          </label>
+          <div class="pos-resto-valore">Resto <strong data-resto-valore>—</strong></div>
+          <div class="pos-banconote">
+            <button type="button" class="chip" data-banconota="esatto">Esatto</button>
+            <button type="button" class="chip" data-banconota="500">5 €</button>
+            <button type="button" class="chip" data-banconota="1000">10 €</button>
+            <button type="button" class="chip" data-banconota="2000">20 €</button>
+            <button type="button" class="chip" data-banconota="5000">50 €</button>
+            <button type="button" class="chip" data-banconota="10000">100 €</button>
+          </div>
         </div>
-        <div class="pos-resto-valore">Resto <strong data-resto-valore>—</strong></div>
-      </div>
+        <p class="pos-omaggio tenue piccolo" data-nota-omaggio hidden>Omaggio: niente incasso. Se mancano nome e tavolo diventa «{{ dati.omaggio.nome }}», tavolo {{ dati.omaggio.tavolo }}.</p>
 
-      <p class="pos-mancante" data-mancante></p>
-      <button type="button" class="pulsante pos-conferma" data-conferma disabled>Conferma e stampa</button>
-      <button type="button" class="link pos-svuota" data-svuota>Svuota ordine</button>
+        <p class="pos-mancante" data-mancante></p>
+        <button type="button" class="pulsante pos-conferma" data-conferma disabled>Conferma e stampa</button>
+        <button type="button" class="link pos-svuota" data-svuota>Svuota ordine</button>
+      </div>
     </aside>
 
     <a class="pos-riassunto" href="#ordine" data-riassunto hidden></a>
   </form>
-
-  <section class="pos-ultimi" aria-label="Ultimi ordini">
-    <h2>Ultimi ordini{% if bar %} al bar{% endif %}</h2>
-    <ol class="pos-ultimi-elenco" data-ultimi><li class="tenue">Nessun ordine.</li></ol>
-  </section>
   <iframe class="pos-iframe-stampa" data-iframe-stampa title="Stampa delle comande" tabindex="-1" aria-hidden="true"></iframe>
 {% endblock %}

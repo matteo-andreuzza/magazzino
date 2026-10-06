@@ -8,6 +8,9 @@
   {% elif ha_ordini %}
     <div class="box-errori">Non si può eliminare: in questo servizio ci sono ordini registrati in cassa.</div>
     <a class="pulsante secondario" href="{% url 'servizio_dettaglio' servizio.pk %}">Torna al servizio</a>
+  {% elif ha_fusti %}
+    <div class="box-errori">Non si può eliminare: in questo servizio ci sono i fusti del bar registrati. Annullali prima dalla pagina dei fusti («Rifai da capo la serata»).</div>
+    <a class="pulsante secondario" href="{% url 'bar:conta_fusti' servizio.pk %}">Vai ai fusti</a>
   {% else %}
     <form method="post" class="azioni">
       {% csrf_token %}

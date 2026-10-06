@@ -15,11 +15,15 @@
     {% include "magazzino/_campo.html" with campo=form.prezzo %}
     {% include "magazzino/_campo.html" with campo=form.attivo %}
     {% include "magazzino/_campo.html" with campo=form.esaurito %}
-    <details class="campo"{% if form.piatto.errors or form.prodotto.errors or form.quantita_prodotto.errors or form.instance.piatto_id or form.instance.prodotto_id %} open{% endif %}>
-      <summary><strong>Collegamento con il magazzino</strong> <span class="tenue piccolo">(facoltativo)</span></summary>
+    <fieldset class="scheda collegamento-bar" data-collegamento-bar>
+      <legend><strong>Magazzino del bar</strong> <span class="tenue piccolo">(per le bevande)</span></legend>
+      <p class="tenue piccolo">Ogni pezzo venduto toglie la bevanda dal magazzino del bar: 1 lattina, oppure i litri di birra o vino.</p>
+      {% include "magazzino/_campo.html" with campo=form.bevanda %}
+      {% include "magazzino/_campo.html" with campo=form.quantita_bevanda %}
+    </fieldset>
+    <details class="campo"{% if form.piatto.errors or form.instance.piatto_id %} open{% endif %}>
+      <summary><strong>Piatto del menu</strong> <span class="tenue piccolo">(facoltativo, per la cucina)</span></summary>
       {% include "magazzino/_campo.html" with campo=form.piatto %}
-      {% include "magazzino/_campo.html" with campo=form.prodotto %}
-      {% include "magazzino/_campo.html" with campo=form.quantita_prodotto %}
     </details>
     {% include "magazzino/_campo.html" with campo=form.ordine %}
     {% include "magazzino/_campo.html" with campo=form.note %}

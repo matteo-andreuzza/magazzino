@@ -2,7 +2,7 @@
 
 Gira sullo stesso database del magazzino: gli ordini appartengono alle stesse
 serate (Servizio), gli articoli del listino possono richiamare i piatti del
-menu e i prodotti del magazzino.
+menu e le bevande del magazzino del bar (che si scaricano da sole vendendole).
 """
 
 import secrets
@@ -17,7 +17,8 @@ from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import formats, timezone
 
-from magazzino.models import Piatto, Prodotto, Servizio, Ubicazione
+from bar.models import Bevanda
+from magazzino.models import Piatto, Servizio
 
 
 class Reparto(models.TextChoices):
@@ -78,16 +79,15 @@ class Articolo(models.Model):
         help_text="Facoltativo. Se la serata ha i suoi piatti, in cassa compare solo quando il piatto è servito; "
         "nelle statistiche serve a calcolare il consumo degli ingredienti per porzione.",
     )
-    prodotto = models.ForeignKey(
-        Prodotto, on_delete=models.SET_NULL, null=True, blank=True, related_name="articoli_cassa",
-        verbose_name="prodotto del magazzino",
-        help_text="Solo per ciò che esce dal magazzino così com'è, come le bevande: serve per scaricare il venduto. "
-        "Non collegare la merce che la cucina prende con «Metti a cucinare».",
+    bevanda = models.ForeignKey(
+        Bevanda, on_delete=models.SET_NULL, null=True, blank=True, related_name="articoli",
+        verbose_name="bevanda del magazzino bar",
+        help_text="Lascia vuoto per il cibo e per ciò che non si conta (caffè, liquori…).",
     )
-    quantita_prodotto = models.DecimalField(
-        "quantità per pezzo venduto", max_digits=12, decimal_places=3, default=Decimal("1"),
+    quantita_bevanda = models.DecimalField(
+        "quantità per pezzo venduto", max_digits=8, decimal_places=3, default=Decimal("1"),
         validators=[MinValueValidator(Decimal("0.001"))],
-        help_text="Quanto prodotto esce dal magazzino per ogni pezzo venduto (es. 1 lattina, 0,25 l).",
+        help_text="Es. 1 lattina; per birra e vino i litri: 0,33 il bicchiere, 1,5 la caraffa grande.",
     )
     ordine = models.PositiveIntegerField(default=0, help_text="Ordine dentro la categoria.")
     attivo = models.BooleanField(default=True, help_text="Gli articoli non attivi non compaiono in cassa.")
@@ -133,6 +133,8 @@ class Ordine(models.Model):
     postazione = models.CharField(max_length=10, choices=Postazione.choices, default=Postazione.INGRESSO)
     nome = models.CharField(max_length=40, blank=True)
     tavolo = models.CharField(max_length=10, blank=True)
+    # Da portare via: niente tavolo (si scrive «ASP») né coperti, e la comanda lo dice in grande.
+    asporto = models.BooleanField(default=False)
     coperti = models.PositiveSmallIntegerField(null=True, blank=True, validators=[MaxValueValidator(500)])
     note = models.CharField(max_length=200, blank=True)
     pagamento = models.CharField(max_length=10, choices=Pagamento.choices)
@@ -184,6 +186,10 @@ class RigaOrdine(models.Model):
     prezzo = models.DecimalField("prezzo unitario", max_digits=7, decimal_places=2)
     quantita = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(999)])
     note = models.CharField(max_length=60, blank=True)
+    # Anche la bevanda del bar e quanta ne esce per pezzo sono copiate: il venduto
+    # del magazzino bar non cambia se poi si modifica l'articolo.
+    bevanda = models.ForeignKey(Bevanda, on_delete=models.PROTECT, null=True, blank=True, related_name="righe_vendute")
+    quantita_bevanda = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
 
     class Meta:
         ordering = ["pk"]
@@ -389,10 +395,6 @@ class ImpostazioniCassa(models.Model):
         "cassa al bar", default=False,
         help_text="Al bar si può pagare direttamente, solo per gli articoli del bar, senza passare dalla cassa all'ingresso.",
     )
-    scarico_magazzino = models.BooleanField(
-        "scarico dal magazzino", default=False,
-        help_text="Per gli articoli collegati a un prodotto (es. bevande) propone di scaricare dal magazzino quanto venduto.",
-    )
 
     # Stampa
     intestazione = models.CharField(
@@ -424,11 +426,6 @@ class ImpostazioniCassa(models.Model):
     stampa_comande_cassa_bar = models.BooleanField(
         "stampa le comande della cassa al bar", default=False,
         help_text="Di solito non serve: chi paga al bar viene servito subito.",
-    )
-    ubicazione_scarico = models.ForeignKey(
-        Ubicazione, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
-        verbose_name="scarica prima da",
-        help_text="Per lo scarico del venduto: da dove proporre di togliere per primo (es. Frigo bar).",
     )
     token_agente = models.CharField(max_length=64, default=genera_token, editable=False)
     modificate_il = models.DateTimeField(auto_now=True)

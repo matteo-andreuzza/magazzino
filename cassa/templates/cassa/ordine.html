@@ -1,8 +1,17 @@
 {% extends "cassa/base.html" %}
+{% block sezione %}{% if bar %}bar{% else %}cassa{% endif %}{% endblock %}
+{% block sezione_cassa %}{% if not bar %} aria-current="true"{% endif %}{% endblock %}
+{% block sezione_bar %}{% if bar %} aria-current="true"{% endif %}{% endblock %}
+{% block classe_pagina %}{% if bar %}pos-bar{% endif %}{% endblock %}
+{% block nav %}{% if bar %}{% include "bar/_nav.html" %}{% else %}{{ block.super }}{% endif %}{% endblock %}
 {% load cassa_tags %}
 {% block titolo %}Ordine n. {{ ordine.numero }}{% endblock %}
 {% block contenuto %}
-  {% include "cassa/_serata_nav.html" with servizio=ordine.servizio attiva="ordini" %}
+  {% if bar %}
+    <p class="tenue piccolo"><a href="{% url 'bar:inizio' %}">Bar</a> · <a href="{% url 'cassa:ordini' ordine.servizio_id %}?postazione=bar">Ordini della cassa bar</a> · {{ ordine.servizio }}</p>
+  {% else %}
+    {% include "cassa/_serata_nav.html" with servizio=ordine.servizio attiva="ordini" %}
+  {% endif %}
   <h1>Ordine n. {{ ordine.numero }}{% if ordine.annullato %} <span class="etichetta pericolo">annullato</span>{% endif %}</h1>
   <p class="tenue">
     {{ ordine.creato_il|date:"l j F, H:i"|capfirst }} · {{ ordine.get_postazione_display }}{% if ordine.utente %} · {{ ordine.utente.get_username }}{% endif %}
@@ -17,7 +26,7 @@
 
   <div class="scheda">
     <dl class="dati">
-      {% if ordine.tavolo %}<div><dt>Tavolo</dt><dd>{{ ordine.tavolo }}</dd></div>{% endif %}
+      {% if ordine.asporto %}<div><dt>Tavolo</dt><dd><span class="etichetta-asporto">Asporto</span> ({{ ordine.tavolo }})</dd></div>{% elif ordine.tavolo %}<div><dt>Tavolo</dt><dd>{{ ordine.tavolo }}</dd></div>{% endif %}
       {% if ordine.nome %}<div><dt>Nome</dt><dd>{{ ordine.nome }}</dd></div>{% endif %}
       {% if ordine.coperti %}<div><dt>Coperti</dt><dd>{{ ordine.coperti }}</dd></div>{% endif %}
       <div><dt>Pagamento</dt><dd>{{ ordine.get_pagamento_display }}</dd></div>
@@ -99,9 +108,14 @@
     <p class="piccolo tenue">Se le stampanti non funzionano: <a href="{% url 'cassa:ordine_biglietti' ordine.pk %}?auto=1">stampa tutto con la stampante di questo computer</a>.</p>
 
     <h2>Correzioni</h2>
+    {% if ordine.servizio.cassa_chiusa and not ordine.servizio.chiuso %}
+      <p class="tenue">La cassa è chiusa: per annullare o correggere un ordine riaprila.</p>
+    {% endif %}
     <div class="azioni">
-      {% if not ordine.servizio.chiuso %}
+      {% if not ordine.servizio.chiuso and not ordine.servizio.cassa_chiusa %}
         <a class="pulsante pericolo" href="{% url 'cassa:ordine_annulla' ordine.pk %}">Annulla o correggi l'ordine</a>
+      {% elif not ordine.servizio.chiuso %}
+        <form method="post" action="{% url 'cassa:riapri' ordine.servizio_id %}">{% csrf_token %}<button type="submit" class="pulsante secondario">Riapri la cassa</button></form>
       {% endif %}
       <a class="pulsante secondario" href="{{ url_cassa }}">Torna alla cassa</a>
     </div>

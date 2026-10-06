@@ -1,0 +1,68 @@
+# L'app. I file caricati (fatture, foto dei prodotti) stanno nel volume «sagra-allegati».
+#
+# Una sola copia (replicas: 1) e strategia Recreate: il volume è ReadWriteOnce e le migrazioni
+# del database partono all'avvio (entrypoint). Per più copie servono un volume ReadWriteMany
+# (o un archivio di oggetti) e le migrazioni in un Job a parte: vedi docs/MANUTENZIONE.md.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sagra-allegati
+  namespace: sagra
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 5Gi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sagra-web
+  namespace: sagra
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: sagra-web}
+  template:
+    metadata:
+      labels: {app: sagra-web}
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: web
+          # L'immagine si costruisce dal Dockerfile e si carica su un registro:
+          #   docker build -t registro.esempio.it/sagra/magazzino:2026.10 . && docker push …
+          image: registro.esempio.it/sagra/magazzino:2026.10
+          envFrom:
+            - configMapRef: {name: sagra-impostazioni}
+            - secretRef: {name: sagra-segreti}
+          ports: [{containerPort: 8000}]
+          startupProbe:
+            httpGet: {path: /salute/, port: 8000}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /salute/, port: 8000}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /salute/, port: 8000}
+            periodSeconds: 30
+            failureThreshold: 4
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 768Mi}
+          volumeMounts:
+            - {name: allegati, mountPath: /app/dati}
+      volumes:
+        - name: allegati
+          persistentVolumeClaim: {claimName: sagra-allegati}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sagra-web
+  namespace: sagra
+spec:
+  selector: {app: sagra-web}
+  ports: [{port: 80, targetPort: 8000}]

@@ -1,0 +1,1 @@
+{% if p.miniatura %}<img class="miniatura" src="{{ p.url_miniatura }}" alt="" width="48" height="48" loading="lazy" decoding="async">{% else %}<span class="miniatura vuota" aria-hidden="true">{{ p.nome|first|upper }}</span>{% endif %}

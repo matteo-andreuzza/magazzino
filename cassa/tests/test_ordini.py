@@ -288,3 +288,33 @@ class ImpostazioniTest(BaseCassa):
         imp.intestazione = "Sagra"
         services.salva_impostazioni(imp)
         self.assertEqual(services.impostazioni().monitor_cucina_dal, acceso)
+
+
+class AsportoTest(BaseCassa):
+    def test_ordine_da_asporto(self):
+        from cassa import stampa
+        from cassa.models import Stampa
+
+        ordine, _ = self.ordina([(self.grigliata, 1)], asporto=True, tavolo="12", coperti=4)
+        self.assertEqual((ordine.asporto, ordine.tavolo, ordine.coperti), (True, "ASP", None))
+        comanda = Stampa.objects.get(ordine=ordine, documento="comanda", reparto="cucina")
+        righe = stampa.impagina(comanda.contenuto, colonne=42)
+        testi = [t.strip() for _, _, t in righe]
+        self.assertIn("ASPORTO", testi)
+        self.assertIn("DA PORTARE VIA", testi)
+        self.assertIn("N. 1  TAV. ASP", testi)
+        # La fascia è in negativo e larga quanto la carta (21 caratteri doppi su 42 colonne).
+        fascia = next(r for r in righe if r[2].strip() == "ASPORTO")
+        self.assertIn("inverso", fascia[0])
+        self.assertEqual(len(fascia[2]), 21)
+        self.assertIn(b"\x1dB\x01", stampa.escpos(comanda.contenuto))
+        # Senza tavolo va bene lo stesso: è da asporto.
+        ordine, _ = self.ordina([(self.grigliata, 1)], asporto=True, tavolo="")
+        self.assertEqual(ordine.tavolo, "ASP")
+
+    def test_alla_cassa_del_bar_niente_asporto(self):
+        from cassa.models import Postazione
+
+        self.imposta(cassa_bar=True)
+        ordine, _ = self.ordina([(self.coca, 1)], postazione=Postazione.BAR, asporto=True, nome="", tavolo="")
+        self.assertFalse(ordine.asporto)

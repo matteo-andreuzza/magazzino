@@ -1,0 +1,35 @@
+{% extends "bar/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Consumi del bar{% endblock %}
+{% block contenuto %}
+  <h1>Consumi del bar</h1>
+  <p class="tenue">Venduto in cassa per serata (omaggi compresi). Per birra e vino alla spina anche quello uscito dai fusti (finiti e pesati a fine serata): la differenza è schiuma, prove e bicchieri non battuti.</p>
+  {% if righe %}
+    <div class="scorrimento">
+      <table class="tabella compatta">
+        <thead>
+          <tr>
+            <th class="sticky-col">Serata</th>
+            {% for b, cosa in colonne %}<th class="num">{{ b.nome }}{% if b.a_fusti %}<br><span class="tenue">{% if cosa == "venduto" %}venduto{% else %}dai fusti{% endif %}</span>{% endif %}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for servizio, celle in righe %}
+            <tr>
+              <td class="sticky-col"><a href="{% url 'cassa:report' servizio.pk %}">{{ servizio.data|date:"D j/n" }}{% if servizio.tipo == "pranzo" %} pranzo{% endif %}</a></td>
+              {% for valore, unita in celle %}<td class="num">{% if valore is None %}—{% elif unita == "l" %}{{ valore|floatformat:1 }} l{% else %}{{ valore|qta:unita }}{% endif %}</td>{% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td class="sticky-col">Totale</td>
+            {% for valore, unita in totali %}<td class="num">{% if unita == "l" %}{{ valore|floatformat:1 }} l{% else %}{{ valore|qta:unita }}{% endif %}</td>{% endfor %}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  {% else %}
+    <p class="tenue">Ancora nessuna bevanda venduta. Per contarle, nel <a href="{% url 'cassa:listino' %}">listino</a> collega ogni articolo del bar alla sua bevanda.</p>
+  {% endif %}
+{% endblock %}

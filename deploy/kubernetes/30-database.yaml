@@ -1,0 +1,49 @@
+# PostgreSQL dentro il cluster. Se il fornitore ne offre uno gestito (con i suoi backup), meglio
+# quello: togli questo file e metti il suo indirizzo in POSTGRES_HOST.
+apiVersion: v1
+kind: Service
+metadata:
+  name: sagra-db
+  namespace: sagra
+spec:
+  selector: {app: sagra-db}
+  ports: [{port: 5432}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sagra-db
+  namespace: sagra
+spec:
+  serviceName: sagra-db
+  replicas: 1
+  selector:
+    matchLabels: {app: sagra-db}
+  template:
+    metadata:
+      labels: {app: sagra-db}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          env:
+            - {name: POSTGRES_DB, valueFrom: {configMapKeyRef: {name: sagra-impostazioni, key: POSTGRES_DB}}}
+            - {name: POSTGRES_USER, valueFrom: {configMapKeyRef: {name: sagra-impostazioni, key: POSTGRES_USER}}}
+            - {name: POSTGRES_PASSWORD, valueFrom: {secretKeyRef: {name: sagra-segreti, key: POSTGRES_PASSWORD}}}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+            - {name: TZ, value: Europe/Rome}
+          ports: [{containerPort: 5432}]
+          readinessProbe:
+            exec: {command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+          volumeMounts:
+            - {name: dati, mountPath: /var/lib/postgresql/data}
+  volumeClaimTemplates:
+    - metadata:
+        name: dati
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: {storage: 5Gi}

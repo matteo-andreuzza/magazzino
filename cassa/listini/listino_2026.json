@@ -1,0 +1,84 @@
+{
+  "nome": "Sagra paesana di Canizzano 2026 (foglio A1, cucina e bar)",
+  "categorie": [
+    {"nome": "Primi", "colore": "giallo"},
+    {"nome": "Secondi", "colore": "rosso"},
+    {"nome": "Contorni", "colore": "verde"},
+    {"nome": "Piatti della serata", "colore": "arancio", "sostituisce": ["Panini e piadine"]},
+    {"nome": "Bevande", "colore": "azzurro"},
+    {"nome": "Birra e vino", "colore": "marrone"},
+    {"nome": "Caffè e liquori", "colore": "grigio"},
+    {"nome": "Dolci", "colore": "viola"}
+  ],
+  "bevande": [
+    {"nome": "Acqua naturale", "tipo": "bottiglia", "sostituisce": ["Acqua minerale"]},
+    {"nome": "Acqua gassata", "tipo": "bottiglia"},
+    {"nome": "Prosecco", "tipo": "bottiglia", "note": "In bottiglia"},
+    {"nome": "Raboso in bottiglia", "tipo": "bottiglia"}
+  ],
+  "piatti": [
+    {"menu": "Solo una sera", "nome": "Panino con würstel", "note": "Venerdì 2 e 9 ottobre", "ingredienti": ["Panini"]},
+    {"menu": "Solo una sera", "nome": "Panino vegetariano", "note": "Venerdì 2 e 9 ottobre: formaggio, peperoni e cipolla", "ingredienti": ["Panini", "Peperoni", "Cipolla"]},
+    {"menu": "Solo una sera", "nome": "Sangria", "note": "Solo sabato 10 ottobre, con la paella", "ingredienti": []}
+  ],
+  "articoli": [
+    {"nome": "Pasta con pomodoro e basilico", "categoria": "Primi", "prezzo": "5.00", "piatto": ["Menu della sagra", "Gnocchi o pennette"], "sostituisce": ["Pennette al pomodoro"]},
+    {"nome": "Pasta con sugo d'anatra", "categoria": "Primi", "prezzo": "6.00", "piatto": ["Menu della sagra", "Gnocchi o pennette"], "sostituisce": ["Pennette al ragù d'anatra"]},
+    {"nome": "Gnocchi con pomodoro e basilico", "categoria": "Primi", "prezzo": "6.50", "piatto": ["Menu della sagra", "Gnocchi o pennette"], "sostituisce": ["Gnocchi al pomodoro"]},
+    {"nome": "Gnocchi con sugo d'anatra", "categoria": "Primi", "prezzo": "7.50", "piatto": ["Menu della sagra", "Gnocchi o pennette"], "sostituisce": ["Gnocchi al ragù d'anatra"]},
+
+    {"nome": "Frittura mista di pesce con polenta", "categoria": "Secondi", "prezzo": "14.00", "piatto": ["Menu della sagra", "Frittura"], "sostituisce": ["Frittura"]},
+    {"nome": "Baccalà alla vicentina con polenta", "categoria": "Secondi", "prezzo": "14.00", "piatto": ["Menu della sagra", "Baccalà alla vicentina"], "sostituisce": ["Baccalà alla vicentina"]},
+    {"nome": "Grigliata mista di carne con polenta", "categoria": "Secondi", "prezzo": "13.00", "piatto": ["Menu della sagra", "Grigliata mista"], "sostituisce": ["Grigliata mista"]},
+    {"nome": "Pollo con polenta", "categoria": "Secondi", "prezzo": "10.00", "piatto": ["Menu della sagra", "Solo pollo"], "sostituisce": ["Solo pollo"]},
+    {"nome": "Salsicce con polenta", "categoria": "Secondi", "prezzo": "10.00", "piatto": ["Menu della sagra", "Solo salamelle"], "sostituisce": ["Solo salamelle"]},
+    {"nome": "Costicine con polenta", "categoria": "Secondi", "prezzo": "10.00", "piatto": ["Menu della sagra", "Solo costicine"], "sostituisce": ["Solo costicine"]},
+    {"nome": "Primo sale alla piastra con polenta", "categoria": "Secondi", "prezzo": "8.00", "piatto": ["Menu della sagra", "Primo sale con polenta"], "sostituisce": ["Primo sale con polenta"]},
+    {"nome": "Piatto con salumi, formaggi e polenta", "categoria": "Secondi", "prezzo": "7.00"},
+    {"nome": "Piatto vegetariano: piadina alle verdure", "categoria": "Secondi", "prezzo": "8.00", "piatto": ["Menu della sagra", "Piadina alle verdure"], "sostituisce": ["Piadina alle verdure"], "note": "Con salsa rosa"},
+    {"nome": "Piatto baby: 2 würstel con patate fritte", "categoria": "Secondi", "prezzo": "8.00"},
+
+    {"nome": "Patate fritte", "categoria": "Contorni", "prezzo": "3.00", "piatto": ["Menu della sagra", "Patatine fritte"], "sostituisce": ["Patatine fritte"]},
+    {"nome": "Funghi", "categoria": "Contorni", "prezzo": "4.00", "piatto": ["Menu della sagra", "Funghi"]},
+    {"nome": "Fagioli con sedano", "categoria": "Contorni", "prezzo": "3.00", "piatto": ["Menu della sagra", "Fagioli"]},
+    {"nome": "Fagioli con cipolla", "categoria": "Contorni", "prezzo": "3.00", "piatto": ["Menu della sagra", "Fagioli"]},
+    {"nome": "Supplemento polenta (3 fette)", "categoria": "Contorni", "prezzo": "1.00"},
+
+    {"nome": "Panino con pastin", "categoria": "Piatti della serata", "prezzo": "6.00", "piatto": ["Solo una sera", "Panino onto"], "sostituisce": ["Panino onto"], "note": "Venerdì 2 e 9 ottobre"},
+    {"nome": "Panino con pastin farcito (peperoni e cipolla)", "categoria": "Piatti della serata", "prezzo": "7.00", "piatto": ["Solo una sera", "Panino onto"], "note": "Venerdì 2 e 9 ottobre"},
+    {"nome": "Panino con würstel", "categoria": "Piatti della serata", "prezzo": "5.00", "piatto": ["Solo una sera", "Panino con würstel"], "note": "Venerdì 2 e 9 ottobre"},
+    {"nome": "Panino vegetariano (formaggio, peperoni, cipolla)", "categoria": "Piatti della serata", "prezzo": "5.00", "piatto": ["Solo una sera", "Panino vegetariano"], "note": "Venerdì 2 e 9 ottobre"},
+    {"nome": "Tagliata di manzo con rucola e grana", "categoria": "Piatti della serata", "prezzo": "16.00", "piatto": ["Solo una sera", "Tagliata"], "sostituisce": ["Tagliata"], "note": "Sabato 3 ottobre"},
+    {"nome": "Seppie in umido con polenta e bisi", "categoria": "Piatti della serata", "prezzo": "18.00", "piatto": ["Solo una sera", "Seppie in umido"], "sostituisce": ["Seppie in umido"], "note": "Domenica 4 ottobre"},
+    {"nome": "Paella valenciana pesce e carne", "categoria": "Piatti della serata", "prezzo": "18.00", "piatto": ["Solo una sera", "Paella"], "sostituisce": ["Paella"], "note": "Sabato 10 ottobre (sangria esclusa)"},
+
+    {"nome": "Minerale naturale ½ l", "categoria": "Bevande", "reparto": "bar", "prezzo": "1.00", "bevanda": "Acqua naturale", "quantita": "1"},
+    {"nome": "Minerale gassata ½ l", "categoria": "Bevande", "reparto": "bar", "prezzo": "1.00", "bevanda": "Acqua gassata", "quantita": "1"},
+    {"nome": "Coca-Cola lattina", "categoria": "Bevande", "reparto": "bar", "prezzo": "3.00", "bevanda": "Coca-Cola", "quantita": "1"},
+    {"nome": "Fanta lattina", "categoria": "Bevande", "reparto": "bar", "prezzo": "3.00", "bevanda": "Fanta", "quantita": "1"},
+    {"nome": "Tè al limone lattina", "categoria": "Bevande", "reparto": "bar", "prezzo": "3.00", "bevanda": "Tè al limone", "quantita": "1"},
+    {"nome": "Tè alla pesca lattina", "categoria": "Bevande", "reparto": "bar", "prezzo": "3.00", "bevanda": "Tè alla pesca", "quantita": "1"},
+
+    {"nome": "Birra bionda 0,33", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "3.50", "bevanda": "Birra bionda", "quantita": "0.33", "note": "S. Gabriel, bicchiere"},
+    {"nome": "Birra rossa 0,33", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "3.50", "bevanda": "Birra rossa", "quantita": "0.33", "note": "S. Gabriel, bicchiere"},
+    {"nome": "Caraffa birra bionda 1,5 l", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "14.00", "bevanda": "Birra bionda", "quantita": "1.5"},
+    {"nome": "Caraffa birra rossa 1,5 l", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "14.00", "bevanda": "Birra rossa", "quantita": "1.5"},
+    {"nome": "Ombra di bianco frizzante", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "1.00", "bevanda": "Vino bianco", "quantita": "0.1"},
+    {"nome": "Ombra di Raboso", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "1.00", "bevanda": "Vino rosso", "quantita": "0.1"},
+    {"nome": "Caraffa bianco ½ l", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "3.50", "bevanda": "Vino bianco", "quantita": "0.5"},
+    {"nome": "Caraffa Raboso ½ l", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "3.50", "bevanda": "Vino rosso", "quantita": "0.5"},
+    {"nome": "Caraffa bianco 1 l", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "6.00", "bevanda": "Vino bianco", "quantita": "1"},
+    {"nome": "Caraffa Raboso 1 l", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "6.00", "bevanda": "Vino rosso", "quantita": "1"},
+    {"nome": "Bottiglia di Prosecco", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "9.00", "bevanda": "Prosecco", "quantita": "1"},
+    {"nome": "Bottiglia di Raboso", "categoria": "Birra e vino", "reparto": "bar", "prezzo": "9.00", "bevanda": "Raboso in bottiglia", "quantita": "1"},
+
+    {"nome": "Caffè", "categoria": "Caffè e liquori", "reparto": "bar", "prezzo": "1.40", "note": "Normale, macchiato, orzo, decaffeinato o ginseng: scrivilo nella nota"},
+    {"nome": "Caffè corretto", "categoria": "Caffè e liquori", "reparto": "bar", "prezzo": "2.00"},
+    {"nome": "Liquori", "categoria": "Caffè e liquori", "reparto": "bar", "prezzo": "2.50"},
+    {"nome": "Spritz", "categoria": "Caffè e liquori", "reparto": "bar", "prezzo": "3.50"},
+    {"nome": "Sangria bicchiere", "categoria": "Caffè e liquori", "reparto": "bar", "prezzo": "5.00", "piatto": ["Solo una sera", "Sangria"], "note": "Solo sabato 10 ottobre"},
+    {"nome": "Sangria caraffa", "categoria": "Caffè e liquori", "reparto": "bar", "prezzo": "10.00", "piatto": ["Solo una sera", "Sangria"], "note": "Solo sabato 10 ottobre"},
+
+    {"nome": "Dolce in fetta", "categoria": "Dolci", "reparto": "bar", "prezzo": "3.00", "note": "Per il tipo chiedere al banco dolci"}
+  ]
+}

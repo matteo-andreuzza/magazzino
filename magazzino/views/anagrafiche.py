@@ -1,6 +1,7 @@
 """Prodotti e servizi (serate/pranzi)."""
 
 from django.contrib import messages
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -20,11 +21,22 @@ def _prossimo(request, predefinito):
     return predefinito
 
 
+def _salva_prodotto(form):
+    """Salva il prodotto e la sua foto (tutto o niente)."""
+    with transaction.atomic():
+        prodotto = form.save()
+        if form.foto_pronta is not None:
+            services.salva_foto(prodotto=prodotto, foto=form.foto_pronta)
+        elif form.cleaned_data.get("togli_foto"):
+            services.togli_foto(prodotto=prodotto)
+    return prodotto
+
+
 @require_http_methods(["GET", "POST"])
 def prodotto_nuovo(request):
-    form = ProdottoForm(request.POST or None)
+    form = ProdottoForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        prodotto = form.save()
+        prodotto = _salva_prodotto(form)
         messages.success(request, f"Prodotto «{prodotto.nome}» creato.")
         return redirect(_prossimo(request, "prodotti"))
     return render(
@@ -37,9 +49,9 @@ def prodotto_nuovo(request):
 @require_http_methods(["GET", "POST"])
 def prodotto_modifica(request, pk):
     prodotto = get_object_or_404(Prodotto, pk=pk)
-    form = ProdottoForm(request.POST or None, instance=prodotto)
+    form = ProdottoForm(request.POST or None, request.FILES or None, instance=prodotto)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        _salva_prodotto(form)
         messages.success(request, f"Prodotto «{prodotto.nome}» salvato.")
         return redirect("prodotto_dettaglio", pk=prodotto.pk)
     return render(
@@ -87,14 +99,17 @@ def servizio_elimina(request, pk):
     servizio = get_object_or_404(Servizio, pk=pk)
     ha_operazioni = servizio.operazioni.exists()
     ha_ordini = servizio.ordini.exists()
+    # I fusti della serata (bar) proteggono la serata: si annullano dalla pagina dei fusti.
+    ha_fusti = hasattr(servizio, "conta_fusti")
     if request.method == "POST":
-        if ha_operazioni or ha_ordini:
-            messages.error(
-                request,
-                "Non si può eliminare: ci sono movimenti registrati. Annullali prima."
-                if ha_operazioni
-                else "Non si può eliminare: ci sono ordini registrati in cassa.",
-            )
+        if ha_operazioni or ha_ordini or ha_fusti:
+            if ha_operazioni:
+                testo = "Non si può eliminare: ci sono movimenti registrati. Annullali prima."
+            elif ha_ordini:
+                testo = "Non si può eliminare: ci sono ordini registrati in cassa."
+            else:
+                testo = "Non si può eliminare: ci sono i fusti del bar registrati. Annullali prima (Bar → Fusti → Rifai da capo)."
+            messages.error(request, testo)
             return redirect("servizio_dettaglio", pk=servizio.pk)
         nome = str(servizio)
         servizio.delete()
@@ -103,7 +118,7 @@ def servizio_elimina(request, pk):
     return render(
         request,
         "magazzino/servizio_elimina.html",
-        {"servizio": servizio, "ha_operazioni": ha_operazioni, "ha_ordini": ha_ordini},
+        {"servizio": servizio, "ha_operazioni": ha_operazioni, "ha_ordini": ha_ordini, "ha_fusti": ha_fusti},
     )
 
 
@@ -127,10 +142,14 @@ def servizio_chiudi(request, pk):
         for p in ordina_per_categoria(prodotti.values())
         if consumi[p.pk]["preso"] > consumi[p.pk]["rientrato"]
     ]
+    from bar import services as bar
+
+    # A fine serata i fusti rimasti attaccati vanno pesati (solo nell'ultima serata con i fusti).
+    da_pesare = bar.da_pesare(servizio) if bar.motivo_sola_lettura(servizio) is None else []
     return render(
         request,
         "magazzino/servizio_chiudi.html",
-        {"servizio": servizio, "non_rientrati": non_rientrati, "cassa": riepilogo_cassa(servizio)},
+        {"servizio": servizio, "non_rientrati": non_rientrati, "cassa": riepilogo_cassa(servizio), "da_pesare": da_pesare},
     )
 
 

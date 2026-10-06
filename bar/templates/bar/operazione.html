@@ -1,0 +1,19 @@
+{% extends "bar/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}{{ operazione.get_tipo_display }}{% endblock %}
+{% block contenuto %}
+  <p class="tenue piccolo"><a href="{% url 'bar:storico' %}">Storico del bar</a></p>
+  <h1>{{ operazione.get_tipo_display }}</h1>
+  <p class="tenue">{{ operazione.creata_il|date:"l j F, H:i"|capfirst }}{% if operazione.utente %} · {{ operazione.utente.get_username }}{% endif %}{% if operazione.note %} · {{ operazione.note }}{% endif %}</p>
+  <div class="scheda">
+    <ul class="elenco">
+      {% for m in movimenti %}
+        <li class="voce"><span>{{ m.cosa.nome }}</span><strong class="num">{{ m.quantita|qta_segno:m.cosa.unita }}</strong></li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="azioni">
+    <a class="pulsante pericolo" href="{% url 'bar:operazione_annulla' operazione.pk %}">Annulla l'operazione</a>
+    <a class="pulsante secondario" href="{% url 'bar:storico' %}">Torna allo storico</a>
+  </div>
+{% endblock %}

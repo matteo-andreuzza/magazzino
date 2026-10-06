@@ -1,0 +1,11 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Pagina non trovata{% endblock %}
+{% block contenuto %}
+  <h1>Pagina non trovata</h1>
+  <p>Questa pagina non esiste (più): forse quello che cercavi è stato annullato o eliminato.</p>
+  <div class="azioni">
+    <a class="pulsante" href="{% url 'home' %}">Magazzino</a>
+    <a class="pulsante secondario" href="{% url 'bar:inizio' %}">Bar</a>
+    <a class="pulsante secondario" href="{% url 'cassa:inizio' %}">Cassa</a>
+  </div>
+{% endblock %}

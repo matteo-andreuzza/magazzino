@@ -1,0 +1,97 @@
+{% extends "bar/base.html" %}
+{% load magazzino_tags %}
+{% block titolo %}Bar{% endblock %}
+{% block contenuto %}
+  <h1>Bar · {{ oggi|date:"l j F"|lower|capfirst }}</h1>
+  <p class="tenue">Le bevande vendute in cassa (anche in omaggio) escono da sole dal magazzino del bar.</p>
+
+  {% for s in servizi_oggi %}
+    <div class="scheda">
+      <h2>{{ s }}{% if s.cassa_chiusa %} <span class="etichetta">cassa chiusa</span>{% endif %}{% if s.chiuso %} <span class="etichetta">terminat{{ s.desinenza }}</span>{% endif %}</h2>
+      <div class="griglia-azioni">
+        {% if IMPOSTAZIONI_CASSA.cassa_bar and not s.chiuso and not s.cassa_chiusa %}
+          <a class="tessera tessera-cassa-bar" href="{% url 'cassa:cassa_bar' s.pk %}"><strong>Cassa del bar</strong><span>Solo bevande, si paga qui</span></a>
+        {% endif %}
+        <a class="tessera{% if not s.chiuso %} evidenza{% endif %}" href="{% url 'bar:conta_fusti' s.pk %}"><strong>Fusti alla spina</strong><span>{% if s.da_pesare %}{{ s.da_pesare|length }} da pesare a fine serata{% else %}Spinatrici, cambi, pesate{% endif %}</span></a>
+        <a class="tessera" href="{% url 'bar:carico' %}?tipo=carico"><strong>Carica</strong><span>Consegna di bevande o fusti</span></a>
+        {% if IMPOSTAZIONI_CASSA.cassa_bar %}<a class="tessera" href="{% url 'cassa:ordini' s.pk %}?postazione=bar"><strong>Ordini del bar</strong><span>Ristampa, annulla</span></a>{% endif %}
+        <a class="tessera" href="{% url 'cassa:report' s.pk %}"><strong>Report della serata</strong><span>Venduto e incassi</span></a>
+      </div>
+    </div>
+  {% empty %}
+    <div class="box-avviso">
+      <p><strong>Per oggi non c'è ancora nessuna serata o pranzo.</strong> Cassa del bar e fusti lavorano sulla serata: creala dal <a href="{% url 'home' %}">magazzino</a>.</p>
+    </div>
+  {% endfor %}
+
+  {% if vuoto %}
+    <div class="box-avviso"><p>Non c'è ancora nessuna bevanda. <a href="{% url 'bar:bevande' %}">Aggiungile</a>, poi fai l'inventario iniziale.</p></div>
+  {% endif %}
+
+  {% if negativi %}
+    <div class="box-avviso">
+      <p><strong>Giacenze sotto zero:</strong> è stato venduto più di quanto caricato. Registra il carico mancante o correggi il conteggio.</p>
+      <p><a class="pulsante secondario piccolo" href="{% url 'bar:carico' %}">Carica</a> <a class="pulsante secondario piccolo" href="{% url 'bar:correggi' %}">Correggi</a></p>
+    </div>
+  {% endif %}
+
+  {% if alla_spina %}<h2>Alla spina</h2>{% endif %}
+  {% for g in alla_spina %}
+    <h3 class="titolo-spina"><span class="pallino l-{{ g.bevanda.colore }}" aria-hidden="true"></span>{{ g.bevanda.nome }}</h3>
+    <div class="scheda">
+      <ul class="elenco">
+        {% for t, n in g.tipi %}
+          <li class="voce">
+            <span>{{ t.nome }} <span class="tenue piccolo">pieni in magazzino</span></span>
+            <strong class="num{% if n < 0 %} negativo{% endif %}">{{ n|qta:"fusto" }}</strong>
+          </li>
+        {% endfor %}
+        {% for s in g.attaccati %}
+          <li class="voce">
+            <span>{{ s.tipo.nome }} <span class="etichetta ok">attaccato{% if s.fusto.spina %} a «{{ s.fusto.spina.nome }}»{% endif %}</span> <span class="tenue piccolo">dal {{ s.fusto.aperto_con.servizio.data|date:"D j/n" }}{% if s.pesate %} · ultima pesata {{ s.ultimo_peso|num }} kg{% endif %}</span></span>
+            <span class="num">{% if s.litri_rimasti is not None %}≈ {{ s.litri_rimasti|floatformat:1 }} l{% endif %}</span>
+          </li>
+        {% endfor %}
+        {% if servizi_oggi %}
+          <li class="voce"><span>Venduto oggi in cassa</span><strong class="num">{{ g.venduto|floatformat:1 }} l</strong></li>
+        {% endif %}
+      </ul>
+      {% with sc=scorte|prendi:g.bevanda.pk %}{% if sc %}
+        <p class="scorta-spina piccolo">
+          Disponibili <strong>≈ {{ sc.litri|floatformat:0 }} l</strong> ({{ sc.fusti_pieni|num }} pien{{ sc.fusti_pieni|pluralize:"o,i" }} + {{ sc.litri_attaccati|floatformat:1 }} l attaccat{% if g.attaccati|length > 1 %}i{% else %}o{% endif %})
+          {% if sc.media %}· in media escono {{ sc.media|floatformat:0 }} l a serata ({{ sc.serate }} serat{{ sc.serate|pluralize:"a,e" }}): <strong class="{% if sc.autonomia < 1.5 %}negativo{% endif %}">bastano per circa {{ sc.autonomia|floatformat:1 }} serat{% if sc.autonomia == 1 %}a{% else %}e{% endif %}</strong>{% endif %}
+        </p>
+      {% endif %}{% endwith %}
+      {% if g.tare_provvisorie %}
+        <p class="piccolo avviso-testo">Litri e tara provvisori (valori simbolici) per: {% for t in g.tare_provvisorie %}{{ t.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}. I litri dei fusti sono giusti solo con quelli veri{% if user.is_staff %}: <a href="{% url 'bar:bevande' %}">scrivili</a>{% endif %}.</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  {% if alla_spina %}<p class="piccolo"><a href="{% url 'bar:fusti' %}">Vedi le spinatrici e i fusti →</a></p>{% endif %}
+
+  {% if altre %}
+    <h2>Lattine e bottiglie</h2>
+    <div class="scorrimento">
+      <table class="tabella">
+        <thead><tr><th>Bevanda</th><th class="num">In magazzino</th>{% if servizi_oggi %}<th class="num">Venduto oggi</th>{% endif %}</tr></thead>
+        <tbody>
+          {% for r in altre %}
+            <tr>
+              <td>{{ r.bevanda.nome }}</td>
+              <td class="num"><strong{% if r.giacenza < 0 %} class="negativo"{% endif %}>{{ r.giacenza|qta:r.bevanda.unita }}</strong></td>
+              {% if servizi_oggi %}<td class="num">{% if r.venduto %}{{ r.venduto|qta:r.bevanda.unita }}{% else %}—{% endif %}</td>{% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <div class="griglia-azioni">
+    <a class="tessera" href="{% url 'bar:carico' %}?tipo=inventario"><strong>Inventario iniziale</strong><span>A inizio sagra</span></a>
+    <a class="tessera" href="{% url 'bar:correggi' %}"><strong>Correggi</strong><span>Se i numeri non tornano</span></a>
+    <a class="tessera" href="{% url 'bar:consumi' %}"><strong>Consumi</strong><span>Birra, vino, lattine per serata</span></a>
+    <a class="tessera" href="{% url 'bar:storico' %}"><strong>Storico</strong><span>Carichi, correzioni, fusti</span></a>
+  </div>
+{% endblock %}

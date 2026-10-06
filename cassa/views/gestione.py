@@ -16,7 +16,7 @@ from .comuni import solo_staff
 
 @require_http_methods(["GET", "POST"])
 def listino(request):
-    articoli = list(Articolo.objects.select_related("categoria", "piatto", "prodotto"))
+    articoli = list(Articolo.objects.select_related("categoria", "piatto", "bevanda"))
     errori = {}
     if request.method == "POST":
         if not request.user.is_staff:

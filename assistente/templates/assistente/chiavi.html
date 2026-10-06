@@ -1,0 +1,73 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Claude{% endblock %}
+{% block contenuto %}
+  <h1>Collega Claude</h1>
+  <p class="tenue">Con il <strong>server MCP</strong> dell'app, Claude Code (o un altro programma che usa MCP) può leggere giacenze, serate,
+    incassi, bar e fusti, e se vuoi registrare carichi, prelievi della cucina, i fusti di fine serata e prodotti nuovi. Ogni chiave agisce come l'utente che la crea.</p>
+
+  {% if nuova %}
+    <section class="scheda chiave-nuova" aria-labelledby="titolo-nuova">
+      <h2 id="titolo-nuova">Chiave «{{ nuova.chiave.nome }}» creata</h2>
+      <p><strong>Copiala adesso:</strong> non si vedrà più. Se la perdi, revocala e creane un'altra.</p>
+      <div class="copia"><code data-testo-copia>{{ nuova.testo }}</code><button type="button" class="pulsante secondario piccolo" data-copia>Copia</button></div>
+      <h3>In Claude Code, su qualunque computer</h3>
+      <p class="tenue piccolo">Nel terminale (una volta sola):</p>
+      <div class="copia"><code data-testo-copia>claude mcp add --transport http magazzino-sagra {{ indirizzo }} --header "Authorization: Bearer {{ nuova.testo }}"</code><button type="button" class="pulsante secondario piccolo" data-copia>Copia</button></div>
+      <p class="tenue piccolo">Poi in Claude Code scrivi <code>/mcp</code> per controllare che sia collegato, e chiedi per esempio «cosa manca in magazzino per stasera?».
+        {% if nuova.chiave.scrittura %}Questa chiave può anche registrare: Claude Code chiede il permesso prima di usare gli strumenti, a meno che tu non li autorizzi per sempre.{% else %}Questa chiave può solo leggere.{% endif %}</p>
+    </section>
+  {% endif %}
+
+  {% if in_chiaro %}
+    <div class="box-avviso piccolo"><strong>Attenzione:</strong> l'app è raggiungibile senza HTTPS ({{ indirizzo }}): la chiave viaggia in chiaro nella rete. Va bene nel Wi-Fi della sagra, non su internet.</div>
+  {% endif %}
+
+  <h2>Nuova chiave</h2>
+  <form method="post" class="scheda">
+    {% csrf_token %}
+    <div class="campo">
+      <label for="nome">Nome</label>
+      <input id="nome" name="nome" type="text" maxlength="60" required placeholder="Es. Claude Code sul portatile di Matteo">
+    </div>
+    <div class="campo campo-check">
+      <label><input type="checkbox" name="scrittura"> Può registrare (carichi, prelievi e rientri della cucina, fusti di fine serata, prodotti nuovi)</label>
+      <div class="aiuto">Senza, Claude può solo leggere. Le registrazioni si annullano come sempre dallo storico.</div>
+    </div>
+    <div class="azioni"><button type="submit" class="pulsante">Crea la chiave</button></div>
+  </form>
+
+  <h2>Chiavi</h2>
+  <div class="scheda">
+    <ul class="elenco">
+      {% for c in chiavi %}
+        <li class="voce">
+          <span>
+            <span class="voce-nome{% if not c.attiva %} barrato{% endif %}">{{ c.nome }}</span>
+            <span class="tenue piccolo"><code>{{ c.inizio }}…</code> · {{ c.utente.get_username }} · {% if c.scrittura %}<span class="etichetta avviso">legge e registra</span>{% else %}<span class="etichetta">solo lettura</span>{% endif %}
+              · creata {{ c.creata_il|date:"j/n H:i" }}{% if c.ultimo_uso %} · usata {{ c.ultimo_uso|date:"j/n H:i" }}{% else %} · mai usata{% endif %}{% if not c.attiva %} · revocata {{ c.revocata_il|date:"j/n H:i" }}{% endif %}</span>
+          </span>
+          {% if c.attiva %}
+            <form method="post" action="{% url 'assistente:chiave_revoca' c.pk %}">{% csrf_token %}<button type="submit" class="pulsante pericolo piccolo">Revoca</button></form>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li class="tenue">Ancora nessuna chiave.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <details class="scheda">
+    <summary><strong>Sullo stesso computer dell'app, senza chiave</strong></summary>
+    <p class="piccolo">Se Claude Code gira sul computer dove gira Docker, si può collegare direttamente al container (agisce come l'utente indicato, solo lettura; aggiungi <code>--scrittura</code> per registrare):</p>
+    <div class="copia"><code data-testo-copia>claude mcp add magazzino-sagra -- docker exec -i magazzino-sagra-web-1 python manage.py server_mcp --utente {{ user.get_username }}</code><button type="button" class="pulsante secondario piccolo" data-copia>Copia</button></div>
+  </details>
+
+  <h2>Cosa può fare Claude</h2>
+  <div class="scheda">
+    <ul class="elenco">
+      {% for s in strumenti %}
+        <li><strong>{{ s.titolo }}</strong> <code class="piccolo">{{ s.nome }}</code>{% if s.scrive %} <span class="etichetta avviso">registra</span>{% endif %}<br><span class="tenue piccolo">{{ s.descrizione }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

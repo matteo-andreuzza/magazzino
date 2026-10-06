@@ -91,7 +91,8 @@
 
     var testa = crea("header", "monitor-testa");
     testa.appendChild(crea("span", "monitor-numero", "N. " + c.numero));
-    if (c.tavolo) testa.appendChild(crea("span", "monitor-tavolo", "Tav. " + c.tavolo));
+    if (c.asporto) testa.appendChild(crea("span", "monitor-asporto", "ASPORTO"));
+    else if (c.tavolo) testa.appendChild(crea("span", "monitor-tavolo", "Tav. " + c.tavolo));
     var tempo = crea("span", "monitor-tempo", c.stato === "pronta" ? "pronta da " + minutiDa(riferimento) + "'" : minuti + "'");
     testa.appendChild(tempo);
     box.appendChild(testa);

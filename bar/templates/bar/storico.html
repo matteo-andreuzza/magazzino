@@ -1,0 +1,44 @@
+{% extends "bar/base.html" %}
+{% block titolo %}Storico del bar{% endblock %}
+{% block contenuto %}
+  <h1>Storico del bar</h1>
+  <p class="tenue">Il venduto non compare qui: esce da solo dal magazzino del bar con gli ordini della cassa.</p>
+
+  <h2>Fusti delle serate</h2>
+  {% if conte %}
+    <div class="scheda">
+      <ul class="elenco">
+        {% for c in conte %}
+          <li class="voce">
+            <a class="voce-nome" href="{% url 'bar:conta_fusti' c.servizio_id %}">{{ c.servizio }}</a>
+            <span class="tenue piccolo nowrap">{{ c.n_attaccati }} attaccat{{ c.n_attaccati|pluralize:"o,i" }} · {{ c.n_finiti }} finit{{ c.n_finiti|pluralize:"o,i" }} · {{ c.n_pesate }} pesat{{ c.n_pesate|pluralize:"a,e" }}{% if ultima and c.pk == ultima.pk %} · <span class="etichetta">ultima</span>{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <p class="tenue">Nessun fusto ancora attaccato.</p>
+  {% endif %}
+
+  <h2>Carichi e correzioni</h2>
+  {% if pagina.object_list %}
+    <div class="scheda">
+      <ul class="elenco">
+        {% for op in pagina %}
+          <li class="voce">
+            <a class="voce-nome" href="{% url 'bar:operazione' op.pk %}">{{ op.get_tipo_display }}</a>
+            <span class="tenue piccolo nowrap">{{ op.n_movimenti }} rig{{ op.n_movimenti|pluralize:"a,he" }} · {{ op.creata_il|date:"d/m H:i" }}{% if op.utente %} · {{ op.utente.get_username }}{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% if pagina.has_other_pages %}
+      <div class="azioni">
+        {% if pagina.has_previous %}<a class="pulsante secondario piccolo" href="?pagina={{ pagina.previous_page_number }}">← Più recenti</a>{% endif %}
+        {% if pagina.has_next %}<a class="pulsante secondario piccolo" href="?pagina={{ pagina.next_page_number }}">Meno recenti →</a>{% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <p class="tenue">Nessun carico registrato. <a href="{% url 'bar:carico' %}?tipo=inventario">Fai l'inventario iniziale</a>.</p>
+  {% endif %}
+{% endblock %}

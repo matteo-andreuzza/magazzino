@@ -1,0 +1,252 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Guida{% endblock %}
+{% block sezione %}guida{% endblock %}
+{% block sezione_magazzino %}{% endblock %}
+{% block classe_contenuto %} contenuto-guida{% endblock %}
+{% block nav %}
+  <nav class="nav" aria-label="Capitoli della guida">
+    <span class="nav-sezione" aria-hidden="true">Guida</span>
+    <a href="#come-funziona">Come funziona</a>
+    <a href="#prima-della-sagra">Prima della sagra</a>
+    <a href="#ogni-serata">Ogni serata</a>
+    <a href="#cassa">Cassa</a>
+    <a href="#bar">Bar</a>
+    <a href="#fusti">Pesare i fusti</a>
+    <a href="#fine-serata">Fine serata</a>
+    <a href="#menu-listino">Menu e listino</a>
+    <a href="#stampanti">Stampanti</a>
+    <a href="#domande">Domande</a>
+  </nav>
+{% endblock %}
+{% block contenuto %}
+<article class="guida">
+  <header class="guida-testa">
+    <h1>Guida: come si usa</h1>
+    <p class="tenue">Tutto quello che serve per la sagra, passo per passo. Le scritte <span class="percorso">Così → in questo modo</span> dicono dove toccare.
+      Quello segnato <span class="solo-staff">amministrazione</span> lo fa solo chi gestisce (gli utenti «staff»).</p>
+    <p class="guida-azioni"><button type="button" class="pulsante secondario piccolo" onclick="window.print()">Stampa la guida</button></p>
+  </header>
+
+  <nav class="guida-indice" aria-label="Indice">
+    <a href="#prima-della-sagra"><strong>Prima della sagra</strong><span>Cosa preparare una volta sola</span></a>
+    <a href="#ogni-serata"><strong>Prima di ogni serata</strong><span>Creare la serata e il suo menu</span></a>
+    <a href="#cassa"><strong>Alla cassa</strong><span>Ordini, asporto, omaggi, errori</span></a>
+    <a href="#bar"><strong>Il bar</strong><span>Bevande che escono da sole</span></a>
+    <a href="#fusti"><strong>Pesare i fusti</strong><span>Birra e vino, a fine serata</span></a>
+    <a href="#fine-serata"><strong>Fine serata</strong><span>Chiudere tutto in ordine</span></a>
+    <a href="#menu-listino"><strong>Menu e listino</strong><span>Cambiare piatti e prezzi</span></a>
+    <a href="#stampanti"><strong>Stampanti</strong><span>Comande in cucina e al bar</span></a>
+    <a href="#domande"><strong>Domande frequenti</strong><span>Le risposte veloci</span></a>
+  </nav>
+
+  <section id="come-funziona" class="guida-capitolo">
+    <h2>Come funziona</h2>
+    <p>Il programma ha tre parti, che si scelgono in alto. Ognuna ha il suo colore, anche nella barra delle sue pagine: così si vede sempre dove si è.</p>
+    <div class="guida-sezioni">
+      <div class="guida-sezione sezione-magazzino"><strong>Magazzino</strong><span>Frighi, congelatori e dispensa: cosa c'è, cosa va in cucina, cosa rientra.</span></div>
+      <div class="guida-sezione sezione-bar"><strong>Bar</strong><span>Lattine, bottiglie e i fusti di birra e vino alla spina.</span></div>
+      <div class="guida-sezione sezione-cassa"><strong>Cassa</strong><span>Ordini all'ingresso, comande in cucina e al bar, incassi.</span></div>
+    </div>
+    <ul>
+      <li>La pagina in cui sei è quella <strong>colorata</strong> nella barra sotto la testata; le altre sono solo scritte.</li>
+      <li>Le quantità non si scrivono mai a mano: <strong>le giacenze sono la somma di quello che si registra</strong> (carichi, prelievi, rientri, vendite). Per questo è importante registrare tutto.</li>
+      <li>Ogni errore si può correggere: <span class="percorso">Storico → apri l'operazione → annulla</span>.</li>
+      <li>Il pulsante con la luna in alto mette la <strong>modalità scura</strong> (utile la sera all'aperto).</li>
+    </ul>
+  </section>
+
+  <section id="prima-della-sagra" class="guida-capitolo">
+    <h2>Prima della sagra</h2>
+    <p>Da fare una volta sola, qualche giorno prima. Conviene farlo da un computer.</p>
+    <ol class="guida-passi">
+      <li><strong>Utenti dei volontari</strong> <span class="solo-staff">amministrazione</span><br>
+        <span class="percorso">Magazzino → Amministrazione → Utenti → Aggiungi</span>. Senza «staff» il volontario non vede le pagine di configurazione.
+        Va bene anche un utente unico per tutti, ma con utenti diversi lo storico dice chi ha fatto cosa.</li>
+      <li><strong>Frighi, congelatori e dispensa</strong> <span class="solo-staff">amministrazione</span><br>
+        <span class="percorso">Magazzino → Amministrazione → Ubicazioni</span>: un nome che tutti riconoscono («Congelatore piccolo»).</li>
+      <li><strong>Prodotti</strong><br>
+        <span class="percorso">Magazzino → Prodotti → Nuovo prodotto</span>: nome, categoria e unità (kg, pezzi, buste…). La <em>scorta minima</em> fa comparire in home i prodotti che stanno finendo.
+        Una <em>foto</em> aiuta a riconoscerli in frigo.</li>
+      <li><strong>Menu e piatti</strong> <span class="solo-staff">amministrazione</span> — vedi <a href="#menu-listino">Menu e listino</a>.</li>
+      <li><strong>Listino della cassa (prezzi)</strong> <span class="solo-staff">amministrazione</span><br>
+        <span class="percorso">Cassa → Listino</span>: un articolo per ogni cosa che si vende, con prezzo e reparto (<em>Cucina</em> = comanda in cucina, <em>Bar</em> = copia per il bar).
+        Un articolo senza prezzo non compare in cassa. Il listino 2026 si può caricare già pronto (vedi <a href="#gestione">Per chi gestisce il computer</a>).</li>
+      <li><strong>Bevande e fusti del bar</strong> <span class="solo-staff">amministrazione</span><br>
+        <span class="percorso">Bar → Bevande e fusti</span>: le bevande, i <strong>tipi di fusto con litri e tara</strong> (vedi <a href="#tara">come si imposta la tara</a>), le spinatrici e le spine.
+        Poi in <span class="percorso">Cassa → Listino</span> collega ogni articolo del bar alla sua bevanda.</li>
+      <li><strong>Inventario iniziale</strong><br>
+        Cucina: <span class="percorso">Magazzino → Carica → scegli il frigo → Inventario iniziale</span>. Bar: <span class="percorso">Bar → Carica → Inventario iniziale</span> (lattine, bottiglie e fusti pieni).</li>
+      <li><strong>Stampanti</strong> <span class="solo-staff">amministrazione</span> — vedi <a href="#stampanti">Stampanti</a>.</li>
+      <li><strong>Funzioni in più</strong> <span class="solo-staff">amministrazione</span><br>
+        <span class="percorso">Cassa → Impostazioni</span>: <em>Monitor cucina</em> (le comande anche su uno schermo in cucina), <em>Cassa al bar</em> (al bar si paga direttamente), ricevuta per il cliente.</li>
+      <li><strong>Prova generale</strong><br>Crea una serata di prova, fai qualche ordine e controlla che le comande escano. Poi annulla gli ordini e cancella la serata.</li>
+    </ol>
+  </section>
+
+  <section id="ogni-serata" class="guida-capitolo">
+    <h2>Prima di ogni serata</h2>
+    <ol class="guida-passi">
+      <li><strong>Crea la serata</strong> (o il pranzo)<br>
+        <span class="percorso">Magazzino → Inizio → Crea la serata di oggi</span> (si può anche dalla pagina della cassa). Due pranzi nello stesso giorno si distinguono col nome, es. «Pranzo anniversari».</li>
+      <li id="menu-della-serata"><strong>Scegli il menu della serata</strong><br>
+        Nella stessa pagina spunta i <strong>piatti serviti</strong> stasera: quelli del menu della sagra e quello speciale della sera (es. la tagliata il sabato).
+        In cassa compaiono solo gli articoli dei piatti spuntati, più quelli non legati a un piatto (bevande, caffè, dolci).
+        Se non spunti niente, compare tutto il listino. Si cambia quando vuoi da <span class="percorso">Serate → la serata → Modifica servizio</span>.</li>
+      <li><strong>Accendi le stampanti</strong> e, sul computer delle stampanti, il <em>programma di stampa</em>. Se non è acceso, in cassa compare un avviso rosso.</li>
+      <li><strong>Metti a cucinare</strong><br>
+        <span class="percorso">Magazzino → Inizio → Metti a cucinare</span>: per ogni frigo o congelatore scrivi quanto porti in cucina. Si può tornare più volte durante la serata: ogni invio si somma.</li>
+      <li><strong>Apri la cassa</strong>: <span class="percorso">Cassa → Apri la cassa ingresso</span>. Con la cassa al bar attiva, al bar si apre da <span class="percorso">Bar → Oggi → Cassa del bar</span>.</li>
+    </ol>
+    <p class="guida-nota">Dopo mezzanotte, fino alle 5 del mattino, il programma considera ancora la serata del giorno prima.</p>
+  </section>
+
+  <section id="cassa" class="guida-capitolo">
+    <h2>Alla cassa</h2>
+    <ol class="guida-passi">
+      <li><strong>Nome e tavolo</strong> del cliente (i coperti sono facoltativi).</li>
+      <li><strong>Tocca gli articoli</strong>: ogni tocco ne aggiunge uno. <em>−</em> e <em>+</em> cambiano la quantità, <em>Nota</em> aggiunge una richiesta alla riga («senza cipolla»): va sulla comanda.
+        I bottoni colorati in alto filtrano per categoria; il colore della striscia di ogni articolo è quello della sua categoria.</li>
+      <li><strong>Pagamento</strong>: con <em>Contanti</em> scrivi quanto ti danno (o tocca 10 €, 20 €…) e leggi il resto.</li>
+      <li><strong>Conferma e stampa</strong>: l'ordine prende il numero della serata e le comande escono.</li>
+    </ol>
+    <dl class="guida-faq">
+      <dt id="asporto">Ordine da asporto</dt>
+      <dd>Tocca <strong>Asporto</strong> accanto a tavolo e coperti: il tavolo diventa <strong>ASP</strong> e la comanda in cucina esce con la scritta <strong>ASPORTO</strong> grande, bianca su nero, in alto e in fondo. Il nome del cliente serve per chiamarlo quando è pronto.</dd>
+      <dt>Omaggio (volontari)</dt>
+      <dd>Scegli <em>Omaggio</em>: l'ordine non conta negli incassi. Se mancano nome e tavolo diventano «Volontario», tavolo XXX.</dd>
+      <dt>Un piatto è finito</dt>
+      <dd><em>Segna esauriti</em> e tocca l'articolo: tutte le casse lo vedono barrato. Toccalo di nuovo quando torna disponibile.</dd>
+      <dt>Ho sbagliato un ordine</dt>
+      <dd><span class="percorso">Ordini → apri l'ordine → Annulla o correggi</span>. Se la comanda era già stampata, in cucina esce un biglietto <strong>ANNULLATO</strong>. <em>Annulla e correggi</em> riapre la cassa con lo stesso ordine da sistemare.</dd>
+      <dt>Si è inceppata la stampante</dt>
+      <dd>La comanda viene ritentata da sola per 10 minuti; dopo, dalla pagina dell'ordine tocca <em>Riprova</em> o <em>Ristampa</em>.</dd>
+      <dt>È caduta la rete mentre confermavo</dt>
+      <dd>Premi di nuovo <em>Conferma</em>: lo stesso ordine non viene mai registrato due volte. L'ordine in corso resta anche ricaricando la pagina.</dd>
+      <dt>Il monitor cucina</dt>
+      <dd>Se attivo (<span class="percorso">Cassa → Impostazioni</span>), su un tablet o una TV in cucina apri <span class="percorso">Cassa → Monitor cucina</span>: le comande da fare, in preparazione e pronte, con i minuti di attesa. Si tocca <em>Inizio</em>, <em>Pronta</em>, <em>Ritirata</em>. Le comande di carta continuano a uscire.</dd>
+    </dl>
+  </section>
+
+  <section id="bar" class="guida-capitolo">
+    <h2>Il bar</h2>
+    <dl class="guida-faq">
+      <dt id="coca-cola">Una Coca-Cola venduta esce da sola dal magazzino?</dt>
+      <dd><strong>Sì</strong>, sia alla cassa dell'ingresso sia alla cassa del bar, anche in omaggio, se nel listino l'articolo è <strong>collegato alla bevanda</strong> (es. «Coca-Cola lattina» → bevanda Coca-Cola, 1 lattina).
+        Annullando l'ordine la lattina torna in magazzino. Se le giacenze vanno sotto zero la pagina del bar lo segnala (manca un carico), ma la cassa non si blocca mai.
+        In <span class="percorso">Cassa → Listino</span> gli articoli del bar non collegati sono scritti in arancione (caffè, liquori e spritz non si collegano: non si contano).</dd>
+      <dt id="nuova-bevanda">Come aggiungo una bevanda al bar?</dt>
+      <dd><ol>
+        <li><span class="percorso">Bar → Bevande e fusti → Nuova bevanda</span> <span class="solo-staff">amministrazione</span>: nome e come si conta (lattine, bottiglie, oppure alla spina da fusti).</li>
+        <li>Se è alla spina, aggiungile un <em>tipo di fusto</em> (litri e tara) e una spina da cui esce.</li>
+        <li><span class="percorso">Cassa → Listino → Nuovo articolo</span>: reparto <em>Bar</em>, la <strong>bevanda</strong> appena creata e quanta ne esce per pezzo (1 lattina; 0,33 l il bicchiere…).</li>
+        <li><span class="percorso">Bar → Carica</span>: quante ne arrivano.</li>
+      </ol></dd>
+      <dt id="tara">Come imposto la tara di ogni tipo di fusto?</dt>
+      <dd><ol>
+        <li>Pesa un fusto <strong>vuoto</strong> di quel tipo (es. un «Alto nero» finito).</li>
+        <li><span class="percorso">Bar → Bevande e fusti → clic sul tipo di fusto</span> <span class="solo-staff">amministrazione</span>.</li>
+        <li>Scrivi <strong>Peso da vuoto</strong> (la tara) e controlla i <strong>Litri</strong> che contiene pieno. Salva.</li>
+      </ol>
+        Finché i valori sono «provvisori» le pagine del bar lo ricordano e i controlli sui pesi avvisano senza bloccare. Correggendo la tara si correggono anche le serate già passate.
+        Se lo stesso fusto si usa per due bevande (il 50 litri della bionda e della rossa) spunta <em>Stessi litri e tara anche per gli altri</em>.</dd>
+    </dl>
+  </section>
+
+  <section id="fusti" class="guida-capitolo">
+    <h2>Pesare i fusti (fine serata)</h2>
+    <p>La pagina <span class="percorso">Bar → Fusti</span> è disegnata come il bancone: a sinistra i <strong>fusti nuovi</strong> (pieni, in magazzino), al centro le <strong>due spinatrici</strong> (birra: bionda e rossa; vino: bianco e rosso) con i fusti attaccati, a destra i <strong>fusti finiti</strong>.
+      A fine serata si rifà qui quello che è successo al bancone, poi si pesano i fusti rimasti attaccati.</p>
+    <div class="guida-esempio">
+      <p><strong>Esempio.</strong> Stasera alla bionda il fusto di ieri è finito, ne avete attaccato un altro, è finito anche quello e adesso ce n'è un terzo:</p>
+      <ol class="guida-passi">
+        <li>trascina il fusto attaccato (quello di ieri) tra i <strong>Fusti finiti</strong>;</li>
+        <li>trascina un <strong>fusto nuovo</strong> sulla spina della bionda;</li>
+        <li>trascina anche questo tra i finiti;</li>
+        <li>trascina un altro fusto nuovo sulla spina: è quello di adesso;</li>
+        <li><strong>pesalo</strong>: toccalo e scrivi il peso.</li>
+      </ol>
+    </div>
+    <ul>
+      <li><strong>Pesare tutti insieme</strong>: <em>Pesata di fine serata</em> apre un modulo con tutti i fusti attaccati; mentre scrivi il programma mostra quanti litri restano e quanti ne sono usciti stasera.</li>
+      <li>Fusto <strong>non usato</strong> stasera: tocca <em>Non usato</em>, ripete il peso di ieri.</li>
+      <li>Fusto cambiato <strong>al volo</strong>: trascina il nuovo direttamente sopra quello attaccato e conferma che è finito.</li>
+      <li><strong>Col dito</strong>: tieni premuto un attimo il fusto, poi trascinalo (vicino al bordo la pagina scorre da sola). Oppure toccalo e scegli dalla finestra.</li>
+      <li>Ogni spina accetta solo i fusti della sua bevanda: la rossa non finisce per sbaglio sulla spina della bionda.</li>
+      <li>Errori: un fusto finito per sbaglio si trascina di nuovo sulla sua spina; uno attaccato per sbaglio si rimette tra i nuovi dalla sua finestra; <em>Rifai da capo la serata</em> annulla tutto quello registrato stasera sui fusti.</li>
+      <li>Si può fare anche il giorno dopo: la serata resta modificabile finché non si registrano i fusti della serata successiva. Le serate vanno registrate in ordine.</li>
+      <li>Se avete collegato Claude, potete anche <strong>raccontarglielo</strong>: «bionda cambiata, nuova da 26 kg; rossa non cambiata 6,60; bianco 7,86». Prima di registrare vi mostra il riepilogo.</li>
+    </ul>
+    <p class="guida-nota">Pesare più della volta prima è sempre un errore (o il fusto è stato cambiato o il peso è sbagliato): il programma lo dice e non registra.</p>
+  </section>
+
+  <section id="fine-serata" class="guida-capitolo">
+    <h2>Fine serata</h2>
+    <ol class="guida-passi">
+      <li><strong>Chiudi la cassa</strong> (dalla cassa dell'ingresso): niente più ordini, si apre il riepilogo con incassi e contanti da trovare nel cassetto. Se arriva ancora qualcuno, <em>Riapri la cassa</em>.</li>
+      <li><strong>Fusti</strong>: <a href="#fusti">pesali</a>.</li>
+      <li><strong>Rientro dalla cucina</strong>: <span class="percorso">Magazzino → Inizio → Rientro dalla cucina</span>, quello che non è stato usato e dove lo rimetti (lo scongelato non torna in congelatore).</li>
+      <li><strong>Termina la serata</strong>: <span class="percorso">Magazzino → Inizio → Termina</span>. La pagina mostra cosa è uscito e non è rientrato: il resto conta come usato.</li>
+    </ol>
+    <p>Il <strong>report della serata</strong> (<span class="percorso">Cassa → Report</span>) mostra incassi, venduto, bevande e confronto tra birra e vino usciti dai fusti e venduti; si stampa o si scarica per Excel.</p>
+  </section>
+
+  <section id="menu-listino" class="guida-capitolo">
+    <h2>Menu e listino</h2>
+    <p>Sono due cose diverse: il <strong>menu</strong> dice quali piatti ci sono e con quali prodotti si fanno (serve al magazzino), il <strong>listino</strong> dice cosa si vende in cassa e a che prezzo.</p>
+    <dl class="guida-faq">
+      <dt id="menu-sagra">Come modifico il menu della sagra?</dt>
+      <dd><span class="percorso">Magazzino → Amministrazione → Menu</span> <span class="solo-staff">amministrazione</span>: in ogni menu si aggiungono, rinominano o tolgono i piatti.
+        Gli ingredienti di un piatto si cambiano da <span class="percorso">Amministrazione → Piatti</span>. La pagina <span class="percorso">Magazzino → Menu</span> mostra quanto c'è di ogni ingrediente.</dd>
+      <dt>Come cambio un prezzo o aggiungo un piatto in cassa?</dt>
+      <dd><span class="percorso">Cassa → Listino</span> <span class="solo-staff">amministrazione</span>: scrivi i prezzi nella tabella e <em>Salva il listino</em>, oppure <em>Nuovo articolo</em>.
+        Collega l'articolo al suo <em>piatto del menu</em> se deve comparire solo nelle serate che servono quel piatto.</dd>
+      <dt id="subito-in-cassa">Se lo modifico, le modifiche si vedono subito in cassa?</dt>
+      <dd><strong>Sì.</strong> Le casse aperte se ne accorgono da sole entro pochi secondi e mostrano <em>Il listino è cambiato: Aggiorna la cassa</em>; toccandolo si aggiorna senza perdere l'ordine in corso.
+        Lo stesso vale se cambi i piatti della serata o segni un articolo esaurito. Un ordine confermato con un prezzo vecchio viene fermato: la cassa mostra il totale nuovo da controllare col cliente.</dd>
+    </dl>
+  </section>
+
+  <section id="stampanti" class="guida-capitolo">
+    <h2>Stampanti</h2>
+    <p>Le comande escono su stampanti termiche da 80 o 58 mm (Epson TM e compatibili).</p>
+    <ol class="guida-passi">
+      <li><span class="percorso">Cassa → Stampanti → Aggiungi stampante</span> <span class="solo-staff">amministrazione</span>: un nome («Cucina»), come è collegata e l'indirizzo:
+        <ul>
+          <li><em>di rete</em>: l'indirizzo IP, es. 192.168.1.50 (si legge sul foglio che stampa tenendo premuto FEED all'accensione);</li>
+          <li><em>collegata a un computer</em>: /dev/usb/lp0 (Linux), \\localhost\Cucina (Windows), cups:Cucina;</li>
+          <li><em>dal browser della cassa</em>: la stampante del computer della cassa (avvia Chrome con <code>--kiosk-printing</code> per non avere la finestra di conferma).</li>
+        </ul></li>
+      <li>Per le stampanti di rete o collegate a un computer serve il <strong>programma di stampa</strong>, su un computer della sagra (anche un Raspberry Pi):
+        dalla stessa pagina <em>Scarica il programma di stampa</em> (è già configurato) e avvialo con <code>python3 agente_stampa.py</code> (su Windows doppio clic). Deve restare acceso durante la serata.</li>
+      <li><em>Stampa di prova</em> per ogni stampante.</li>
+      <li><span class="percorso">Cassa → Impostazioni</span>: scegli dove escono le comande della <strong>cucina</strong> e la copia del <strong>bar</strong> (al bar o alla cassa, se è il cliente a portarla).</li>
+    </ol>
+  </section>
+
+  <section id="domande" class="guida-capitolo">
+    <h2>Domande frequenti</h2>
+    <dl class="guida-faq">
+      <dt>Ho sbagliato a registrare qualcosa nel magazzino</dt>
+      <dd><span class="percorso">Storico → apri l'operazione → annulla la riga sbagliata</span> (o tutta l'operazione) e registrala di nuovo giusta.</dd>
+      <dt>I numeri del magazzino non tornano</dt>
+      <dd>Conta cosa c'è davvero e usa <span class="percorso">Correggi conteggio</span> (magazzino) o <span class="percorso">Bar → Correggi</span>.</dd>
+      <dt>Una Coca-Cola venduta esce dal magazzino?</dt><dd>Sì: vedi <a href="#coca-cola">il bar</a>.</dd>
+      <dt>Come si fa un ordine da asporto?</dt><dd>Tasto <em>Asporto</em> in cassa: vedi <a href="#asporto">alla cassa</a>.</dd>
+      <dt>Come si imposta la tara dei fusti?</dt><dd>Vedi <a href="#tara">la tara</a>.</dd>
+      <dt>Il telefono non apre il programma</dt>
+      <dd>Deve essere sullo stesso Wi-Fi del computer dell'app (o su internet, se l'app è in cloud). L'indirizzo è quello che vi ha dato chi gestisce, es. http://192.168.1.10:8000.</dd>
+      <dt>Posso usarlo con Claude?</dt>
+      <dd>Sì: <span class="percorso">Magazzino → Claude</span> <span class="solo-staff">amministrazione</span> crea la chiave. Poi si chiede in italiano: «cosa è sotto scorta?», «registra 20 kg di patate in dispensa», «per quante serate basta la bionda?».</dd>
+    </dl>
+  </section>
+
+  <section id="gestione" class="guida-capitolo">
+    <h2>Per chi gestisce il computer</h2>
+    <ul>
+      <li><strong>Backup</strong>: ogni 30 minuti il programma salva una copia del database e delle foto nella cartella <code>backup</code> del computer, e se configurato anche su Google Drive. A fine giornata copia la cartella su una chiavetta.</li>
+      <li><strong>Listino 2026</strong>: si carica con <code>docker compose exec web python manage.py carica_listino cassa/listini/listino_2026.json</code>.</li>
+      <li><strong>Aggiornare il programma</strong>, spostarlo su un altro server, Kubernetes, ripristinare un backup: è tutto nel manuale tecnico, nel file <code>docs/MANUTENZIONE.md</code> del programma.</li>
+    </ul>
+  </section>
+</article>
+{% endblock %}

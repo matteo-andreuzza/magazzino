@@ -1,0 +1,84 @@
+{% extends "bar/base.html" %}
+{% load magazzino_tags bar_tags %}
+{% block titolo %}Bevande e fusti{% endblock %}
+{% block contenuto %}
+  {% include "bar/_definizioni_svg.html" %}
+  <h1>Bevande e fusti</h1>
+  <p class="tenue">Ogni articolo del bar nel <a href="{% url 'cassa:listino' %}">listino</a> si collega alla sua bevanda con la quantità per pezzo (1 lattina, 0,33 l di birra, 0,1 l l'ombra di vino…): così ogni vendita la toglie dal magazzino del bar.</p>
+  {% if user.is_staff %}
+    <div class="azioni">
+      <a class="pulsante" href="{% url 'bar:bevanda_nuova' %}">Nuova bevanda</a>
+      {% if alla_spina %}<a class="pulsante secondario" href="{% url 'bar:fusto_nuovo' %}">Nuovo tipo di fusto</a>{% endif %}
+      <a class="pulsante secondario" href="{% url 'bar:spinatrice_nuova' %}">Nuova spinatrice</a>
+    </div>
+  {% endif %}
+
+  <h2>Spinatrici e spine</h2>
+  <p class="tenue piccolo">Al bancone: ogni spinatrice ha le sue spine e a ogni spina è attaccato un fusto alla volta. Una spina che dà una bevanda accetta solo i fusti di quella bevanda.</p>
+  {% for sp in spinatrici %}
+    <div class="scheda">
+      <div class="voce">
+        <h3 class="voce-nome">{% if user.is_staff %}<a href="{% url 'bar:spinatrice_modifica' sp.pk %}">{{ sp.nome }}</a>{% else %}{{ sp.nome }}{% endif %}{% if not sp.attiva %} <span class="etichetta">non attiva</span>{% endif %}</h3>
+        {% if user.is_staff %}<a class="pulsante secondario piccolo" href="{% url 'bar:spina_nuova' %}?spinatrice={{ sp.pk }}">Aggiungi una spina</a>{% endif %}
+      </div>
+      <ul class="elenco">
+        {% for s in sp.spine.all %}
+          <li class="voce">
+            {% if user.is_staff %}<a class="voce-nome" href="{% url 'bar:spina_modifica' s.pk %}">{{ s.nome }}</a>{% else %}<span class="voce-nome">{{ s.nome }}</span>{% endif %}
+            <span class="tenue piccolo">{% if s.bevanda %}<span class="pallino l-{{ s.bevanda.colore }}" aria-hidden="true"></span>{{ s.bevanda.nome }}{% else %}qualsiasi bevanda{% endif %}{% if not s.attiva %} · <span class="etichetta">non attiva</span>{% endif %}</span>
+          </li>
+        {% empty %}
+          <li class="tenue">Nessuna spina.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% empty %}
+    <p class="tenue">Nessuna spinatrice.</p>
+  {% endfor %}
+
+  <h2>Tipi di fusto</h2>
+  <p class="tenue piccolo">Per ogni bevanda alla spina, i fusti in cui arriva: quanti litri contengono e quanto pesano da vuoti (la tara, decisa dall'amministrazione). Colore e forma servono a riconoscerli nel disegno.</p>
+  {% for b in alla_spina %}
+    <div class="scheda">
+      <div class="voce">
+        <h3 class="voce-nome"><span class="pallino l-{{ b.colore }}" aria-hidden="true"></span>{{ b.nome }}</h3>
+        {% if user.is_staff %}<a class="pulsante secondario piccolo" href="{% url 'bar:fusto_nuovo' %}?bevanda={{ b.pk }}">Aggiungi un tipo</a>{% endif %}
+      </div>
+      <ul class="elenco elenco-fusti">
+        {% for t in b.tipi_fusto.all %}
+          <li class="voce">
+            <span class="voce-fusto">
+              {% fusto_svg t 0.7 "fusto-elenco" %}
+              {% if user.is_staff %}<a class="voce-nome" href="{% url 'bar:fusto_modifica' t.pk %}">{{ t.nome }}</a>{% else %}<span class="voce-nome">{{ t.nome }}</span>{% endif %}
+            </span>
+            <span class="tenue piccolo">{{ t.litri|num }} l · {% if t.tara is None %}<span class="etichetta avviso">manca la tara</span>{% else %}vuoto {{ t.tara|num }} kg{% endif %}{% if t.tara_provvisoria %} <span class="etichetta avviso">provvisori</span>{% endif %}{% if not t.attivo %} · <span class="etichetta">non attivo</span>{% endif %}</span>
+          </li>
+        {% empty %}
+          <li class="tenue">Nessun tipo di fusto: aggiungine uno per poterla attaccare a una spina.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% empty %}
+    <p class="tenue">Nessuna bevanda alla spina.</p>
+  {% endfor %}
+  {% if tare_provvisorie %}<p class="piccolo avviso-testo">Litri e tara li decide l'amministrazione: finché sono «provvisori» i litri usciti dai fusti non sono giusti (e i controlli sui pesi avvisano senza bloccare). Correggendoli si correggono anche le serate passate.</p>{% endif %}
+
+  <h2>Bevande</h2>
+  <div class="scheda">
+    <ul class="elenco">
+      {% for b in bevande %}
+        <li>
+          <div class="voce">
+            {% if user.is_staff %}<a class="voce-nome" href="{% url 'bar:bevanda_modifica' b.pk %}">{{ b.nome }}</a>{% else %}<span class="voce-nome">{{ b.nome }}</span>{% endif %}
+            <span class="tenue piccolo">{{ b.get_tipo_display }}{% if not b.attiva %} · <span class="etichetta">non attiva</span>{% endif %}</span>
+          </div>
+          <div class="tenue piccolo">
+            {% for a in b.articoli.all %}{{ a.nome }} ({{ a.quantita_bevanda|qta:b.unita }}){% if not forloop.last %}, {% endif %}{% empty %}<span class="avviso-testo">Nessun articolo del listino collegato: le vendite non la scaricano.</span>{% endfor %}
+          </div>
+        </li>
+      {% empty %}
+        <li class="tenue">Nessuna bevanda.</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

@@ -11,6 +11,7 @@ possono "disallinearsi". Tutte le scritture passano da queste funzioni, che:
 * ignorano il secondo invio dello stesso modulo (token univoco).
 """
 
+import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
@@ -70,7 +71,6 @@ SEGNO = {
     TipoOperazione.SCARTO: -1,
     TipoOperazione.SPOSTAMENTO: 0,
     TipoOperazione.RETTIFICA: 0,
-    TipoOperazione.VENDITA: -1,
 }
 
 
@@ -108,24 +108,19 @@ def giacenze_totali(prodotti=None):
 
 
 def consumi_servizio(servizio, prodotti=None):
-    """{prodotto_id: {"preso": q, "rientrato": q, "venduto": q}} con quantità positive.
-
-    "venduto" è quanto scaricato perché venduto in cassa (es. bevande).
-    """
+    """{prodotto_id: {"preso": q, "rientrato": q}} con quantità positive."""
     qs = Movimento.objects.filter(operazione__servizio=servizio)
     if prodotti is not None:
         qs = qs.filter(prodotto__in=list(prodotti))
     righe = (
         qs.values("prodotto_id", "operazione__tipo").annotate(totale=Sum("quantita")).order_by()
     )
-    risultato = defaultdict(lambda: {"preso": ZERO, "rientrato": ZERO, "venduto": ZERO})
+    risultato = defaultdict(lambda: {"preso": ZERO, "rientrato": ZERO})
     for r in righe:
         if r["operazione__tipo"] == TipoOperazione.CUCINA:
             risultato[r["prodotto_id"]]["preso"] += -r["totale"]
         elif r["operazione__tipo"] == TipoOperazione.RESO:
             risultato[r["prodotto_id"]]["rientrato"] += r["totale"]
-        elif r["operazione__tipo"] == TipoOperazione.VENDITA:
-            risultato[r["prodotto_id"]]["venduto"] += -r["totale"]
     return dict(risultato)
 
 
@@ -245,7 +240,7 @@ def _controlla(tipo, righe, servizio):
 def _registra(tipo, prodotto_ids, calcola_righe, *, utente, servizio=None, note="", token=None, allegati=()):
     """Crea un'operazione con i suoi movimenti. Restituisce (operazione, creata)."""
     if (tipo in TIPI_CON_SERVIZIO) != (servizio is not None):
-        raise ValueError("Il servizio va indicato solo per i prelievi, i rientri e il venduto in cassa.")
+        raise ValueError("Il servizio va indicato solo per i prelievi e i rientri.")
     if token is not None:
         esistente = Operazione.objects.filter(token=token).first()
         if esistente is not None:
@@ -353,6 +348,51 @@ def aggiungi_allegati(*, operazione, files, utente):
 
 
 # ---------------------------------------------------------------------------
+# Foto dei prodotti
+# ---------------------------------------------------------------------------
+
+
+def _cambia_foto(prodotto, nuova):
+    """nuova: (foto, miniatura) già preparate da foto.prepara(), oppure None per toglierla.
+
+    I file vecchi si cancellano solo se il cambio va a buon fine; quelli nuovi
+    si cancellano se qualcosa va storto.
+    """
+    salvati = []
+    try:
+        with transaction.atomic():
+            p = Prodotto.objects.select_for_update().filter(pk=prodotto.pk).first()
+            if p is None:
+                raise ErroreMagazzino("Questo prodotto non esiste più.")
+            vecchi = [(c.storage, c.name) for c in (p.foto, p.miniatura) if c]
+            if nuova is None:
+                p.foto, p.miniatura = "", ""
+            else:
+                nome = uuid.uuid4().hex
+                grande, piccola = nuova
+                p.foto.save(f"{nome}.jpg", grande, save=False)
+                salvati.append((p.foto.storage, p.foto.name))
+                p.miniatura.save(f"{nome}-piccola.jpg", piccola, save=False)
+                salvati.append((p.miniatura.storage, p.miniatura.name))
+            p.save(update_fields=["foto", "miniatura"])
+            transaction.on_commit(lambda: _elimina_file(vecchi))
+    except Exception:
+        _elimina_file(salvati)
+        raise
+    prodotto.foto, prodotto.miniatura = p.foto, p.miniatura
+    return prodotto
+
+
+def salva_foto(*, prodotto, foto):
+    """foto: (foto, miniatura) da magazzino.foto.prepara(). Sostituisce quella di prima."""
+    return _cambia_foto(prodotto, foto)
+
+
+def togli_foto(*, prodotto):
+    return _cambia_foto(prodotto, None)
+
+
+# ---------------------------------------------------------------------------
 # Servizi: terminare e riaprire
 # ---------------------------------------------------------------------------
 
@@ -418,16 +458,6 @@ def registra_reso(*, servizio, rientri, utente, note="", token=None):
     righe = [Riga(p, u, q) for p, u, q in voci]
     return _registra(
         TipoOperazione.RESO, [p.pk for p, _, _ in voci], lambda: righe,
-        utente=utente, servizio=servizio, note=note, token=token,
-    )
-
-
-def registra_vendita(*, servizio, prelievi, utente, note="", token=None):
-    """Scarico di quanto venduto in cassa. prelievi: iterabile di (prodotto, ubicazione, q>0)."""
-    voci = _positive(prelievi)
-    righe = [Riga(p, u, -q) for p, u, q in voci]
-    return _registra(
-        TipoOperazione.VENDITA, [p.pk for p, _, _ in voci], lambda: righe,
         utente=utente, servizio=servizio, note=note, token=token,
     )
 

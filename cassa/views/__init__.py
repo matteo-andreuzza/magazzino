@@ -24,6 +24,8 @@ from .vendita import (  # noqa: F401
     articolo_esaurito,
     cassa,
     cassa_bar,
+    cassa_chiudi,
+    cassa_riapri,
     inizio,
     ordina,
     ordine,

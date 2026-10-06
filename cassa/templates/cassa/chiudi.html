@@ -1,0 +1,30 @@
+{% extends "cassa/base.html" %}
+{% load cassa_tags %}
+{% block titolo %}Chiudi la cassa{% endblock %}
+{% block contenuto %}
+  {% include "cassa/_serata_nav.html" %}
+  <h1>Chiudere la cassa?</h1>
+  <p>A fine serata: la cassa non registra più ordini{% if IMPOSTAZIONI_CASSA.cassa_bar %} (nemmeno quella del bar){% endif %} e si apre il riepilogo. Il magazzino resta aperto per i rientri dalla cucina e la pesata dei fusti. Se arriva ancora qualcuno, si riapre con un tocco.</p>
+
+  <section class="kpi" aria-label="La serata finora">
+    <div class="kpi-tessere">
+      <div class="kpi-tessera"><span class="kpi-etichetta">Incassato</span><span class="kpi-valore">{{ totali.incassato|euro }}</span></div>
+      <div class="kpi-tessera"><span class="kpi-etichetta">Contanti</span><span class="kpi-valore">{{ totali.contanti|euro }}</span><span class="kpi-nota">da trovare nel cassetto</span></div>
+      <div class="kpi-tessera"><span class="kpi-etichetta">Carta / bancomat</span><span class="kpi-valore">{{ totali.carta|euro }}</span></div>
+      <div class="kpi-tessera"><span class="kpi-etichetta">Ordini</span><span class="kpi-valore">{{ totali.ordini }}</span>{% if totali.n_omaggi %}<span class="kpi-nota">di cui {{ totali.n_omaggi }} omaggi</span>{% endif %}</div>
+    </div>
+  </section>
+
+  {% if in_stampa or errori_stampa %}
+    <div class="box-avviso">
+      {% if in_stampa %}<p><strong>{{ in_stampa }} ordin{{ in_stampa|pluralize:"e,i" }} ancora in stampa.</strong> Le comande escono lo stesso anche a cassa chiusa.</p>{% endif %}
+      {% if errori_stampa %}<p><strong>{{ errori_stampa }} ordin{{ errori_stampa|pluralize:"e,i" }} con errori di stampa:</strong> controlla che la cucina li abbia ricevuti (<a href="{% url 'cassa:ordini' servizio.pk %}">ordini</a>).</p>{% endif %}
+    </div>
+  {% endif %}
+
+  <form method="post" class="azioni">
+    {% csrf_token %}
+    <button type="submit" class="pulsante">Sì, chiudi la cassa</button>
+    <a class="pulsante secondario" href="{% url 'cassa:cassa' servizio.pk %}">No, torna alla cassa</a>
+  </form>
+{% endblock %}

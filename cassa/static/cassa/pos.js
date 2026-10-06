@@ -41,7 +41,11 @@
     avvisoStampa: $("[data-avviso-stampa]"),
     avvisoListino: $("[data-avviso-listino]"),
     modoEsauriti: $("[data-modo-esauriti]", radice),
+    notaOmaggio: $("[data-nota-omaggio]", radice),
+    ordine: $(".pos-ordine", radice),
     avvisoEsauriti: $("[data-avviso-esauriti]", radice),
+    asporto: $("[data-asporto]", radice),
+    bannerAsporto: $("[data-banner-asporto]", radice),
   };
   $$("[data-campo]", radice).forEach(function (c) { el.campi[c.dataset.campo] = c; });
 
@@ -95,7 +99,13 @@
   // ---------------------------------------------------------------------
 
   function nuovoStato() {
-    return { righe: [], nome: "", tavolo: "", coperti: "", note: "", ricevuti: "", pagamento: "", token: uuid4(), inviato: false };
+    return {
+      righe: [], nome: "", tavolo: "", coperti: "", note: "", ricevuti: "", pagamento: "", token: uuid4(), inviato: false,
+      // Da asporto: il tavolo è «ASP» (lo mette il server) e non ci sono coperti.
+      asporto: false,
+      // Nome e tavolo messi da soli scegliendo «Omaggio»: si tolgono se si cambia pagamento.
+      autoNome: false, autoTavolo: false,
+    };
   }
 
   var stato = nuovoStato();
@@ -110,6 +120,7 @@
     stato.nome = cfg.copia.nome || "";
     stato.tavolo = cfg.copia.tavolo || "";
     stato.coperti = cfg.copia.coperti ? String(cfg.copia.coperti) : "";
+    stato.asporto = !!cfg.copia.asporto;
     stato.note = cfg.copia.note || "";
     stato.righe = cfg.copia.righe.map(function (r) { return { a: r.a, q: r.q, n: r.n || "" }; });
     tolti = cfg.copia.mancanti.slice();
@@ -292,8 +303,9 @@
   function cosaManca() {
     var manca = [];
     if (!stato.righe.length) manca.push("gli articoli");
-    if (cfg.obbligatori && !stato.nome.trim()) manca.push("il nome");
-    if (cfg.obbligatori && !stato.tavolo.trim()) manca.push("il tavolo");
+    var chiServe = cfg.obbligatori && stato.pagamento !== "omaggio";
+    if (chiServe && !stato.nome.trim()) manca.push("il nome");
+    if (chiServe && !stato.asporto && !stato.tavolo.trim()) manca.push("il tavolo");
     if (!stato.pagamento) manca.push("il pagamento");
     return manca;
   }
@@ -307,9 +319,22 @@
     Object.keys(el.campi).forEach(function (nome) {
       if (document.activeElement !== el.campi[nome]) el.campi[nome].value = stato[nome] || "";
     });
+    if (el.asporto) {
+      var asporto = stato.asporto && cfg.asporto.ammesso;
+      el.asporto.setAttribute("aria-pressed", asporto ? "true" : "false");
+      el.ordine.classList.toggle("in-asporto", asporto);
+      el.bannerAsporto.hidden = !asporto;
+      ["tavolo", "coperti"].forEach(function (nome) {
+        var campo = el.campi[nome];
+        if (!campo) return;
+        campo.disabled = asporto;
+        if (asporto) campo.value = nome === "tavolo" ? cfg.asporto.tavolo : "";
+      });
+    }
     el.pagamenti.forEach(function (p) { p.checked = p.value === stato.pagamento; });
 
     el.resto.hidden = stato.pagamento !== "contanti";
+    if (el.notaOmaggio) el.notaOmaggio.hidden = stato.pagamento !== "omaggio";
     var ricevuti = leggiEuro(stato.ricevuti);
     if (ricevuti === null) {
       el.restoValore.textContent = "—";
@@ -330,7 +355,7 @@
     el.conferma.disabled = bloccata || inCorso || manca.length > 0;
 
     var pezzi = stato.righe.reduce(function (s, r) { return s + r.q; }, 0);
-    el.riassunto.hidden = pezzi === 0;
+    el.riassunto.hidden = pezzi === 0 || ordineInVista;
     el.riassunto.textContent = pezzi ? "Ordine: " + pezzi + (pezzi === 1 ? " articolo" : " articoli") + " · " + euro(totale) + " ↓" : "";
   }
 
@@ -432,6 +457,8 @@
     campo.addEventListener("input", function () {
       if (nome === "coperti") campo.value = campo.value.replace(/\D/g, "");
       stato[nome] = campo.value;
+      if (nome === "nome") stato.autoNome = false;
+      if (nome === "tavolo") stato.autoTavolo = false;
       if (nome === "ricevuti") {
         salva();
         aggiorna();
@@ -449,10 +476,38 @@
     });
   });
 
+  if (el.asporto) {
+    el.asporto.addEventListener("click", function () {
+      stato.asporto = !stato.asporto;
+      if (stato.asporto) {
+        stato.coperti = "";
+        // Il tavolo scritto prima (o messo dall'omaggio) non serve più: sulla comanda va «ASP».
+        stato.tavolo = "";
+        stato.autoTavolo = false;
+      }
+      modificato();
+      if (!stato.asporto && el.campi.tavolo) el.campi.tavolo.focus();
+    });
+  }
+
+  function omaggio(attivo) {
+    // Gli omaggi ai volontari non hanno cliente né tavolo: si riempiono da soli.
+    if (!cfg.obbligatori) return;
+    if (attivo) {
+      if (!stato.nome.trim()) { stato.nome = cfg.omaggio.nome; stato.autoNome = true; }
+      if (!stato.tavolo.trim() && !stato.asporto) { stato.tavolo = cfg.omaggio.tavolo; stato.autoTavolo = true; }
+    } else {
+      if (stato.autoNome && stato.nome === cfg.omaggio.nome) stato.nome = "";
+      if (stato.autoTavolo && stato.tavolo === cfg.omaggio.tavolo) stato.tavolo = "";
+      stato.autoNome = stato.autoTavolo = false;
+    }
+  }
+
   el.pagamenti.forEach(function (p) {
     p.addEventListener("change", function () {
       stato.pagamento = p.value;
       if (p.value !== "contanti") stato.ricevuti = "";
+      omaggio(p.value === "omaggio");
       salva();
       aggiorna();
       if (p.value === "contanti" && el.campi.ricevuti) el.campi.ricevuti.focus();
@@ -530,8 +585,9 @@
       token: stato.token,
       postazione: cfg.postazione,
       nome: stato.nome,
-      tavolo: stato.tavolo,
-      coperti: stato.coperti,
+      tavolo: stato.asporto ? "" : stato.tavolo,
+      coperti: stato.asporto ? "" : stato.coperti,
+      asporto: !!stato.asporto,
       note: stato.note,
       pagamento: stato.pagamento,
       totale: totale,
@@ -643,15 +699,16 @@
   function disegnaUltimi(ordini) {
     el.ultimi.textContent = "";
     if (!ordini.length) {
-      el.ultimi.appendChild(crea("li", "tenue", "Nessun ordine."));
+      el.ultimi.appendChild(crea("li", "tenue", "nessun ordine"));
       return;
     }
     ordini.forEach(function (o) {
       var li = crea("li", "pos-ultimo" + (o.annullato ? " annullato" : ""));
       var link = crea("a", "pos-ultimo-link");
       link.href = o.url;
+      link.title = [o.ora, o.nome, o.totaleTesto, o.pagamento].filter(Boolean).join(" · ");
       link.appendChild(crea("strong", "", "N. " + o.numero));
-      link.appendChild(crea("span", "", [o.ora, o.tavolo ? "T. " + o.tavolo : "", o.nome].filter(Boolean).join(" · ")));
+      if (o.tavolo) link.appendChild(crea("span", "", "T. " + o.tavolo));
       link.appendChild(crea("span", "num", o.totaleTesto));
       li.appendChild(link);
       if (o.annullato) {
@@ -661,7 +718,10 @@
       } else if (o.stampa === "coda") {
         li.appendChild(crea("span", "etichetta avviso", "in stampa"));
       } else if (o.stampa === "ok") {
-        li.appendChild(crea("span", "etichetta ok", "stampato"));
+        var ok = crea("span", "etichetta ok", "✓");
+        ok.title = "Stampato";
+        ok.setAttribute("aria-label", "stampato");
+        li.appendChild(ok);
       }
       if (o.daStampare.length && !o.annullato) {
         var b = crea("button", "pulsante piccolo", "Stampa");
@@ -687,7 +747,8 @@
           if (adottaVersione === true) cfg.versione = d.versione;
           else avvisaListinoCambiato(false);
         }
-        if (d.chiuso && !bloccata) location.reload();
+        // Chiusa o riaperta da un'altra cassa: si ricarica per bloccarla o sbloccarla.
+        if (d.chiuso !== bloccata) location.reload();
         var avvisi = [];
         if (d.stampa.avviso) avvisi.push("Il programma di stampa non è collegato: le comande NON escono. Controlla il computer delle stampanti.");
         if (d.stampa.errori) avvisi.push(d.stampa.errori + (d.stampa.errori === 1 ? " stampa è andata" : " stampe sono andate") + " in errore: controlla la stampante (carta, accesa, collegata).");
@@ -702,6 +763,14 @@
           el.avvisoStampa.hidden = false;
         }
       });
+  }
+
+  var ordineInVista = false;
+  if (window.IntersectionObserver) {
+    new IntersectionObserver(function (voci) {
+      ordineInVista = voci[0].isIntersecting;
+      aggiorna();
+    }, { threshold: 0.15 }).observe(el.ordine);
   }
 
   // ---------------------------------------------------------------------

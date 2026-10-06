@@ -1,23 +1,39 @@
-{% load static %}<!doctype html>
+{% load static magazzino_tags %}<!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#7a2e12">
+  <meta name="theme-color" content="#8cc63f">
+  <script>
+    /* Tema scelto col pulsante in alto; se non si è scelto niente, quello del telefono.
+       Qui in testa così la pagina non lampeggia di bianco prima di diventare scura. */
+    (function () {
+      var scelto = null;
+      try { scelto = localStorage.getItem("tema"); } catch (e) { /* memoria bloccata */ }
+      var scuro = scelto ? scelto === "scuro" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.tema = scuro ? "scuro" : "chiaro";
+    })();
+  </script>
   <title>{% block titolo %}{% endblock %} · {{ APP_NOME }}</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%237a2e12%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27Arial%27 font-weight=%27bold%27%3EM%3C/text%3E%3C/svg%3E">
+  {% block icona %}<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%238cc63f%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27%23173a08%27 font-family=%27Arial%27 font-weight=%27bold%27%3EM%3C/text%3E%3C/svg%3E">{% endblock %}
   <link rel="stylesheet" href="{% static 'magazzino/app.css' %}">
   <script src="{% static 'magazzino/app.js' %}" defer></script>
   {% block testa %}{% endblock %}
 </head>
-<body class="{% block classe_pagina %}{% endblock %}">
+<body class="sezione-{% block sezione %}magazzino{% endblock %} {% block classe_pagina %}{% endblock %}">
   <header class="testata">
     <a class="marchio" href="{% url 'home' %}">{{ APP_NOME }}</a>
+    <button type="button" class="tema" data-cambia-tema aria-label="Modalità scura" aria-pressed="false" title="Modalità scura">
+      <svg class="icona-luna" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.7 14.6A8.5 8.5 0 0 1 9.4 3.3a.6.6 0 0 0-.8-.7A10 10 0 1 0 21.4 15.4a.6.6 0 0 0-.7-.8z"/></svg>
+      <svg class="icona-sole" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 1.8v2.4M12 19.8v2.4M1.8 12h2.4M19.8 12h2.4M4.8 4.8l1.7 1.7M17.5 17.5l1.7 1.7M4.8 19.2l1.7-1.7M17.5 6.5l1.7-1.7"/></svg>
+    </button>
     {% if user.is_authenticated %}
-      <nav class="sezioni" aria-label="Magazzino o cassa">
-        <a href="{% url 'home' %}"{% block sezione_magazzino %} aria-current="true"{% endblock %}>Magazzino</a>
-        <a href="{% url 'cassa:inizio' %}"{% block sezione_cassa %}{% endblock %}>Cassa</a>
+      <nav class="sezioni" aria-label="Sezione del programma: magazzino, bar o cassa">
+        <a class="s-magazzino" href="{% url 'home' %}"{% block sezione_magazzino %} aria-current="true"{% endblock %}>{% include "magazzino/_icona_sezione.html" with sezione="magazzino" %}<span>Magazzino</span></a>
+        <a class="s-bar" href="{% url 'bar:inizio' %}"{% block sezione_bar %}{% endblock %}>{% include "magazzino/_icona_sezione.html" with sezione="bar" %}<span>Bar</span></a>
+        <a class="s-cassa" href="{% url 'cassa:inizio' %}"{% block sezione_cassa %}{% endblock %}>{% include "magazzino/_icona_sezione.html" with sezione="cassa" %}<span>Cassa</span></a>
       </nav>
+      <a class="guida-link" href="{% url 'guida' %}{% block ancora_guida %}{% endblock %}" title="Guida: come si usa"{% attiva "guida" %}><span aria-hidden="true">?</span><span class="guida-testo">Guida</span></a>
       <form method="post" action="{% url 'logout' %}" class="utente">
         {% csrf_token %}
         <span class="tenue">{{ user.get_username }}</span>
@@ -26,18 +42,19 @@
     {% endif %}
   </header>
   {% if user.is_authenticated %}{% block nav %}
-    <nav class="nav" aria-label="Sezioni">
-      <a href="{% url 'home' %}">Inizio</a>
-      <a href="{% url 'servizi' %}">Serate</a>
-      <a href="{% url 'giacenze' %}">Giacenze</a>
-      <a href="{% url 'ubicazioni' %}">Frighi</a>
-      <a href="{% url 'carico_scelta' %}">Carica</a>
-      <a href="{% url 'spostamento_scelta' %}">Sposta</a>
-      <a href="{% url 'operazioni' %}">Storico</a>
-      <a href="{% url 'riepilogo' %}">Consumi</a>
-      <a href="{% url 'menu' %}">Menu</a>
-      <a href="{% url 'prodotti' %}">Prodotti</a>
-      {% if user.is_staff %}<a href="{% url 'admin:index' %}">Amministrazione</a>{% endif %}
+    <nav class="nav" aria-label="Pagine del magazzino">
+      <span class="nav-sezione" aria-hidden="true">{% include "magazzino/_icona_sezione.html" with sezione="magazzino" %}Magazzino</span>
+      <a href="{% url 'home' %}"{% attiva "home" %}>Inizio</a>
+      <a href="{% url 'servizi' %}"{% attiva "servizi" "servizio_*" %}>Serate</a>
+      <a href="{% url 'giacenze' %}"{% attiva "giacenze" %}>Giacenze</a>
+      <a href="{% url 'ubicazioni' %}"{% attiva "ubicazioni" "ubicazione_dettaglio" %}>Frighi</a>
+      <a href="{% url 'carico_scelta' %}"{% attiva "carico_scelta" "carico" %}>Carica</a>
+      <a href="{% url 'spostamento_scelta' %}"{% attiva "spostamento*" %}>Sposta</a>
+      <a href="{% url 'operazioni' %}"{% attiva "operazioni" "operazione_*" "movimento_annulla" "allegato_*" %}>Storico</a>
+      <a href="{% url 'riepilogo' %}"{% attiva "riepilogo" %}>Consumi</a>
+      <a href="{% url 'menu' %}"{% attiva "menu" %}>Menu</a>
+      <a href="{% url 'prodotti' %}"{% attiva "prodotti" "prodotto_*" %}>Prodotti</a>
+      {% if user.is_staff %}<a href="{% url 'assistente:chiavi' %}"{% attiva "assistente:*" %}>Claude</a><a href="{% url 'admin:index' %}">Amministrazione</a>{% endif %}
     </nav>
   {% endblock %}{% endif %}
   <main class="contenuto{% block classe_contenuto %}{% endblock %}">

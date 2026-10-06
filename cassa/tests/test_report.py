@@ -107,7 +107,7 @@ class ConsumiTest(BaseCassa):
         services.annulla_ordine(ordine=ordine, utente=None)
         self.assertEqual(report.consumo_per_porzione([self.serata]), [])
         self.assertIsNone(report.riepilogo_breve(Servizio.objects.create(data=self.serata.data + timedelta(days=3))))
-        self.assertEqual(report.riepilogo_breve(self.serata), {"ordini": 0, "da_scaricare": False})
+        self.assertEqual(report.riepilogo_breve(self.serata), {"ordini": 0})
 
     def test_tempi_senza_monitor(self):
         self.ordina([(self.grigliata, 1)])

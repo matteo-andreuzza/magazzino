@@ -23,7 +23,7 @@ class ArticoloAdmin(admin.ModelAdmin):
     list_editable = ["prezzo", "attivo", "esaurito"]
     list_filter = ["categoria", "reparto", "attivo", "esaurito"]
     search_fields = ["nome"]
-    autocomplete_fields = ["piatto", "prodotto"]
+    autocomplete_fields = ["piatto"]
 
 
 class RigaOrdineInline(admin.TabularInline):
