@@ -1,8 +1,0 @@
-{% extends "magazzino/base.html" %}
-{% block titolo %}Sola lettura{% endblock %}
-{% block contenuto %}
-  <h1>Copia di sola lettura</h1>
-  <p>{{ testo }}</p>
-  <p class="tenue">Questo server riceve da solo, ogni pochi minuti, i dati del programma della sagra: quello che si cambiasse qui verrebbe sovrascritto.</p>
-  <p><a class="pulsante secondario" href="{% url 'home' %}">Torna al magazzino</a></p>
-{% endblock %}
