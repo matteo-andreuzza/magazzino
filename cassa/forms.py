@@ -6,7 +6,7 @@ from bar.models import Bevanda
 from magazzino.models import Piatto
 
 from .formati import euro, leggi_euro
-from .models import Articolo, Connessione, ImpostazioniCassa, Stampante
+from .models import Articolo, Carta, Connessione, ImpostazioniCassa, Stampante
 
 
 class CampoEuro(forms.Field):
@@ -74,11 +74,16 @@ class ImpostazioniForm(forms.ModelForm):
 class StampanteForm(forms.ModelForm):
     class Meta:
         model = Stampante
-        fields = ["nome", "connessione", "indirizzo", "agente", "colonne", "accenti", "attiva"]
+        fields = ["nome", "connessione", "indirizzo", "carta", "colonne", "accenti", "agente", "attiva"]
         widgets = {"connessione": forms.RadioSelect}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["carta"].required = False  # serve solo alle stampanti normali
 
     def clean(self):
         dati = super().clean()
+        dati["carta"] = dati.get("carta") or Carta.A4
         if dati.get("connessione") == Connessione.BROWSER:
             dati["indirizzo"] = ""
             dati["agente"] = ""

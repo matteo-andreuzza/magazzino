@@ -1,0 +1,7 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Accesso riservato{% endblock %}
+{% block contenuto %}
+  <h1>Accesso riservato</h1>
+  <p>Questa pagina è solo per chi gestisce il programma (utenti con accesso all'amministrazione).</p>
+  <p><a class="pulsante secondario" href="{% url 'home' %}">Torna al magazzino</a></p>
+{% endblock %}

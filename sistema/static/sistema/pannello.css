@@ -1,0 +1,189 @@
+/* Pannello del sistema (/sistema/). Gli schemi sono sempre scuri, come lo schermo di una sala
+   macchine: i puntini luminosi si vedono meglio. Il resto segue il tema dell'app. */
+
+.contenuto-pannello { max-width: 1400px; }
+
+.pannello {
+  --s-ok: #4ade80;
+  --s-avviso: #fbbf24;
+  --s-errore: #f87171;
+  --s-spento: #64748b;
+  --s-sconosciuto: #94a3b8;
+  --f-richieste: #67e8f9;
+  --f-risposte: #a7f3d0;
+  --f-dati: #c4b5fd;
+  --f-stampe: #fda4af;
+  --notte: #07110c;
+  --notte-2: #0d1d15;
+  --notte-bordo: #1f3a2a;
+  --notte-testo: #d6efe0;
+  --notte-tenue: #7fa08c;
+}
+
+.pannello-testa { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; justify-content: space-between; }
+.pannello-testa h1 { margin-bottom: .25rem; }
+.pannello-sezione { margin: 2rem 0; scroll-margin-top: 1rem; }
+.sezione-titolo { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; }
+.sezione-titolo .azioni, .sezione-titolo form { margin: 0; display: flex; gap: .5rem; flex-wrap: wrap; }
+.conta-errori { background: var(--pericolo); color: #fff; border-radius: 999px; padding: 0 .45em; font-size: .8em; }
+
+/* Sintesi in alto a destra */
+.sintesi {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: .6rem .8rem;
+}
+.sintesi-luce { width: .9rem; height: .9rem; border-radius: 50%; background: var(--s-sconosciuto); box-shadow: 0 0 0 3px rgba(148, 163, 184, .25); }
+.sintesi[data-stato="ok"] .sintesi-luce { background: var(--s-ok); box-shadow: 0 0 10px var(--s-ok); }
+.sintesi[data-stato="avviso"] .sintesi-luce { background: var(--s-avviso); box-shadow: 0 0 10px var(--s-avviso); }
+.sintesi[data-stato="errore"] .sintesi-luce { background: var(--s-errore); box-shadow: 0 0 12px var(--s-errore); animation: pulsa 1.2s ease-in-out infinite; }
+.sintesi-testo { font-weight: 600; }
+
+/* Schemi */
+.schema { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 1rem; align-items: start; }
+@media (max-width: 1000px) { .schema { grid-template-columns: 1fr; } }
+.schema-tela {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(127, 160, 140, .14) 1px, transparent 0) 0 0 / 22px 22px,
+    linear-gradient(160deg, var(--notte-2), var(--notte));
+  border: 1px solid var(--notte-bordo); border-radius: 14px; overflow-x: auto;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, .55);
+}
+.schema-svg { display: block; width: 100%; min-width: 760px; height: auto; color: var(--notte-testo); font-family: inherit; }
+.schema-dettaglio {
+  background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: .9rem 1rem;
+  font-size: .92rem; position: sticky; top: .5rem; max-height: calc(100vh - 2rem); overflow: auto;
+}
+.schema-dettaglio h3 { margin: 0 0 .3rem; }
+.schema-dettaglio dl { display: grid; grid-template-columns: auto 1fr; gap: .2rem .7rem; margin: .6rem 0; }
+.schema-dettaglio dt { color: var(--tenue); }
+.schema-dettaglio dd { margin: 0; word-break: break-word; }
+.schema-dettaglio ul { padding-left: 1.1rem; margin: .4rem 0; }
+.schema-dettaglio code, .schede-servizi code { font-size: .85em; word-break: break-word; }
+
+/* Elementi SVG */
+.nodo { cursor: pointer; }
+.nodo-corpo { fill: rgba(13, 29, 21, .92); stroke: var(--s-sconosciuto); stroke-width: 1.5; transition: stroke .3s, filter .3s; }
+.nodo:hover .nodo-corpo, .nodo:focus .nodo-corpo { fill: rgba(25, 52, 38, .95); }
+.nodo.scelto .nodo-corpo { stroke-width: 3; }
+.nodo:focus { outline: none; }
+.nodo:focus-visible .nodo-corpo { stroke-width: 3; stroke-dasharray: 5 3; }
+.nodo-titolo { fill: var(--notte-testo); font-size: 14px; font-weight: 700; }
+.nodo-sotto { fill: var(--notte-tenue); font-size: 11.5px; }
+.nodo-numero { fill: var(--notte-testo); font-size: 12px; font-weight: 700; }
+.nodo-icona { fill: none; stroke: var(--notte-tenue); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.cornice { fill: rgba(140, 198, 63, .035); stroke: #2c5a3c; stroke-width: 1.5; stroke-dasharray: 8 5; }
+.cornice-titolo { fill: #8cc63f; font-size: 15px; font-weight: 800; letter-spacing: .02em; }
+.cornice-sotto { fill: var(--notte-tenue); font-size: 12px; }
+.chip-corpo { fill: rgba(140, 198, 63, .08); stroke: #2c5a3c; }
+.chip-testo { fill: var(--notte-testo); font-size: 12px; font-weight: 600; }
+.chip-numero { fill: var(--notte-tenue); font-size: 11px; }
+.etichetta-filo { fill: var(--notte-tenue); font-size: 10.5px; }
+
+.luce-nodo { fill: var(--s-sconosciuto); }
+.stato-ok .nodo-corpo { stroke: var(--s-ok); filter: drop-shadow(0 0 4px rgba(74, 222, 128, .35)); }
+.stato-ok .luce-nodo { fill: var(--s-ok); filter: drop-shadow(0 0 4px var(--s-ok)); }
+.stato-avviso .nodo-corpo { stroke: var(--s-avviso); filter: drop-shadow(0 0 5px rgba(251, 191, 36, .4)); }
+.stato-avviso .luce-nodo { fill: var(--s-avviso); filter: drop-shadow(0 0 4px var(--s-avviso)); }
+.stato-errore .nodo-corpo { stroke: var(--s-errore); filter: drop-shadow(0 0 7px rgba(248, 113, 113, .6)); }
+.stato-errore .luce-nodo { fill: var(--s-errore); animation: pulsa 1s ease-in-out infinite; }
+.stato-spento .nodo-corpo { stroke: var(--s-spento); stroke-dasharray: 4 4; }
+.stato-spento .luce-nodo { fill: var(--s-spento); }
+.stato-spento .nodo-titolo, .stato-spento .nodo-sotto { opacity: .6; }
+
+.filo { fill: none; stroke-width: 2; stroke-linecap: round; opacity: .55; }
+.filo-ok, .filo-avviso { stroke: #2f6b47; }
+.filo-avviso { stroke: #7a6420; }
+.filo-errore { stroke: var(--s-errore); stroke-dasharray: 6 6; opacity: .8; }
+.filo-spento { stroke: #2a3b33; stroke-dasharray: 3 7; opacity: .7; }
+.puntino { filter: url(#bagliore); }
+.puntino-richieste { fill: var(--f-richieste); }
+.puntino-risposte { fill: var(--f-risposte); }
+.puntino-dati { fill: var(--f-dati); }
+.puntino-stampe { fill: var(--f-stampe); }
+
+@keyframes pulsa { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .stato-errore .luce-nodo, .sintesi[data-stato="errore"] .sintesi-luce { animation: none; }
+}
+
+/* Legenda */
+.legenda { list-style: none; padding: 0; margin: .6rem 0 0; display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; font-size: .85rem; color: var(--tenue); }
+.legenda li { display: flex; align-items: center; gap: .35rem; }
+.luce { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; }
+.luce.stato-ok { background: var(--s-ok); }
+.luce.stato-avviso { background: var(--s-avviso); }
+.luce.stato-errore { background: var(--s-errore); }
+.luce.stato-spento { background: var(--s-spento); }
+.luce.stato-sconosciuto { background: var(--s-sconosciuto); }
+.legenda .filo { display: inline-block; width: 1.6rem; height: 0; border-top: 3px dotted; opacity: 1; }
+.filo-richieste { border-color: var(--f-richieste); }
+.filo-dati { border-color: var(--f-dati); }
+.filo-stampe { border-color: var(--f-stampe); }
+
+/* Pillole di stato nelle tabelle */
+.pillola-stato { display: inline-flex; align-items: center; gap: .35rem; font-size: .82rem; font-weight: 600; white-space: nowrap;
+  border-radius: 999px; padding: .1rem .55rem; border: 1px solid var(--bordo); }
+.pillola-stato::before { content: ""; width: .55rem; height: .55rem; border-radius: 50%; background: var(--s-sconosciuto); }
+.pillola-stato.stato-ok::before { background: var(--s-ok); }
+.pillola-stato.stato-avviso::before { background: var(--s-avviso); }
+.pillola-stato.stato-errore::before { background: var(--s-errore); }
+.pillola-stato.stato-spento::before { background: var(--s-spento); }
+
+/* Servizi */
+.computer { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: .5rem 0 1rem; font-size: .92rem; }
+.computer span strong { margin-left: .25rem; }
+.schede-servizi { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: .8rem; }
+.scheda-servizio { background: var(--carta); border: 1px solid var(--bordo); border-left-width: 5px; border-radius: var(--raggio); padding: .8rem 1rem; }
+.scheda-servizio.stato-ok { border-left-color: var(--s-ok); }
+.scheda-servizio.stato-avviso { border-left-color: var(--s-avviso); }
+.scheda-servizio.stato-errore { border-left-color: var(--s-errore); }
+.scheda-servizio.stato-spento, .scheda-servizio.stato-sconosciuto { border-left-color: var(--s-spento); }
+.scheda-servizio h3 { margin: 0; font-size: 1.05rem; display: flex; justify-content: space-between; gap: .5rem; align-items: center; }
+.scheda-servizio p { margin: .35rem 0; }
+.scheda-servizio dl { display: grid; grid-template-columns: auto 1fr; gap: .15rem .7rem; font-size: .87rem; margin: .4rem 0; }
+.scheda-servizio dt { color: var(--tenue); }
+.scheda-servizio dd { margin: 0; word-break: break-word; }
+.scheda-servizio details { font-size: .87rem; }
+
+/* Tabelle */
+.tabella-scorre { overflow-x: auto; }
+.tabella-pannello { width: 100%; border-collapse: collapse; font-size: .9rem; background: var(--carta); border-radius: var(--raggio); }
+.tabella-pannello th, .tabella-pannello td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--bordo); vertical-align: top; }
+.tabella-pannello th { background: var(--testa-tabella); font-weight: 600; white-space: nowrap; }
+
+/* Attività */
+.attivita { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .5rem; }
+.attivita div { background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: .55rem .8rem; }
+.attivita dt { color: var(--tenue); font-size: .85rem; }
+.attivita dd { margin: .1rem 0 0; font-weight: 600; }
+
+/* Errori */
+.errore-voce { background: var(--carta); border: 1px solid var(--bordo); border-left: 5px solid var(--s-errore); border-radius: var(--raggio); padding: .6rem .9rem; margin: .5rem 0; }
+.errore-voce.visto { border-left-color: var(--s-spento); opacity: .85; }
+.errore-voce summary { cursor: pointer; }
+.errore-voce pre { white-space: pre-wrap; word-break: break-word; font-size: .78rem; background: var(--notte); color: var(--notte-testo); padding: .7rem; border-radius: 8px; max-height: 420px; overflow: auto; }
+.errore-testa { display: flex; flex-wrap: wrap; gap: .3rem .8rem; align-items: baseline; }
+.errore-tipo { font-family: ui-monospace, monospace; font-weight: 700; }
+.distintivo { font-size: .75rem; border-radius: 4px; padding: .05rem .4rem; background: var(--info-chiaro); color: var(--testo); }
+
+.due-colonne { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+
+/* Guida del programmatore (Markdown) */
+.guida-corpo { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (max-width: 900px) { .guida-corpo { grid-template-columns: 1fr; } }
+.guida-indice-md { position: sticky; top: .5rem; max-height: calc(100vh - 2rem); overflow: auto; font-size: .88rem;
+  background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: .6rem .8rem; }
+.guida-indice-md ul { list-style: none; padding-left: .8rem; margin: .2rem 0; }
+.guida-indice-md > .toc > ul { padding-left: 0; }
+.testo-md { background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: 1rem 1.4rem; line-height: 1.55; min-width: 0; }
+.testo-md h1 { display: none; }
+.testo-md h2 { border-bottom: 1px solid var(--bordo); padding-bottom: .25rem; margin-top: 2rem; scroll-margin-top: 1rem; }
+.testo-md h3 { scroll-margin-top: 1rem; }
+.testo-md pre { background: var(--notte); color: var(--notte-testo); padding: .8rem 1rem; border-radius: 8px; overflow-x: auto; font-size: .85rem; line-height: 1.4; }
+.testo-md code { font-size: .88em; }
+.testo-md :not(pre) > code { background: var(--testa-tabella); border: 1px solid var(--bordo); border-radius: 4px; padding: 0 .25em; }
+.testo-md table { border-collapse: collapse; display: block; overflow-x: auto; font-size: .9rem; margin: .8rem 0; }
+.testo-md th, .testo-md td { border: 1px solid var(--bordo); padding: .35rem .6rem; vertical-align: top; text-align: left; }
+.testo-md th { background: var(--testa-tabella); }
+.testo-md .headerlink { opacity: 0; margin-left: .3rem; text-decoration: none; }
+.testo-md h2:hover .headerlink, .testo-md h3:hover .headerlink { opacity: .6; }

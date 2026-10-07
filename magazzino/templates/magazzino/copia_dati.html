@@ -1,0 +1,26 @@
+{% extends "magazzino/base.html" %}
+{% block titolo %}Copia dei dati{% endblock %}
+{% block contenuto %}
+  <h1>Copia dei dati</h1>
+  <p>Una copia completa di tutto quello che c'è nel programma: magazzino, bar, cassa e utenti, con fatture e foto.
+    Serve ad avere i dati anche in un altro posto, per esempio portandola a casa su una chiavetta a fine serata.</p>
+
+  <div class="scheda">
+    <ol class="passi">
+      <li>Infila la chiavetta nel computer.</li>
+      <li><a class="pulsante" href="{% url 'copia_dati_scarica' %}">Scarica la copia</a>
+        <span class="tenue piccolo">un file come <code>{{ nome_file }}</code>, ci vuole qualche secondo</span></li>
+      <li>Salva il file sulla chiavetta. Se il browser lo mette da solo nella cartella <em>Download</em>, spostalo sulla chiavetta da lì.</li>
+      <li>A casa, sul tuo server, nella cartella del programma: <code>scripts/importa-dati.sh /percorso/della/chiavetta/{{ nome_file }}</code>.
+        I dati di quel server vengono sostituiti da quelli della copia.</li>
+    </ol>
+  </div>
+
+  <div class="box-avviso">
+    <p><strong>La copia contiene dati personali</strong> (nomi, incassi, password cifrate degli utenti): tieni la chiavetta al sicuro.</p>
+    <p class="piccolo">Sul server di casa guarda pure, ma non registrare niente: alla prossima copia caricata verrebbe sostituito.</p>
+  </div>
+
+  <p class="tenue piccolo">Intanto i backup automatici continuano da soli: ogni 30 minuti nella cartella <code>backup</code> del computer del programma,
+    e su Google Drive quando c'è internet (se è configurato).</p>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "magazzino/base.html" %}
+{% load static %}
+{% block titolo %}Sistema{% endblock %}
+{% block sezione_magazzino %}{% endblock %}
+{% block classe_contenuto %} contenuto-pannello{% endblock %}
+{% block ancora_guida %}#computer{% endblock %}
+{% block testa %}
+  <link rel="stylesheet" href="{% static 'sistema/pannello.css' %}">
+  <script src="{% static 'sistema/pannello.js' %}" defer></script>
+{% endblock %}
+{% block nav %}
+  <nav class="nav" aria-label="Parti del pannello">
+    <span class="nav-sezione" aria-hidden="true">Sistema</span>
+    <a href="#schema">Schema</a>
+    <a href="#programma">Programma</a>
+    <a href="#servizi">Servizi</a>
+    <a href="#stampanti">Stampanti</a>
+    <a href="#dispositivi">Dispositivi</a>
+    <a href="#attivita">Attività</a>
+    <a href="#errori">Errori <span class="conta-errori" data-conta-errori hidden></span></a>
+    <a href="#versione">Versione</a>
+    <a href="#guida">Guida del programmatore</a>
+    <a href="{% url 'home' %}">← Magazzino</a>
+  </nav>
+{% endblock %}
+{% block contenuto %}
+<div class="pannello" data-pannello data-indirizzo-stato="{% url 'sistema:stato_json' %}">
+  <header class="pannello-testa">
+    <div>
+      <h1>Sistema</h1>
+      <p class="tenue">Come stanno server, servizi, stampanti e dispositivi, cosa è successo e la guida per chi mantiene il programma.
+        {% if copia %}Questo è il <strong>server di casa</strong>: copia di sola lettura di <code>{{ copia_di }}</code>.{% endif %}</p>
+    </div>
+    <div class="sintesi" data-sintesi role="status" aria-live="polite">
+      <span class="sintesi-luce"></span>
+      <span class="sintesi-testo">Carico lo stato…</span>
+      <span class="sintesi-ora tenue piccolo" data-ora></span>
+      <button type="button" class="pulsante secondario piccolo" data-pausa aria-pressed="false">Pausa</button>
+    </div>
+  </header>
+  <noscript><div class="box-errori">Il pannello si aggiorna da solo con JavaScript: attivalo nel browser.</div></noscript>
+
+  <section id="schema" class="pannello-sezione">
+    <div class="sezione-titolo">
+      <h2>Schema: chi parla con chi</h2>
+      <div class="azioni">
+        {% if not copia %}
+          <form method="post" action="{% url 'sistema:stampanti_controlla' %}">{% csrf_token %}<button class="pulsante secondario piccolo">Controlla le stampanti adesso</button></form>
+        {% else %}
+          <form method="post" action="{% url 'sistema:copia_adesso' %}">{% csrf_token %}<button class="pulsante secondario piccolo">Prendi la copia adesso</button></form>
+          <form method="post" action="{% url 'sistema:copia_adesso' %}">{% csrf_token %}<input type="hidden" name="forza" value="1"><button class="pulsante secondario piccolo" title="Ricarica il database anche se non è cambiato">Ricarica tutto</button></form>
+        {% endif %}
+      </div>
+    </div>
+    <p class="tenue piccolo">I puntini che scorrono sono i dati che passano: richieste e risposte delle pagine, query al database, stampe, copie. Tocca un riquadro per vedere i dettagli e cosa fare se non va.</p>
+    <div class="schema">
+      <div class="schema-tela">
+        <svg class="schema-svg" data-schema-rete viewBox="0 0 1200 700" role="img" aria-label="Schema del sistema: dispositivi, rete, server con i suoi container, stampanti e internet"></svg>
+      </div>
+      <aside class="schema-dettaglio" data-dettaglio aria-live="polite">
+        <p class="tenue">Tocca un riquadro dello schema.</p>
+      </aside>
+    </div>
+    <ul class="legenda" aria-label="Legenda">
+      <li><span class="luce stato-ok"></span>a posto</li>
+      <li><span class="luce stato-avviso"></span>da guardare</li>
+      <li><span class="luce stato-errore"></span>guasto</li>
+      <li><span class="luce stato-spento"></span>spento o non serve</li>
+      <li><span class="luce stato-sconosciuto"></span>non si sa</li>
+      <li><span class="filo filo-richieste"></span>pagine (richieste e risposte)</li>
+      <li><span class="filo filo-dati"></span>dati (database, copie)</li>
+      <li><span class="filo filo-stampe"></span>stampe</li>
+    </ul>
+  </section>
+
+  <section id="programma" class="pannello-sezione">
+    <h2>Dentro il programma</h2>
+    <p class="tenue piccolo">I pezzi del codice e come si passano il lavoro, con i numeri di oggi. Tocca un pezzo per sapere dove sta e cosa fa.</p>
+    <div class="schema">
+      <div class="schema-tela">
+        <svg class="schema-svg" data-schema-programma viewBox="0 0 1200 530" role="img" aria-label="Componenti del programma e come comunicano"></svg>
+      </div>
+      <aside class="schema-dettaglio" data-dettaglio-programma aria-live="polite">
+        <p class="tenue">Tocca un pezzo dello schema.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="servizi" class="pannello-sezione">
+    <h2>Servizi</h2>
+    <div class="computer" data-computer></div>
+    <div class="schede-servizi" data-servizi></div>
+  </section>
+
+  <section id="stampanti" class="pannello-sezione">
+    <div class="sezione-titolo">
+      <h2>Stampanti</h2>
+      <a class="pulsante secondario piccolo" href="{% url 'cassa:stampanti' %}">Gestisci le stampanti</a>
+    </div>
+    <div class="tabella-scorre" data-stampanti></div>
+    <h3>Stampe in errore</h3>
+    <div data-stampe-errore></div>
+  </section>
+
+  <section id="dispositivi" class="pannello-sezione">
+    <div class="sezione-titolo">
+      <h2>Dispositivi collegati</h2>
+      <form method="post" action="{% url 'sistema:dispositivi_dimentica' %}">{% csrf_token %}<button class="pulsante secondario piccolo">Svuota l'elenco</button></form>
+    </div>
+    <p class="tenue piccolo">Telefoni, tablet e computer che usano l'app (ultime 12 ore), Claude e i computer con il programma di stampa. «Attivo» = visto negli ultimi 2 minuti.</p>
+    <div class="tabella-scorre" data-dispositivi></div>
+  </section>
+
+  <section id="attivita" class="pannello-sezione">
+    <h2>Ultime attività</h2>
+    <p class="tenue piccolo">Quando è successa l'ultima volta ogni cosa: se qualcosa che dovrebbe succedere spesso è fermo da tanto, lì c'è il problema.</p>
+    <dl class="attivita" data-attivita></dl>
+  </section>
+
+  <section id="errori" class="pannello-sezione">
+    <div class="sezione-titolo">
+      <h2>Errori ed eccezioni</h2>
+      <div class="azioni">
+        <form method="post" action="{% url 'sistema:errori_visti' %}">{% csrf_token %}<button class="pulsante secondario piccolo">Segna tutti come visti</button></form>
+        <form method="post" action="{% url 'sistema:errori_svuota' %}">{% csrf_token %}<button class="pulsante secondario piccolo">Togli quelli visti</button></form>
+      </div>
+    </div>
+    <p class="tenue piccolo">Errori del programma (pagine andate in errore, servizi inciampati), con il punto del codice e la traccia completa. Quelli uguali si contano. Le stampanti spente o senza carta non sono qui: sono in «Stampanti».</p>
+    <div data-errori></div>
+  </section>
+
+  <section id="versione" class="pannello-sezione">
+    <h2>Versione e backup</h2>
+    <div class="due-colonne">
+      <div data-versione></div>
+      <div data-backup></div>
+    </div>
+  </section>
+
+  <section id="guida" class="pannello-sezione guida-programmatore">
+    <h2>Guida del programmatore</h2>
+    <p class="tenue piccolo">È il file <code>docs/MANUTENZIONE.md</code> del programma, sempre aggiornato con il codice.</p>
+    <div class="guida-corpo">
+      <nav class="guida-indice-md" aria-label="Indice della guida del programmatore">{{ indice|safe }}</nav>
+      <article class="testo-md">{{ guida|safe }}</article>
+    </div>
+  </section>
+</div>
+{{ stato|json_script:"stato-iniziale" }}
+{% endblock %}

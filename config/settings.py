@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "bar",
     "cassa",
     "assistente",
+    "sistema",
 ]
 
 MIDDLEWARE = [
@@ -78,6 +79,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # Dispositivi collegati ed errori per il pannello del sistema (fuori dalla sola lettura qui sotto).
+    "sistema.middleware.MonitoraggioMiddleware",
+    # Solo sulla copia remota (COPIA_DI): niente modifiche.
+    "sistema.middleware.SolaLetturaMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -95,6 +100,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "magazzino.context_processors.app",
                 "cassa.context_processors.cassa",
+                "sistema.context_processors.sistema",
             ],
         },
     },
@@ -167,6 +173,18 @@ if env_bool("DJANGO_DIETRO_PROXY_HTTPS"):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 APP_NOME = os.environ.get("APP_NOME", "Magazzino Sagra")
+
+# Copia remota (vedi sistema/copia_remota.py). Sulla sagra basta COPIA_CHIAVE; sul server di
+# casa anche COPIA_DI, l'indirizzo della sagra: quel server diventa una copia di sola lettura.
+COPIA_DI = os.environ.get("COPIA_DI", "").strip()
+COPIA_CHIAVE = os.environ.get("COPIA_CHIAVE", "").strip()
+COPIA_OGNI_MINUTI = float(os.environ.get("COPIA_OGNI_MINUTI", "5") or 5)
+
+# Per il pannello del sistema: i backup (cartella backup/ del computer) e lo stato che
+# scrivono i servizi backup e drive (vedi docker-compose.yml).
+CARTELLA_BACKUP = Path(os.environ.get("CARTELLA_BACKUP", "/backup"))
+CARTELLA_STATO = Path(os.environ.get("CARTELLA_STATO", "/stato"))
+BACKUP_OGNI_MINUTI = int(os.environ.get("BACKUP_OGNI_MINUTI", "30") or 30)
 
 LIVELLO_LOG = os.environ.get("DJANGO_LOG_LEVEL", "DEBUG" if DEBUG else "INFO").upper()
 

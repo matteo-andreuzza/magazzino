@@ -18,11 +18,11 @@ conferma "I dati del server di prova verranno sostituiti." || { echo "Annullato.
 
 $COMPOSE up -d db
 attendi_db
-$COMPOSE stop web >/dev/null 2>&1 || true
+$COMPOSE stop web stampa >/dev/null 2>&1 || true
 $COMPOSE exec -T db sh -c 'psql -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'
 ripristina_database "$FILE"
 echo "Dati caricati. Avvio il server di prova con il codice nuovo (le migrazioni partono da sole)…"
-$COMPOSE up -d web
+$COMPOSE up -d
 if attendi_app; then
   $COMPOSE exec -T web python manage.py check
   echo "Tutto a posto: prova il programma sul server di prova (porta 8002) prima di aggiornare quello vero."

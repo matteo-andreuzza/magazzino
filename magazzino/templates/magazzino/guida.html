@@ -16,6 +16,7 @@
     <a href="#menu-listino">Menu e listino</a>
     <a href="#stampanti">Stampanti</a>
     <a href="#domande">Domande</a>
+    <a href="#computer">Il computer</a>
   </nav>
 {% endblock %}
 {% block contenuto %}
@@ -37,6 +38,7 @@
     <a href="#menu-listino"><strong>Menu e listino</strong><span>Cambiare piatti e prezzi</span></a>
     <a href="#stampanti"><strong>Stampanti</strong><span>Comande in cucina e al bar</span></a>
     <a href="#domande"><strong>Domande frequenti</strong><span>Le risposte veloci</span></a>
+    <a href="#computer"><strong>Il computer del programma</strong><span>Installarlo, accenderlo, pannello, copie dei dati</span></a>
   </nav>
 
   <section id="come-funziona" class="guida-capitolo">
@@ -59,9 +61,11 @@
     <h2>Prima della sagra</h2>
     <p>Da fare una volta sola, qualche giorno prima. Conviene farlo da un computer.</p>
     <ol class="guida-passi">
+      <li><strong>Il computer del programma</strong>: installalo e dagli un indirizzo fisso nella rete della sagra, vedi <a href="#installazione">Il computer del programma</a>.</li>
       <li><strong>Utenti dei volontari</strong> <span class="solo-staff">amministrazione</span><br>
         <span class="percorso">Magazzino → Amministrazione → Utenti → Aggiungi</span>. Senza «staff» il volontario non vede le pagine di configurazione.
-        Va bene anche un utente unico per tutti, ma con utenti diversi lo storico dice chi ha fatto cosa.</li>
+        Va bene anche un utente unico per tutti, ma con utenti diversi lo storico dice chi ha fatto cosa
+        e su comande e ricevute esce <em>Cassiere: nome</em> (il nome dell'utente che ha fatto l'ordine).</li>
       <li><strong>Frighi, congelatori e dispensa</strong> <span class="solo-staff">amministrazione</span><br>
         <span class="percorso">Magazzino → Amministrazione → Ubicazioni</span>: un nome che tutti riconoscono («Congelatore piccolo»).</li>
       <li><strong>Prodotti</strong><br>
@@ -69,8 +73,8 @@
         Una <em>foto</em> aiuta a riconoscerli in frigo.</li>
       <li><strong>Menu e piatti</strong> <span class="solo-staff">amministrazione</span> — vedi <a href="#menu-listino">Menu e listino</a>.</li>
       <li><strong>Listino della cassa (prezzi)</strong> <span class="solo-staff">amministrazione</span><br>
-        <span class="percorso">Cassa → Listino</span>: un articolo per ogni cosa che si vende, con prezzo e reparto (<em>Cucina</em> = comanda in cucina, <em>Bar</em> = copia per il bar).
-        Un articolo senza prezzo non compare in cassa. Il listino 2026 si può caricare già pronto (vedi <a href="#gestione">Per chi gestisce il computer</a>).</li>
+        <span class="percorso">Cassa → Listino</span>: un articolo per ogni cosa che si vende, con prezzo e reparto (<em>Cucina</em> = comanda in cucina, <em>Bar</em> = comanda del bar).
+        Un articolo senza prezzo non compare in cassa. Il listino 2026 si può caricare già pronto (vedi <a href="#gestione">Il computer del programma</a>).</li>
       <li><strong>Bevande e fusti del bar</strong> <span class="solo-staff">amministrazione</span><br>
         <span class="percorso">Bar → Bevande e fusti</span>: le bevande, i <strong>tipi di fusto con litri e tara</strong> (vedi <a href="#tara">come si imposta la tara</a>), le spinatrici e le spine.
         Poi in <span class="percorso">Cassa → Listino</span> collega ogni articolo del bar alla sua bevanda.</li>
@@ -92,7 +96,9 @@
         Nella stessa pagina spunta i <strong>piatti serviti</strong> stasera: quelli del menu della sagra e quello speciale della sera (es. la tagliata il sabato).
         In cassa compaiono solo gli articoli dei piatti spuntati, più quelli non legati a un piatto (bevande, caffè, dolci).
         Se non spunti niente, compare tutto il listino. Si cambia quando vuoi da <span class="percorso">Serate → la serata → Modifica servizio</span>.</li>
-      <li><strong>Accendi le stampanti</strong> e, sul computer delle stampanti, il <em>programma di stampa</em>. Se non è acceso, in cassa compare un avviso rosso.</li>
+      <li><strong>Accendi il computer del programma e le stampanti.</strong> Il programma parte da solo in un minuto circa, stampa compresa: non c'è niente da avviare.
+        Se in cassa compare un avviso rosso sulla stampa, vedi <a href="#stampanti">Stampanti</a>.
+        Chi gestisce può dare un'occhiata a <span class="percorso">Magazzino → Sistema</span> <span class="solo-staff">amministrazione</span>: se è tutto verde si parte (vedi <a href="#pannello">il pannello</a>).</li>
       <li><strong>Metti a cucinare</strong><br>
         <span class="percorso">Magazzino → Inizio → Metti a cucinare</span>: per ogni frigo o congelatore scrivi quanto porti in cucina. Si può tornare più volte durante la serata: ogni invio si somma.</li>
       <li><strong>Apri la cassa</strong>: <span class="percorso">Cassa → Apri la cassa ingresso</span>. Con la cassa al bar attiva, al bar si apre da <span class="percorso">Bar → Oggi → Cassa del bar</span>.</li>
@@ -107,7 +113,8 @@
       <li><strong>Tocca gli articoli</strong>: ogni tocco ne aggiunge uno. <em>−</em> e <em>+</em> cambiano la quantità, <em>Nota</em> aggiunge una richiesta alla riga («senza cipolla»): va sulla comanda.
         I bottoni colorati in alto filtrano per categoria; il colore della striscia di ogni articolo è quello della sua categoria.</li>
       <li><strong>Pagamento</strong>: con <em>Contanti</em> scrivi quanto ti danno (o tocca 10 €, 20 €…) e leggi il resto.</li>
-      <li><strong>Conferma e stampa</strong>: l'ordine prende il numero della serata e le comande escono.</li>
+      <li><strong>Conferma e stampa</strong>: l'ordine prende il numero della serata. In cucina esce la comanda; alla stampante della cassa escono la <strong>ricevuta</strong>
+        e, se ci sono bevande, la <strong>comanda del bar</strong> («Da presentare al bar»): dalle tutte e due al cliente, la comanda la porta al bar.</li>
     </ol>
     <dl class="guida-faq">
       <dt id="asporto">Ordine da asporto</dt>
@@ -134,6 +141,9 @@
       <dd><strong>Sì</strong>, sia alla cassa dell'ingresso sia alla cassa del bar, anche in omaggio, se nel listino l'articolo è <strong>collegato alla bevanda</strong> (es. «Coca-Cola lattina» → bevanda Coca-Cola, 1 lattina).
         Annullando l'ordine la lattina torna in magazzino. Se le giacenze vanno sotto zero la pagina del bar lo segnala (manca un carico), ma la cassa non si blocca mai.
         In <span class="percorso">Cassa → Listino</span> gli articoli del bar non collegati sono scritti in arancione (caffè, liquori e spritz non si collegano: non si contano).</dd>
+      <dt id="comanda-bar">Come arrivano al bar le bevande ordinate all'ingresso?</dt>
+      <dd>Con la <strong>comanda del bar</strong>: esce alla cassa insieme alla ricevuta, con scritto «Da presentare al bar», numero dell'ordine e tavolo.
+        Il cliente la porta al bar e il bar gli dà quello che c'è scritto. Alla <strong>cassa del bar</strong> invece non si stampa niente: chi paga lì viene servito subito.</dd>
       <dt id="nuova-bevanda">Come aggiungo una bevanda al bar?</dt>
       <dd><ol>
         <li><span class="percorso">Bar → Bevande e fusti → Nuova bevanda</span> <span class="solo-staff">amministrazione</span>: nome e come si conta (lattine, bottiglie, oppure alla spina da fusti).</li>
@@ -145,7 +155,8 @@
       <dd><ol>
         <li>Pesa un fusto <strong>vuoto</strong> di quel tipo (es. un «Alto nero» finito).</li>
         <li><span class="percorso">Bar → Bevande e fusti → clic sul tipo di fusto</span> <span class="solo-staff">amministrazione</span>.</li>
-        <li>Scrivi <strong>Peso da vuoto</strong> (la tara) e controlla i <strong>Litri</strong> che contiene pieno. Salva.</li>
+        <li>Scrivi <strong>Peso da vuoto</strong> (la tara) e controlla i <strong>Litri</strong> che contiene pieno. Salva.
+          Cambiandoli non sono più «provvisori»; se quelli scritti erano già giusti, spunta <em>Litri e tara sono quelli veri</em>.</li>
       </ol>
         Finché i valori sono «provvisori» le pagine del bar lo ricordano e i controlli sui pesi avvisano senza bloccare. Correggendo la tara si correggono anche le serate già passate.
         Se lo stesso fusto si usa per due bevande (il 50 litri della bionda e della rossa) spunta <em>Stessi litri e tara anche per gli altri</em>.</dd>
@@ -186,6 +197,7 @@
       <li><strong>Fusti</strong>: <a href="#fusti">pesali</a>.</li>
       <li><strong>Rientro dalla cucina</strong>: <span class="percorso">Magazzino → Inizio → Rientro dalla cucina</span>, quello che non è stato usato e dove lo rimetti (lo scongelato non torna in congelatore).</li>
       <li><strong>Termina la serata</strong>: <span class="percorso">Magazzino → Inizio → Termina</span>. La pagina mostra cosa è uscito e non è rientrato: il resto conta come usato.</li>
+      <li><strong>Copia dei dati su chiavetta</strong> <span class="solo-staff">amministrazione</span>: <span class="percorso">Magazzino → Copia dati → Scarica la copia</span>, e salvala sulla chiavetta (vedi <a href="#copia">copia dei dati</a>).</li>
     </ol>
     <p>Il <strong>report della serata</strong> (<span class="percorso">Cassa → Report</span>) mostra incassi, venduto, bevande e confronto tra birra e vino usciti dai fusti e venduti; si stampa o si scarica per Excel.</p>
   </section>
@@ -208,19 +220,38 @@
 
   <section id="stampanti" class="guida-capitolo">
     <h2>Stampanti</h2>
-    <p>Le comande escono su stampanti termiche da 80 o 58 mm (Epson TM e compatibili).</p>
+    <p>Comande e ricevute escono sulle <strong>stampanti di rete</strong> della sagra: normali stampanti laser o a getto d'inchiostro collegate allo switch (su fogli A4 o A5),
+      oppure stampanti termiche per scontrini. Le manda <strong>il computer del programma, da solo</strong>, appena si conferma l'ordine: sui telefoni e sui tablet della cassa non c'è niente da installare.</p>
     <ol class="guida-passi">
-      <li><span class="percorso">Cassa → Stampanti → Aggiungi stampante</span> <span class="solo-staff">amministrazione</span>: un nome («Cucina»), come è collegata e l'indirizzo:
-        <ul>
-          <li><em>di rete</em>: l'indirizzo IP, es. 192.168.1.50 (si legge sul foglio che stampa tenendo premuto FEED all'accensione);</li>
-          <li><em>collegata a un computer</em>: /dev/usb/lp0 (Linux), \\localhost\Cucina (Windows), cups:Cucina;</li>
-          <li><em>dal browser della cassa</em>: la stampante del computer della cassa (avvia Chrome con <code>--kiosk-printing</code> per non avere la finestra di conferma).</li>
-        </ul></li>
-      <li>Per le stampanti di rete o collegate a un computer serve il <strong>programma di stampa</strong>, su un computer della sagra (anche un Raspberry Pi):
-        dalla stessa pagina <em>Scarica il programma di stampa</em> (è già configurato) e avvialo con <code>python3 agente_stampa.py</code> (su Windows doppio clic). Deve restare acceso durante la serata.</li>
-      <li><em>Stampa di prova</em> per ogni stampante.</li>
-      <li><span class="percorso">Cassa → Impostazioni</span>: scegli dove escono le comande della <strong>cucina</strong> e la copia del <strong>bar</strong> (al bar o alla cassa, se è il cliente a portarla).</li>
+      <li><strong>Indirizzo fisso</strong> per ogni stampante: dal menu della stampante (di solito <em>Rete → TCP/IP → IP manuale</em>) oppure prenotandolo nel router, es. 192.168.1.50 la cucina e 192.168.1.51 la cassa.
+        Scrivilo su un'etichetta attaccata alla stampante.</li>
+      <li><span class="percorso">Cassa → Stampanti → Aggiungi stampante</span> <span class="solo-staff">amministrazione</span>: un nome («Cucina»), <em>Stampante normale di rete</em>, l'indirizzo e il formato dei fogli nel cassetto (A4 o A5).
+        Con 42 caratteri per riga il testo viene grande, leggibile da lontano.</li>
+      <li><em>Controlla</em>: dice se la stampante risponde, che modello è e se mancano carta o toner. Poi <em>Stampa di prova</em>.</li>
+      <li><span class="percorso">Cassa → Impostazioni</span>: scegli cosa esce da ogni stampante (vedi sotto).</li>
     </ol>
+    <div class="guida-esempio">
+      <p><strong>Da noi: due stampanti</strong>, una in cucina e una alla cassa dell'ingresso. In <span class="percorso">Cassa → Impostazioni</span>:</p>
+      <ul>
+        <li><em>Stampante cucina</em>: <strong>Cucina</strong> — la comanda con quello che c'è da preparare;</li>
+        <li><em>Stampante comanda bar</em>: <strong>Cassa</strong> — la comanda delle bevande esce alla cassa con scritto «Da presentare al bar»: il cliente la porta al bar;</li>
+        <li><em>Ricevuta per il cliente</em> spuntata, <em>stampante ricevute</em>: <strong>Cassa</strong>;</li>
+        <li><em>Stampante della cassa al bar</em>: vuota — la cassa del bar non ha stampante e non stampa niente: chi paga al bar viene servito subito.</li>
+      </ul>
+      <p>Per la cassa conviene la carta <strong>A5</strong> (mezzo A4): ricevuta e comanda del bar ci stanno larghe e si consuma metà carta.</p>
+    </div>
+    <dl class="guida-faq">
+      <dt>Che stampanti vanno bene?</dt>
+      <dd>Quelle di rete che stampano da iPhone o Android senza programmi: sulla scatola o nel manuale c'è scritto <strong>AirPrint</strong>, <strong>Mopria</strong> o <strong>IPP Everywhere</strong> (quasi tutte quelle degli ultimi dieci anni).
+        Collegale con il cavo di rete allo switch: il Wi-Fi delle stampanti è meno affidabile. Le termiche per scontrini vanno bene se sono di rete (ESC/POS, porta 9100).</dd>
+      <dt>Ho una stampante vecchia, o collegata con il cavo USB</dt>
+      <dd>Installala con il suo driver sul computer della cassa e scegli <em>Dal browser della cassa</em>: le comande escono da lì. Per non avere ogni volta la finestra di stampa, avvia Chrome con <code>--kiosk-printing</code>.</dd>
+      <dt>In cassa c'è l'avviso «il servizio di stampa non è attivo»</dt>
+      <dd>Il computer del programma non sta stampando: controlla che sia acceso; se lo è, riavvialo. Gli ordini intanto si registrano e le comande restano in coda: escono appena la stampa riparte.</dd>
+      <dt>In cassa c'è scritto «la stampante … non risponde» o «carta finita»</dt>
+      <dd>Il programma controlla le stampanti ogni minuto. Guarda quella stampante: accesa, cavo di rete nello switch, carta, toner o inchiostro, sportelli chiusi.
+        Le comande non si perdono: restano in coda ed escono appena la stampante torna a posto. L'avviso sparisce da solo entro un minuto.</dd>
+    </dl>
   </section>
 
   <section id="domande" class="guida-capitolo">
@@ -234,18 +265,68 @@
       <dt>Come si fa un ordine da asporto?</dt><dd>Tasto <em>Asporto</em> in cassa: vedi <a href="#asporto">alla cassa</a>.</dd>
       <dt>Come si imposta la tara dei fusti?</dt><dd>Vedi <a href="#tara">la tara</a>.</dd>
       <dt>Il telefono non apre il programma</dt>
-      <dd>Deve essere sullo stesso Wi-Fi del computer dell'app (o su internet, se l'app è in cloud). L'indirizzo è quello che vi ha dato chi gestisce, es. http://192.168.1.10:8000.</dd>
+      <dd>Deve essere sul Wi-Fi della sagra, quello collegato allo switch del computer del programma. L'indirizzo è quello che vi ha dato chi gestisce, es. http://192.168.1.10:8000.</dd>
+      <dt>Serve internet?</dt>
+      <dd><strong>No.</strong> Cassa, stampa, magazzino e bar funzionano nella rete della sagra anche senza internet. Internet serve solo a mandare i backup su Google Drive e la copia al server di casa: quando torna, recuperano da soli.</dd>
+      <dt>C'è una striscia gialla «Copia di sola lettura»</dt>
+      <dd>Sei sul <strong>server di casa</strong>, la copia dei dati della sagra (vedi <a href="#copia-remota">copia remota</a>): lì si guarda e basta. Per registrare usa il programma della sagra.</dd>
       <dt>Posso usarlo con Claude?</dt>
       <dd>Sì: <span class="percorso">Magazzino → Claude</span> <span class="solo-staff">amministrazione</span> crea la chiave. Poi si chiede in italiano: «cosa è sotto scorta?», «registra 20 kg di patate in dispensa», «per quante serate basta la bionda?».</dd>
     </dl>
   </section>
 
-  <section id="gestione" class="guida-capitolo">
-    <h2>Per chi gestisce il computer</h2>
+  <section id="computer" class="guida-capitolo">
+    <h2>Il computer del programma</h2>
+    <p>Un computer della sagra fa da <strong>server</strong>: tiene il programma e i dati e manda le comande alle stampanti.
+      È collegato con il cavo allo <strong>switch</strong>, insieme alle stampanti e al punto di accesso Wi-Fi; telefoni, tablet e computer della cassa aprono il programma con il browser.
+      Va bene anche un mini PC; durante la sagra deve restare acceso e non andare in sospensione.</p>
+
+    <h3 id="installazione">Installarlo (una volta sola, a casa, con internet)</h3>
+    <ol class="guida-passi">
+      <li><strong>Docker.</strong> Su Linux (consigliato, es. Ubuntu o Debian): <code>curl -fsSL https://get.docker.com | sudo sh</code> e poi <code>sudo usermod -aG docker $USER</code> (esci e rientra).
+        Su Windows: installa <em>Docker Desktop</em> e nelle sue impostazioni spunta <em>Start Docker Desktop when you sign in</em>.</li>
+      <li><strong>Il programma.</strong> Copia la sua cartella sul computer (con <code>git clone</code> o da una chiavetta) e aprici un terminale.</li>
+      <li><strong>Le password.</strong> Copia <code>.env.example</code> in <code>.env</code> e cambia almeno <code>ADMIN_PASSWORD</code> e <code>POSTGRES_PASSWORD</code> (quella del database va decisa adesso: dopo non si cambia più).</li>
+      <li><strong>Avvialo</strong>: <code>docker compose up -d --build</code>. La prima volta scarica e prepara tutto (qualche minuto, serve internet); poi apri <code>http://localhost:8000</code> ed entra come <code>admin</code>.</li>
+      <li><strong>Indirizzo fisso</strong> nella rete della sagra, es. 192.168.1.10: nelle impostazioni di rete del computer (IPv4 manuale) oppure prenotandolo nel router.
+        I volontari aprono <code>http://192.168.1.10:8000</code>: salvalo tra i preferiti di ogni tablet o mettilo in un codice QR.</li>
+    </ol>
+    <p>Da quel momento <strong>non c'è niente da avviare</strong>: quando si accende il computer, dopo un minuto circa il programma risponde e stampa da solo (anche dopo un riavvio o una mancanza di corrente).
+      Su Windows parte quando si entra nell'utente: imposta l'accesso automatico o entra appena acceso.</p>
+
+    <h3 id="pannello">Il pannello del sistema: se qualcosa non va</h3>
+    <p><span class="percorso">Magazzino → Sistema</span> <span class="solo-staff">amministrazione</span> mostra in una pagina come sta tutto, e si aggiorna da solo:</p>
     <ul>
-      <li><strong>Backup</strong>: ogni 30 minuti il programma salva una copia del database e delle foto nella cartella <code>backup</code> del computer, e se configurato anche su Google Drive. A fine giornata copia la cartella su una chiavetta.</li>
+      <li>in alto una riga: <em>Tutto a posto</em>, oppure cosa guardare;</li>
+      <li>lo <strong>schema</strong> con i telefoni e i tablet collegati, la rete, il computer con i suoi pezzi (l'app, il database, la stampa, i backup), le stampanti, internet e il server di casa.
+        I puntini che scorrono sono i dati che passano. Verde = a posto, giallo = da guardare, rosso = guasto, grigio = spento o non serve.
+        <strong>Tocca un riquadro</strong>: a destra c'è cosa fare se non va;</li>
+      <li>sotto: le stampanti (se rispondono, carta e toner), i dispositivi collegati, quando è successa l'ultima volta ogni cosa (ultimo ordine, ultima stampa, ultimo backup…),
+        gli errori del programma e la guida tecnica per chi lo mantiene.</li>
+    </ul>
+    <p>Se chiami chi conosce il programma, digli cosa c'è di rosso e cosa dice <em>Se non va</em>: spesso basta quello.</p>
+
+    <h3 id="copia">Copia dei dati su chiavetta</h3>
+    <p>A fine serata <span class="percorso">Magazzino → Copia dati → Scarica la copia</span> <span class="solo-staff">amministrazione</span> e salva il file sulla chiavetta: c'è tutto (database, fatture e foto).
+      A casa, nella cartella del programma sul tuo server: <code>scripts/importa-dati.sh /percorso/della/chiavetta/copia-….tar</code>. I dati del server di casa vengono sostituiti da quelli della copia:
+      lì si guarda, non si registra niente.</p>
+
+    <h3 id="copia-remota">Copia sul server di casa</h3>
+    <p>Se è configurata (<code>docs/MANUTENZIONE.md</code>, «Copia remota»), un server a casa, per esempio un Raspberry, prende da solo ogni pochi minuti la copia dei dati della sagra,
+      quando la sagra ha internet: così si possono guardare report e giacenze anche da fuori. È di sola lettura: si registra sempre e solo sul programma della sagra.
+      Se alla sagra internet non c'è, la copia aspetta e recupera da sola. La chiavetta resta la strada che funziona sempre.</p>
+
+    <h3>Backup automatici</h3>
+    <p>Ogni 30 minuti il programma salva da solo una copia del database e delle foto nella cartella <code>backup</code> del computer, e se configurato anche su Google Drive (quando c'è internet).
+      Così i dati sono in tre posti: il computer della sagra, la chiavetta (e il server di casa) e Google Drive.
+      Nel <a href="#pannello">pannello</a> il riquadro «backup» diventa rosso se un backup non riesce.</p>
+
+    <h3 id="gestione">Altre cose</h3>
+    <ul>
       <li><strong>Listino 2026</strong>: si carica con <code>docker compose exec web python manage.py carica_listino cassa/listini/listino_2026.json</code>.</li>
-      <li><strong>Aggiornare il programma</strong>, spostarlo su un altro server, Kubernetes, ripristinare un backup: è tutto nel manuale tecnico, nel file <code>docs/MANUTENZIONE.md</code> del programma.</li>
+      <li><strong>Aggiornare il programma</strong>, spostarlo su un altro server, ripristinare un backup, la copia remota, i problemi più comuni: è tutto nel manuale tecnico,
+        che si legge in fondo al <a href="#pannello">pannello del sistema</a> (o nel file <code>docs/MANUTENZIONE.md</code> del programma).
+        Con il server di casa: si aggiorna prima quello, poi la sagra.</li>
     </ul>
   </section>
 </article>

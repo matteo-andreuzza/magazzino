@@ -118,7 +118,8 @@ def _agente_autorizzato(request):
 
 def _nome_agente(dati):
     nome = " ".join(str(dati.get("agente") or "").split())[:60]
-    return nome or None
+    # Il nome del servizio di stampa del server non si può usare.
+    return nome if nome and nome != stampa.NOME_SERVER else None
 
 
 def _ip(request):

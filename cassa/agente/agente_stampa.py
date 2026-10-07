@@ -5,6 +5,10 @@ Chiede al server le comande da stampare e le manda alle stampanti termiche
 (comandi ESC/POS): stampanti di rete (indirizzo IP, porta 9100) oppure
 collegate a questo computer. Deve restare acceso durante il servizio.
 
+Con l'app installata nella rete della sagra non serve per le stampanti di rete:
+le serve il server stesso (servizio «stampa»). Serve per le stampanti collegate
+con il cavo a questo computer, o per le termiche quando l'app è in cloud.
+
 Serve solo Python 3.8 o più recente, nessun'altra installazione.
 
 Uso:

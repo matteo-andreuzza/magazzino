@@ -3,6 +3,7 @@ from .gestione import (  # noqa: F401
     articolo_nuovo,
     impostazioni_cassa,
     listino,
+    stampante_controlla,
     stampante_modifica,
     stampante_nuova,
     stampante_prova,

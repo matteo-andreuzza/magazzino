@@ -105,12 +105,12 @@ class CodaAgenteTest(BaseCassa):
         self.assertEqual([(l["connessione"], l["indirizzo"]) for l in lavori], [(Connessione.COMPUTER, "/dev/usb/lp0")])
 
     def test_stato_stampa(self):
-        self.assertEqual(stampa.stato_stampa()["servono_agenti"], True)
-        self.assertFalse(stampa.stato_stampa()["collegato"])
+        # Stampanti termiche di rete: le serve il servizio del server oppure il programma di stampa.
+        self.assertEqual(stampa.stato_stampa()["avviso"], "Il servizio di stampa non è attivo: le comande restano in coda. Avvisa chi gestisce il computer del programma.")
         stampa.prendi_lavori(agente="pc")
-        self.assertTrue(stampa.stato_stampa()["collegato"])
+        self.assertEqual(stampa.stato_stampa()["avviso"], "")
         AgenteStampa.objects.update(ultimo_contatto=timezone.now() - timedelta(minutes=5))
-        self.assertFalse(stampa.stato_stampa()["collegato"])
+        self.assertNotEqual(stampa.stato_stampa()["avviso"], "")
 
 
 class ApiAgenteTest(BaseCassa):

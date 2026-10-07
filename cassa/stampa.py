@@ -16,9 +16,11 @@ Ogni riga è un dizionario con lo stile "s" e i suoi dati:
     {"s": "coppia", "t": "Totale", "d": "34,50 €", "b": true}
     {"s": "linea"} / {"s": "vuota"}
 
-Le stampanti di rete o collegate a un computer ricevono le stampe dal
-programma di stampa (agente/agente_stampa.py), che le chiede al server:
-così funziona anche con l'app in cloud, senza aprire porte nella rete della sagra.
+Chi manda le stampe alle stampanti:
+- le stampanti di rete (normali o termiche) le serve il server stesso, con il
+  servizio di stampa che parte insieme all'app (servizio_stampa.py);
+- quelle collegate con il cavo a un computer, o tutte se l'app è in cloud, il
+  programma di stampa (agente/agente_stampa.py), che chiede le stampe al server.
 """
 
 import base64
@@ -39,6 +41,7 @@ from .models import (
     Postazione,
     Reparto,
     Stampa,
+    Stampante,
     StatoStampa,
 )
 
@@ -68,6 +71,13 @@ def _numero_tavolo(ordine):
     return testo
 
 
+def _cassiere(ordine):
+    """«Cassiere: matteo»: il nome dell'account con cui è stato fatto l'ordine (se c'è)."""
+    if ordine.utente_id is None:
+        return []
+    return [{"s": "testo", "t": f"Cassiere: {ordine.utente.get_username()}"}]
+
+
 def _voci(righe, *, prezzi=False, alta=False):
     contenuto = []
     for r in righe:
@@ -85,12 +95,15 @@ def _voci(righe, *, prezzi=False, alta=False):
 ASPORTO = {"s": "evidenza", "t": "ASPORTO"}
 
 
-def contenuto_comanda(ordine, reparto, righe, imp, *, copia=False):
+def contenuto_comanda(ordine, reparto, righe, imp, *, copia=False, da_presentare=False):
+    """La comanda di un reparto. da_presentare: la porta il cliente (es. comanda del bar stampata in cassa)."""
     titolo = Reparto(reparto).label.upper()
     contenuto = [
         {"s": "centro", "t": _intestazione(imp)},
         {"s": "titolo", "t": f"COPIA {titolo}" if copia else titolo},
     ]
+    if da_presentare:
+        contenuto.append({"s": "centro", "t": f"Da presentare al {Reparto(reparto).label.lower()}", "b": True})
     # Da asporto: si vede subito, in alto e in fondo (la comanda si piega o si infilza).
     if ordine.asporto:
         contenuto.append(ASPORTO)
@@ -102,7 +115,7 @@ def contenuto_comanda(ordine, reparto, righe, imp, *, copia=False):
         dettagli.append("cassa bar")
     if ordine.coperti:
         dettagli.append(f"coperti {ordine.coperti}")
-    contenuto += [{"s": "testo", "t": " · ".join(dettagli)}, {"s": "linea"}]
+    contenuto += [{"s": "testo", "t": " · ".join(dettagli)}, *_cassiere(ordine), {"s": "linea"}]
     contenuto += _voci(righe, alta=True)
     contenuto.append({"s": "linea"})
     if ordine.note:
@@ -123,7 +136,7 @@ def contenuto_ricevuta(ordine, righe, imp, *, copia=False):
         contenuto.append({"s": "centro", "t": "DA ASPORTO", "b": True})
     if ordine.nome:
         contenuto.append({"s": "testo", "t": ordine.nome, "b": True})
-    contenuto += [{"s": "testo", "t": _quando(ordine.creato_il)}, {"s": "linea"}]
+    contenuto += [{"s": "testo", "t": _quando(ordine.creato_il)}, *_cassiere(ordine), {"s": "linea"}]
     contenuto += _voci(righe, prezzi=True)
     contenuto += [
         {"s": "linea"},
@@ -162,7 +175,9 @@ def contenuto_prova(stampante, imp):
         {"s": "centro", "t": _intestazione(imp)},
         {"s": "titolo", "t": "PROVA"},
         {"s": "testo", "t": f"Stampante: {stampante.nome}", "b": True},
-        {"s": "testo", "t": f"{stampante.colonne} caratteri per riga · {_quando(timezone.now())}"},
+        {"s": "testo", "t": f"{stampante.colonne} caratteri per riga"
+         + (f" · fogli {stampante.carta}" if stampante.connessione == Connessione.IPP else "")
+         + f" · {_quando(timezone.now())}"},
         {"s": "testo", "t": "Lettere accentate: à è é ì ò ù € «»"},
         {"s": "linea"},
         {"s": "voce", "q": 2, "t": "Grigliata mista", "alta": True},
@@ -204,10 +219,20 @@ def stampanti_ordine(ordine, imp, solo):
     return None
 
 
+def porta_il_cliente(ordine, imp):
+    """La comanda del bar esce in cassa, sulla stampante delle ricevute: la porta il cliente al bar."""
+    return (
+        ordine.postazione == Postazione.INGRESSO
+        and imp.stampante_bar_id is not None
+        and imp.stampante_bar_id == imp.stampante_ricevute_id
+    )
+
+
 def accoda_ordine(ordine, righe, imp, *, solo=None, copia=False):
     """Crea le stampe di un ordine (da chiamare dentro la transazione che lo registra)."""
     stampe = []
     adesso = timezone.now()
+    al_cliente = porta_il_cliente(ordine, imp)
     for documento, reparto, stampante in _destinazioni(ordine, imp, solo=solo):
         if stampante is None or not stampante.attiva:
             continue
@@ -215,7 +240,9 @@ def accoda_ordine(ordine, righe, imp, *, solo=None, copia=False):
             del_reparto = [r for r in righe if r.reparto == reparto]
             if not del_reparto:
                 continue
-            contenuto = contenuto_comanda(ordine, reparto, del_reparto, imp, copia=copia)
+            contenuto = contenuto_comanda(
+                ordine, reparto, del_reparto, imp, copia=copia, da_presentare=al_cliente and reparto == Reparto.BAR
+            )
         else:
             contenuto = contenuto_ricevuta(ordine, righe, imp, copia=copia)
         stampe.append(Stampa(
@@ -377,30 +404,50 @@ def escpos(contenuto, *, colonne=42, accenti=True):
 
 
 # ---------------------------------------------------------------------------
-# Programma di stampa (agente)
+# Coda: servizio di stampa del server e programma di stampa (agente)
 # ---------------------------------------------------------------------------
 
+# Nome con cui il servizio di stampa del server compare tra chi stampa.
+NOME_SERVER = "(server)"
 
-def prendi_lavori(*, agente, ip=None, versione="", massimo=5):
-    """Assegna all'agente le prossime stampe e le restituisce pronte da inviare."""
+
+def segna_contatto(agente, *, ip=None, versione=""):
+    """Chi stampa si fa vivo: serve all'avviso in cassa quando nessuno manda le stampe."""
+    campi = {"ultimo_contatto": timezone.now()}
+    if ip:
+        campi["indirizzo_ip"] = ip
+    if versione:
+        campi["versione"] = versione[:20]
+    if not AgenteStampa.objects.filter(nome=agente).update(**campi):
+        AgenteStampa.objects.get_or_create(nome=agente, defaults=campi)
+
+
+def _da_stampare(agente, connessioni, adesso):
+    disponibili = (
+        Q(stato=StatoStampa.IN_CODA)
+        | Q(stato=StatoStampa.IN_STAMPA, presa_il__lt=adesso - TIMEOUT_IN_STAMPA)
+        | Q(stato=StatoStampa.ERRORE, presa_il__lt=adesso - ATTESA_RIPROVA, creata_il__gte=adesso - DURATA_RIPROVE)
+    )
+    return (
+        Stampa.objects.filter(disponibili, stampante__attiva=True, stampante__connessione__in=connessioni)
+        .filter(Q(stampante__agente="") | Q(stampante__agente__iexact=agente))
+    )
+
+
+def stampanti_da_servire(*, agente, connessioni):
+    """Le stampanti (pk) che hanno qualcosa da stampare per questo agente."""
+    return set(_da_stampare(agente, connessioni, timezone.now()).values_list("stampante_id", flat=True).distinct())
+
+
+def assegna(*, agente, connessioni, massimo=5, stampante=None):
+    """Le prossime stampe, segnate come prese da `agente` (nessun altro le riceve per un minuto)."""
     adesso = timezone.now()
     with transaction.atomic():
-        campi = {"ultimo_contatto": adesso}
-        if ip:
-            campi["indirizzo_ip"] = ip
-        if versione:
-            campi["versione"] = versione[:20]
-        if not AgenteStampa.objects.filter(nome=agente).update(**campi):
-            AgenteStampa.objects.get_or_create(nome=agente, defaults=campi)
-        disponibili = (
-            Q(stato=StatoStampa.IN_CODA)
-            | Q(stato=StatoStampa.IN_STAMPA, presa_il__lt=adesso - TIMEOUT_IN_STAMPA)
-            | Q(stato=StatoStampa.ERRORE, presa_il__lt=adesso - ATTESA_RIPROVA, creata_il__gte=adesso - DURATA_RIPROVE)
-        )
+        coda = _da_stampare(agente, connessioni, adesso)
+        if stampante is not None:
+            coda = coda.filter(stampante_id=stampante)
         lavori = list(
-            Stampa.objects.select_for_update(skip_locked=True, of=("self",))
-            .filter(disponibili, stampante__attiva=True, stampante__connessione__in=CONNESSIONI_AGENTE)
-            .filter(Q(stampante__agente="") | Q(stampante__agente__iexact=agente))
+            coda.select_for_update(skip_locked=True, of=("self",))
             .select_related("stampante")
             .order_by("creata_il", "pk")[:massimo]
         )
@@ -410,6 +457,14 @@ def prendi_lavori(*, agente, ip=None, versione="", massimo=5):
             s.agente = agente
             s.tentativi += 1
         Stampa.objects.bulk_update(lavori, ["stato", "presa_il", "agente", "tentativi"])
+    return lavori
+
+
+def prendi_lavori(*, agente, ip=None, versione="", massimo=5):
+    """Per il programma di stampa: le prossime stampe pronte da inviare (ESC/POS in base64)."""
+    with transaction.atomic():
+        segna_contatto(agente, ip=ip, versione=versione)
+        lavori = assegna(agente=agente, connessioni=CONNESSIONI_AGENTE, massimo=massimo)
     return [
         {
             "id": s.pk,
@@ -452,16 +507,49 @@ def segna_stampate_dal_browser(ids):
     ).update(stato=StatoStampa.STAMPATA, stampata_il=timezone.now())
 
 
-def stato_stampa():
-    """Per l'avviso in cassa: se servono agenti e se sono collegati."""
-    from .models import Stampante
+def avviso_stampanti():
+    """Stampanti di rete che all'ultimo controllo (ogni minuto) non rispondevano o non potevano stampare."""
+    from sistema.models import Battito
 
-    servono = Stampante.objects.filter(attiva=True, connessione__in=CONNESSIONI_AGENTE).exists()
-    ultimo = AgenteStampa.objects.order_by("-ultimo_contatto").first()
+    from .ipp import TESTI_BLOCCANTI
+
+    stampanti = {f"stampante-{s.pk}": s for s in Stampante.objects.filter(attiva=True, connessione__in=[Connessione.IPP, Connessione.RETE])}
+    controlli = Battito.objects.filter(nome__in=stampanti, ultimo_il__gte=timezone.now() - timedelta(minutes=3)).order_by("nome")
+    problemi = []
+    for controllo in controlli:
+        nome = stampanti[controllo.nome].nome
+        if controllo.stato == "errore":
+            problemi.append(f"la stampante «{nome}» non risponde (è accesa e collegata?)")
+        else:
+            bloccanti = [t for t in TESTI_BLOCCANTI if t in controllo.messaggio]
+            if bloccanti:
+                problemi.append(f"«{nome}»: {', '.join(sorted(bloccanti))}")
+    if not problemi:
+        return ""
+    testo = "; ".join(problemi)
+    return testo[0].upper() + testo[1:] + ". Le comande restano in coda ed escono quando torna a posto."
+
+
+def stato_stampa():
+    """Per l'avviso in cassa: c'è chi manda le stampe alle stampanti attive?
+
+    avviso: testo da mostrare (vuoto se va tutto bene); server: il servizio di stampa
+    del server è acceso; errori: stampe andate male nelle ultime ore.
+    """
+    connessioni = set(Stampante.objects.filter(attiva=True).values_list("connessione", flat=True))
+    collegati = [a.nome for a in AgenteStampa.objects.all() if a.collegato]
+    server = NOME_SERVER in collegati
+    agenti = any(nome != NOME_SERVER for nome in collegati)
+    avviso = ""
+    if (Connessione.IPP in connessioni and not server) or (Connessione.RETE in connessioni and not (server or agenti)):
+        avviso = "Il servizio di stampa non è attivo: le comande restano in coda. Avvisa chi gestisce il computer del programma."
+    elif Connessione.COMPUTER in connessioni and not agenti:
+        avviso = "Il programma di stampa non è collegato: le comande restano in coda. Avvisa chi gestisce il computer delle stampanti."
+    elif server:
+        avviso = avviso_stampanti()
     return {
-        "servono_agenti": servono,
-        "collegato": bool(ultimo and ultimo.collegato),
-        "ultimo_contatto": ultimo.ultimo_contatto if ultimo else None,
+        "avviso": avviso,
+        "server": server,
         "errori": Stampa.objects.filter(
             stato=StatoStampa.ERRORE, creata_il__gte=timezone.now() - timedelta(hours=6)
         ).count(),

@@ -1,12 +1,15 @@
 ## Progetto
 
-Gestionale della sagra (Django + PostgreSQL in Docker): app `magazzino`, `cassa`, `bar`, `assistente` (server MCP).
-Manuale tecnico: `docs/MANUTENZIONE.md`; guida per chi lo usa: `magazzino/templates/magazzino/guida.html` (`/guida/`).
+Gestionale della sagra (Django + PostgreSQL in Docker): app `magazzino`, `cassa`, `bar`, `assistente` (server MCP),
+`sistema` (pannello `/sistema/` con schema animato, errori, dispositivi, copia remota verso il server di casa).
+Manuale tecnico: `docs/MANUTENZIONE.md` (si legge anche in fondo a `/sistema/`); guida per chi lo usa:
+`magazzino/templates/magazzino/guida.html` (`/guida/`). Quando cambia qualcosa, aggiornare tutti e due.
 
 - L'installazione vera (progetto Docker `magazzino-sagra`) gira da questa cartella: per provare non lanciare
   `docker compose up` qui, usa il server di prova (`docker compose -f docker-compose.yml -f docker-compose.debug.yml`, porta 8002).
 - Le migrazioni già applicate non si modificano: se ne scrive una nuova.
 - La logica sta nei `services.py`: viste e strumenti MCP li chiamano. Test: `python manage.py test` (anche su PostgreSQL nel server di prova).
+- Tabelle che riguardano solo un server (battiti, sessioni, `sistema_*`) vanno in `TABELLE_LOCALI` (`sistema/copia.py`), senza chiavi esterne.
 
 ## graphify
 

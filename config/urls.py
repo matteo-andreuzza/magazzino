@@ -14,6 +14,7 @@ urlpatterns = [
     # Server MCP per Claude: vedi assistente/.
     path("mcp/", assistente.mcp, name="mcp"),
     path("claude/", include("assistente.urls")),
+    path("sistema/", include("sistema.urls")),
     path(".well-known/<path:resto>", assistente.non_trovato),
     path("", include("magazzino.urls")),
 ]

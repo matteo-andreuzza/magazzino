@@ -750,7 +750,7 @@
         // Chiusa o riaperta da un'altra cassa: si ricarica per bloccarla o sbloccarla.
         if (d.chiuso !== bloccata) location.reload();
         var avvisi = [];
-        if (d.stampa.avviso) avvisi.push("Il programma di stampa non è collegato: le comande NON escono. Controlla il computer delle stampanti.");
+        if (d.stampa.avviso) avvisi.push(d.stampa.avviso);
         if (d.stampa.errori) avvisi.push(d.stampa.errori + (d.stampa.errori === 1 ? " stampa è andata" : " stampe sono andate") + " in errore: controlla la stampante (carta, accesa, collegata).");
         el.avvisoStampa.textContent = avvisi.join(" ");
         el.avvisoStampa.hidden = !avvisi.length;

@@ -14,6 +14,8 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 
+from sistema.services import e_copia
+
 from .models import ChiaveMCP
 from .protocollo import VERSIONI, gestisci_testo
 from .strumenti import STRUMENTI, Contesto
@@ -60,12 +62,14 @@ def mcp(request):
     if len(request.body) > MAX_CORPO:
         return _rifiuta(413, "Richiesta troppo grande.")
 
+    # Sulla copia remota (sola lettura) Claude può solo leggere.
+    copia = e_copia()
     adesso = timezone.now()
-    if chiave.ultimo_uso is None or adesso - chiave.ultimo_uso > timedelta(minutes=1):
+    if not copia and (chiave.ultimo_uso is None or adesso - chiave.ultimo_uso > timedelta(minutes=1)):
         ChiaveMCP.objects.filter(pk=chiave.pk).update(ultimo_uso=adesso)
 
     risposta = gestisci_testo(request.body.decode("utf-8", errors="replace"),
-                              Contesto(utente=chiave.utente, scrittura=chiave.scrittura))
+                              Contesto(utente=chiave.utente, scrittura=chiave.scrittura and not copia))
     if risposta is None:
         return HttpResponse(status=202)  # solo notifiche: niente da rispondere
     return HttpResponse(json.dumps(risposta, ensure_ascii=False), content_type="application/json", status=200)

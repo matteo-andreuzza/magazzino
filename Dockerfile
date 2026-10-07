@@ -10,6 +10,12 @@ WORKDIR /app
 
 RUN useradd --create-home --shell /usr/sbin/nologin app
 
+# fonts-dejavu-core: il carattere delle comande sui fogli A4/A5 (cassa/fogli.py);
+# postgresql-client: pg_dump per la copia dei dati da scaricare dall'app.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 

@@ -45,6 +45,19 @@ class AccessoTest(BaseCassa):
         self.assertNotContains(risposta, reverse("cassa:monitor", args=[self.serata.pk]))
 
 
+class AvvisiPreparazioneTest(BaseCassa):
+    def test_stampanti_mancanti(self):
+        self.client.force_login(self.utente)
+        self.imposta(stampante_bar=None, ricevuta_cliente=True, stampante_ricevute=None)
+        risposta = self.client.get(reverse("cassa:inizio"))
+        self.assertContains(risposta, "Non è impostata la stampante della comanda del bar")
+        self.assertContains(risposta, "manca la stampante delle ricevute")
+        self.imposta(stampante_bar=self.st_bar, stampante_ricevute=self.st_bar)
+        risposta = self.client.get(reverse("cassa:inizio"))
+        self.assertNotContains(risposta, "comanda del bar")
+        self.assertNotContains(risposta, "manca la stampante delle ricevute")
+
+
 class PagineTest(BaseCassa):
     def setUp(self):
         super().setUp()

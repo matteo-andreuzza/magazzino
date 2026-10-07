@@ -570,3 +570,9 @@ details.scheda summary { cursor: pointer; }
   .testata { background: #fff; color: #000; padding: 0; }
   .marchio { color: #000; }
 }
+
+/* Copia remota di sola lettura (server di casa): striscia sotto la testata. */
+.striscia-copia {
+  background: var(--avviso-chiaro); color: var(--avviso-testo); border-bottom: 1px solid var(--avviso-bordo);
+  padding: .45rem 1rem; font-size: .9rem; text-align: center;
+}

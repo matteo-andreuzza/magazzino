@@ -21,7 +21,25 @@ services:
       DEBUGPY_PORTA: "5678"
     ports: !override
       - "${PORTA_DEBUG:-8002}:8000"
-      - "127.0.0.1:5678:5678"
+      - "127.0.0.1:${PORTA_DEBUGPY:-5678}:5678"
+    # Senza la cartella backup/: è quella dell'installazione vera.
+    volumes: !override
+      - .:/app
+      - app_dati:/app/dati
+      - stato:/stato:ro
+
+  stampa:
+    build:
+      target: debug
+    image: magazzino-sagra:debug
+    volumes:
+      - .:/app
+
+  # Per provare la copia remota: un secondo progetto (-p) con COPIA_DI e COMPOSE_PROFILES=copia.
+  copia:
+    build:
+      target: debug
+    image: magazzino-sagra:debug
     volumes:
       - .:/app
 

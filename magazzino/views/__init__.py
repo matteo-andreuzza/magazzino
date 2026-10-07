@@ -8,6 +8,7 @@ from .anagrafiche import (  # noqa: F401
     servizio_nuovo,
     servizio_riapri,
 )
+from .copia import copia_dati, copia_dati_scarica  # noqa: F401
 from .esporta import giacenze_csv, movimenti_csv, riepilogo_csv  # noqa: F401
 from .moduli import (  # noqa: F401
     carico,

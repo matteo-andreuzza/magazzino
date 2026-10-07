@@ -238,20 +238,30 @@ class Comanda(models.Model):
 
 
 class Connessione(models.TextChoices):
-    RETE = "rete", "Stampante di rete (indirizzo IP)"
-    COMPUTER = "computer", "Collegata a un computer (USB o condivisa)"
+    IPP = "ipp", "Stampante normale di rete (laser o a getto d'inchiostro)"
+    RETE = "rete", "Stampante termica di rete (rotolo per scontrini)"
+    COMPUTER = "computer", "Collegata con il cavo a un altro computer"
     BROWSER = "browser", "Dal browser della cassa"
 
 
+# Le stampanti di rete le serve il server stesso (servizio «stampa», vedi servizio_stampa.py);
+# quelle termiche di rete e quelle collegate a un computer anche il programma di stampa (agente).
+CONNESSIONI_SERVER = [Connessione.IPP, Connessione.RETE]
 CONNESSIONI_AGENTE = [Connessione.RETE, Connessione.COMPUTER]
+
+
+class Carta(models.TextChoices):
+    A4 = "A4", "A4"
+    A5 = "A5", "A5 (mezzo A4)"
 
 
 class Stampante(models.Model):
     nome = models.CharField(max_length=40)
-    connessione = models.CharField(max_length=10, choices=Connessione.choices, default=Connessione.RETE)
+    connessione = models.CharField(max_length=10, choices=Connessione.choices, default=Connessione.IPP)
     indirizzo = models.CharField(
         max_length=200, blank=True,
-        help_text="Stampante di rete: indirizzo IP, es. 192.168.1.50 (porta 9100 se non indicata). "
+        help_text="Stampante di rete: l'indirizzo IP, es. 192.168.1.50 (si legge sul display o sul foglio "
+        "di configurazione della stampante). "
         "Collegata a un computer: /dev/usb/lp0 (Linux), \\\\localhost\\NomeCondivisione (Windows) "
         "oppure cups:NomeCoda.",
     )
@@ -260,9 +270,18 @@ class Stampante(models.Model):
         help_text="Solo per le stampanti collegate a un computer: il nome con cui gira lì il programma di stampa. "
         "Vuoto = qualsiasi.",
     )
+    carta = models.CharField(
+        max_length=2, choices=Carta.choices, default=Carta.A4,
+        help_text="Solo per le stampanti normali: il formato dei fogli nel cassetto.",
+    )
     colonne = models.PositiveSmallIntegerField(
-        choices=[(32, "32 (carta da 58 mm)"), (42, "42 (carta da 80 mm)"), (48, "48 (carta da 80 mm, carattere piccolo)")],
-        default=42, help_text="Caratteri per riga.",
+        "caratteri per riga",
+        choices=[
+            (32, "32 · testo molto grande (rotolo da 58 mm)"),
+            (42, "42 · testo grande (rotolo da 80 mm)"),
+            (48, "48 · testo più piccolo"),
+        ],
+        default=42, help_text="Sui fogli A4 e A5 il testo si allarga a tutta la pagina: meno caratteri, testo più grande.",
     )
     accenti = models.BooleanField(
         "lettere accentate", default=True,
@@ -286,12 +305,30 @@ class Stampante(models.Model):
 
     def clean(self):
         self.indirizzo = self.indirizzo.strip()
-        if self.connessione in CONNESSIONI_AGENTE and not self.indirizzo:
+        if self.connessione != Connessione.BROWSER and not self.indirizzo:
             raise ValidationError({"indirizzo": "Indica dove si trova la stampante."})
+        if self.connessione == Connessione.IPP:
+            from .ipp import ErroreStampante, leggi_indirizzo
+
+            try:
+                leggi_indirizzo(self.indirizzo)
+            except ErroreStampante:
+                raise ValidationError(
+                    {"indirizzo": "Scrivi l'indirizzo IP, es. 192.168.1.50, oppure quello completo, es. ipp://192.168.1.50/ipp/print."}
+                ) from None
         if self.connessione == Connessione.RETE:
             host, _, porta = self.indirizzo.rpartition(":") if ":" in self.indirizzo else (self.indirizzo, "", "")
             if not host or " " in host or (porta and not (porta.isdigit() and 0 < int(porta) < 65536)):
                 raise ValidationError({"indirizzo": "Scrivi l'indirizzo IP, es. 192.168.1.50 oppure 192.168.1.50:9100."})
+
+    @property
+    def controllo(self):
+        """L'ultimo controllo del servizio di stampa (ogni minuto), o None. Sta tra i dati
+        di funzionamento di questo server (sistema.Battito), non nella stampante: così non
+        viaggia nelle copie verso altri server."""
+        from sistema.models import Battito
+
+        return Battito.objects.filter(nome=f"stampante-{self.pk}").first()
 
     @property
     def dal_browser(self):
@@ -406,9 +443,10 @@ class ImpostazioniCassa(models.Model):
     )
     stampante_bar = models.ForeignKey(
         Stampante, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
-        verbose_name="stampante copia bar",
-        help_text="Dove esce la copia per il bar degli ordini fatti all'ingresso: al bar oppure alla cassa, "
-        "se la porta il cliente.",
+        verbose_name="stampante comanda bar",
+        help_text="Dove esce la comanda delle bevande degli ordini fatti all'ingresso: su una stampante al bar, "
+        "oppure su quella della cassa (la stessa delle ricevute): allora il cliente la porta al bar e sopra "
+        "c'è scritto «Da presentare al bar».",
     )
     ricevuta_cliente = models.BooleanField(
         "ricevuta per il cliente", default=False,
@@ -421,7 +459,8 @@ class ImpostazioniCassa(models.Model):
     messaggio_ricevuta = models.CharField(max_length=100, blank=True, default="Grazie e buon appetito!")
     stampante_cassa_bar = models.ForeignKey(
         Stampante, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
-        verbose_name="stampante della cassa al bar", help_text="Per ricevute e comande della cassa al bar.",
+        verbose_name="stampante della cassa al bar",
+        help_text="Per ricevute e comande della cassa al bar. Vuota = la cassa al bar non stampa niente.",
     )
     stampa_comande_cassa_bar = models.BooleanField(
         "stampa le comande della cassa al bar", default=False,

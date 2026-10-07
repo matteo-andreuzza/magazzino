@@ -157,6 +157,35 @@ class CreaOrdineTest(BaseCassa):
         self.assertIn("Ricevuta non fiscale", testo)
 
 
+    def test_due_stampanti_cucina_e_cassa(self):
+        """Come alla sagra: in cucina la comanda; in cassa la ricevuta e la comanda del bar,
+        che il cliente porta al bar. La cassa al bar non ha stampante e non stampa."""
+        st_cassa = Stampante.objects.create(nome="Cassa", connessione=Connessione.IPP, indirizzo="192.168.1.51", carta="A5")
+        self.imposta(stampante_bar=st_cassa, ricevuta_cliente=True, stampante_ricevute=st_cassa, cassa_bar=True)
+        ordine, _ = self.ordina([(self.grigliata, 2), (self.coca, 2)])
+        self.assertEqual(
+            sorted(ordine.stampe.values_list("stampante__nome", "documento", "reparto")),
+            [("Cassa", Documento.COMANDA, Reparto.BAR), ("Cassa", Documento.RICEVUTA, ""), ("Cucina", Documento.COMANDA, Reparto.CUCINA)],
+        )
+        comanda_bar = str(ordine.stampe.get(reparto=Reparto.BAR).contenuto)
+        self.assertIn("Da presentare al bar", comanda_bar)
+        # Su ogni biglietto: chi ha fatto l'ordine.
+        for s in ordine.stampe.all():
+            self.assertIn({"s": "testo", "t": "Cassiere: cassiere"}, s.contenuto, s.descrizione)
+        self.assertNotIn("Da presentare", str(ordine.stampe.get(reparto=Reparto.CUCINA).contenuto))
+        # Solo cibo: in cassa solo la ricevuta.
+        ordine, _ = self.ordina([(self.grigliata, 1)])
+        self.assertEqual(sorted(ordine.stampe.values_list("stampante__nome", flat=True)), ["Cassa", "Cucina"])
+        # Cassa al bar senza stampante: niente.
+        ordine, _ = self.ordina([(self.coca, 1)], postazione=Postazione.BAR, nome="", tavolo="")
+        self.assertFalse(ordine.stampe.exists())
+
+    def test_comanda_bar_su_una_stampante_al_bar(self):
+        self.imposta(ricevuta_cliente=True, stampante_ricevute=self.st_cucina)
+        ordine, _ = self.ordina([(self.coca, 1)])
+        self.assertNotIn("Da presentare", str(ordine.stampe.get(reparto=Reparto.BAR).contenuto))
+
+
 class CassaBarTest(BaseCassa):
     def test_spenta_rifiuta(self):
         with self.assertRaisesMessage(ErroreCassa, "La cassa al bar non è attiva"):

@@ -6,10 +6,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .. import services, stampa
+from .. import services, servizio_stampa, stampa
 from ..formati import euro, leggi_euro
 from ..forms import ArticoloForm, ImpostazioniForm, StampanteForm
-from ..models import CONNESSIONI_AGENTE, AgenteStampa, Articolo, Categoria, Stampa, Stampante, StatoStampa
+from ..models import AgenteStampa, Articolo, Categoria, Connessione, Stampa, Stampante, StatoStampa
 from ..services import impostazioni
 from .comuni import solo_staff
 
@@ -100,15 +100,18 @@ def impostazioni_cassa(request):
 @solo_staff
 def stampanti(request):
     imp = impostazioni()
+    stampanti = list(Stampante.objects.all())
     return render(
         request,
         "cassa/stampanti.html",
         {
-            "stampanti": Stampante.objects.all(),
-            "agenti": AgenteStampa.objects.all()[:10],
-            "servono_agenti": Stampante.objects.filter(attiva=True, connessione__in=CONNESSIONI_AGENTE).exists(),
+            "stampanti": stampanti,
+            "stato": stampa.stato_stampa(),
+            "server": AgenteStampa.objects.filter(nome=stampa.NOME_SERVER).first(),
+            "agenti": AgenteStampa.objects.exclude(nome=stampa.NOME_SERVER)[:10],
+            "servono_agenti": any(s.attiva and s.connessione == Connessione.COMPUTER for s in stampanti),
             "imp": imp,
-            "server": request.build_absolute_uri("/"),
+            "indirizzo_server": request.build_absolute_uri("/"),
             "errori": Stampa.objects.filter(stato=StatoStampa.ERRORE).select_related("stampante", "ordine").order_by("-creata_il")[:20],
         },
     )
@@ -144,7 +147,17 @@ def stampante_prova(request, pk):
     lavoro = stampa.accoda_prova(s, impostazioni())
     if s.dal_browser:
         return redirect(reverse("cassa:stampe_browser") + f"?id={lavoro.pk}&torna={reverse('cassa:stampanti')}")
-    messages.success(request, f"Stampa di prova inviata a «{s.nome}».")
+    messages.success(request, f"Stampa di prova per «{s.nome}» in coda: esce tra qualche secondo.")
+    return redirect("cassa:stampanti")
+
+
+@require_POST
+@solo_staff
+def stampante_controlla(request, pk):
+    """Chiede alla stampante se risponde e cosa sa fare (senza stampare)."""
+    s = get_object_or_404(Stampante, pk=pk)
+    va_bene, testo = servizio_stampa.controlla(s)
+    (messages.success if va_bene else messages.error)(request, f"{s.nome}: {testo}")
     return redirect("cassa:stampanti")
 
 

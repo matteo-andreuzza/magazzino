@@ -4,7 +4,8 @@ App web da usare col telefono per sapere cosa c'è in frighi, congelatori e disp
 cosa va in cucina a ogni serata o pranzo, cosa rientra e quanto si consuma.
 
 Nella stessa app c'è la **cassa**: prende gli ordini all'ingresso (nome, tavolo, cosa si
-mangia e si beve), stampa la comanda per la cucina e la copia per il bar, memorizza tutto
+mangia e si beve), stampa la comanda per la cucina e, alla cassa, la ricevuta e la comanda del bar
+che il cliente porta al bar; memorizza tutto
 e a fine serata mostra incassi, venduto e consumi con i grafici (vedi [Cassa](#cassa)).
 E c'è il **magazzino del bar**: lattine, bottiglie e i fusti di birra e vino alla spina, che escono
 da soli con le vendite della cassa; a fine serata si segna sul disegno delle due spinatrici cosa è
@@ -18,8 +19,11 @@ Cassa, bar e magazzino usano lo stesso database: le serate sono le stesse.
 
 **Come si usa**: nell'app c'è la **Guida** (il pulsante **?** in alto), passo per passo e stampabile:
 prima della sagra, ogni serata, cassa, bar, pesata dei fusti, domande frequenti.
-**Per chi la mantiene** (aggiornamenti sicuri, backup, trasloco su un altro server, Kubernetes):
-[docs/MANUTENZIONE.md](docs/MANUTENZIONE.md).
+**Per chi la mantiene** c'è il **pannello del sistema** (*Magazzino → Sistema*, solo staff): uno
+schema animato di chi parla con chi (dispositivi, server e container, stampanti, internet, server
+di casa) con la salute e da quanto è acceso ogni pezzo, gli errori con la traccia, le ultime
+attività e, in fondo, la guida del programmatore: [docs/MANUTENZIONE.md](docs/MANUTENZIONE.md)
+(architettura, aggiornamenti sicuri, backup, copia remota, trasloco, Kubernetes, problemi comuni).
 
 Le giacenze non si scrivono a mano: sono sempre la somma dei movimenti registrati
 (carichi, prelievi, rientri, spostamenti, scarti, correzioni), quindi non possono
@@ -28,7 +32,10 @@ l'app non lascia andare la giacenza sotto zero.
 
 ## Installazione
 
-Serve un computer con Docker (e Docker Compose) collegato alla stessa rete Wi-Fi dei telefoni.
+Serve un computer con Docker (e Docker Compose) collegato alla rete della sagra: lo switch a cui
+sono collegati anche le stampanti e il Wi-Fi dei telefoni. Internet serve solo per installarlo
+(e per i backup su Google Drive); durante la sagra se ne fa a meno. I passi spiegati per chi
+non è pratico sono nella guida dell'app (`/guida/#computer`) e nel [manuale tecnico](docs/MANUTENZIONE.md#installare-il-programma-alla-sagra).
 
 1. Copia il file delle impostazioni e modificalo:
 
@@ -46,11 +53,16 @@ Serve un computer con Docker (e Docker Compose) collegato alla stessa rete Wi-Fi
    ```
 
 3. Dai telefoni apri `http://INDIRIZZO-DEL-COMPUTER:8000` (l'indirizzo si trova con
-   `hostname -I`) ed entra con l'utente amministratore.
+   `hostname -I`) ed entra con l'utente amministratore. Conviene dare al computer un indirizzo
+   fisso (impostazioni di rete o prenotazione nel router), così l'indirizzo non cambia.
+
+   Da qui in poi parte da solo a ogni accensione del computer (app, stampa e backup): non c'è
+   niente da avviare.
 
 4. Crea gli utenti per i volontari da **Amministrazione → Utenti → Aggiungi**
    (senza "staff": così non vedono l'amministrazione). Va bene anche un utente unico
-   condiviso, ma con utenti diversi lo storico mostra chi ha registrato cosa.
+   condiviso, ma con utenti diversi lo storico mostra chi ha registrato cosa e su comande e
+   ricevute esce «Cassiere: nome» (il nome dell'utente che ha fatto l'ordine).
 
 Comandi utili:
 
@@ -217,13 +229,13 @@ stampanti) le vedono solo gli utenti *staff*; tutto il resto chiunque abbia un u
    tabella e premi *Salva il listino*. Le **bevande** negli appunti non c'erano: aggiungile con
    *Nuovo articolo*, reparto **Bar**, collegandole alla bevanda del magazzino del bar (vedi
    [Bar](#bar)). Le categorie (colori e ordine in cassa) si cambiano da *Categorie*.
-   - Ogni articolo ha un **reparto**: *Cucina* finisce sulla comanda della cucina, *Bar* sulla copia del bar.
+   - Ogni articolo ha un **reparto**: *Cucina* finisce sulla comanda della cucina, *Bar* sulla comanda del bar.
    - *Piatto del menu* (facoltativo): se la serata ha scelto i suoi piatti, l'articolo compare in
      cassa solo nelle serate che lo servono (la paella solo la sera della paella). Serve anche a
      calcolare il consumo degli ingredienti per porzione.
    - I pranzi a menu fisso si possono vendere come un articolo unico (es. «Pranzo anniversari»).
 2. **Stampanti** (*Cassa → Stampanti*): aggiungi le stampanti e fai una stampa di prova, poi in
-   *Impostazioni* scegli dove escono le comande della cucina e la copia del bar (vedi sotto).
+   *Impostazioni* scegli dove escono le comande della cucina, la comanda del bar e la ricevuta (vedi sotto).
 3. Crea la **serata** come per il magazzino (anche dalla pagina *Cassa*, se oggi non c'è).
 
 ### Durante la serata
@@ -237,7 +249,8 @@ stampanti) le vedono solo gli utenti *staff*; tutto il resto chiunque abbia un u
 3. Scegli il pagamento: con *Contanti* scrivi quanto ti danno (o tocca 10 €, 20 €…) e leggi il resto.
    *Omaggio* registra l'ordine senza contarlo negli incassi; nome e tavolo non servono: se mancano
    diventano «Volontario», tavolo XXX.
-4. **Conferma e stampa**: l'ordine riceve un numero progressivo della serata e le comande escono.
+4. **Conferma e stampa**: l'ordine riceve un numero progressivo della serata e le comande escono
+   (in cucina la comanda; alla cassa la ricevuta e la comanda del bar, da dare al cliente).
 
 Totale, pagamento e *Conferma* restano sempre in vista anche su schermi bassi: si accorcia
 l'elenco degli articoli scelti, che scorre.
@@ -264,28 +277,45 @@ Le ricevute, se attivate, sono **non fiscali**.
 
 ### Stampanti e comande
 
-Le comande escono su stampanti termiche ESC/POS da 80 o 58 mm (Epson TM e compatibili) in due modi:
+Comande e ricevute le manda alle stampanti **il server stesso**, con il servizio `stampa` che
+parte insieme all'app (`cassa/servizio_stampa.py`): sui computer e sui tablet della cassa non
+c'è niente da installare. Le stampanti si aggiungono da *Cassa → Stampanti*:
 
-- **Stampante di rete o collegata a un computer**: su un computer della sagra (anche un
-  Raspberry Pi) gira il *programma di stampa*, che chiede le comande al server e le manda alle
-  stampanti. Funziona anche con l'app in cloud e senza aprire porte nel router.
-  Da *Cassa → Stampanti* si scarica già configurato; serve solo Python 3:
+- **Stampante normale di rete** (laser o a getto d'inchiostro, collegata allo switch): comande su
+  fogli A4 o A5, con il testo grande. Il server le parla con **IPP**, il protocollo di AirPrint e
+  Mopria che quasi tutte le stampanti di rete degli ultimi dieci anni capiscono senza driver:
+  le chiede cosa sa stampare e le manda la pagina in PWG raster, Apple raster (URF), PDF o JPEG
+  (`cassa/ipp.py`, `cassa/fogli.py`). Basta l'indirizzo IP; *Controlla* dice se risponde, che
+  modello è e se mancano carta o toner.
+- **Stampante termica di rete** (ESC/POS, Epson TM e compatibili, 80 o 58 mm): indirizzo IP,
+  porta 9100.
+- **Dal browser della cassa**: una stampante installata (con il suo driver) sul computer della
+  cassa, anche vecchia o USB. Per stampare senza la finestra di conferma avvia Chrome con
+  `--kiosk-printing` e imposta quella stampante come predefinita.
+- **Collegata con il cavo a un altro computer**, o qualsiasi termica con l'app **in cloud** (dal
+  cloud le stampanti della sagra non si raggiungono): su un computer della sagra gira il
+  *programma di stampa*, che chiede le comande al server e le passa alle stampanti. Da
+  *Cassa → Stampanti* si scarica già configurato; serve solo Python 3:
 
   ```sh
   python3 agente_stampa.py                  # su Windows basta un doppio clic
   python3 agente_stampa.py --prova 192.168.1.50   # prova diretta della stampante, senza server
   ```
 
-  Indirizzi: `192.168.1.50` (stampante di rete, porta 9100), `/dev/usb/lp0` (USB su Linux),
+  Indirizzi: `192.168.1.50` (termica di rete), `/dev/usb/lp0` (USB su Linux),
   `\\localhost\Cucina` (stampante condivisa su Windows), `cups:Cucina` (coda CUPS).
-  Deve restare acceso durante il servizio: se si ferma, in cassa compare un avviso rosso. Se una
-  stampante è spenta o senza carta, la comanda viene ritentata da sola per 10 minuti; dopo si
-  preme *Riprova* dall'ordine.
-- **Dal browser della cassa**: una stampante collegata al PC della cassa. Per stampare senza la
-  finestra di conferma avvia Chrome con `--kiosk-printing` e imposta la termica come predefinita.
 
-La copia del bar può uscire al bar oppure alla cassa, se è il cliente a portarla al bar: basta
-scegliere la stampante in *Impostazioni*.
+Se nessuno sta stampando (servizio fermo, o programma di stampa spento quando serve), in cassa
+compare un avviso rosso; gli ordini si registrano lo stesso e le comande escono appena la stampa
+riparte. Se una stampante è spenta o senza carta la comanda viene ritentata da sola per 10
+minuti; dopo si preme *Riprova* dall'ordine.
+
+Alla sagra le stampanti sono due: **cucina** (comande della cucina) e **cassa** dell'ingresso
+(ricevuta per il cliente e comanda del bar). In *Impostazioni*: stampante cucina = Cucina,
+stampante comanda bar = Cassa, ricevuta per il cliente spuntata con stampante ricevute = Cassa,
+stampante della cassa al bar vuota (la cassa del bar non stampa). Quando la comanda del bar esce
+sulla stessa stampante delle ricevute, sopra c'è scritto «Da presentare al bar»: la porta il
+cliente. Con una stampante al bar, la comanda del bar si manda lì e quella scritta non c'è.
 
 ### Funzioni smart
 
@@ -318,16 +348,20 @@ Il servizio `backup` ogni 30 minuti (si cambia nel `.env`: `BACKUP_OGNI_MINUTI`,
 - copia le fatture e le foto dei prodotti nuove in `backup/magazzino-sagra-allegati/` (non si cancellano).
 
 I nomi iniziano con il nome del progetto, così i backup di installazioni diverse sullo
-stesso computer non si confondono. A fine giornata conviene copiare la cartella anche
-su una chiavetta, oppure attivare la copia su Google Drive (sotto).
+stesso computer non si confondono. Per avere i dati anche altrove:
+
+- **chiavetta, a fine serata**: *Magazzino → Copia dati → Scarica la copia* (solo staff) scarica un
+  file con database, fatture e foto; a casa lo si carica su un'altra installazione (es. il server
+  di casa) con `scripts/importa-dati.sh FILE.tar`, che ne sostituisce i dati;
+- **Google Drive**, da solo quando c'è internet (sotto).
 
 Per tornare a un backup del database (tutto quello registrato dopo quell'ora va perso) c'è
 `scripts/ripristina.sh backup/magazzino-sagra-AAAAMMGG-HHMM.sql.gz`, oppure a mano:
 
 ```sh
-docker compose stop web
+docker compose stop web stampa
 gunzip -c backup/magazzino-sagra-AAAAMMGG-HHMM.sql.gz | docker compose exec -T db psql -q -v ON_ERROR_STOP=1 --single-transaction -U magazzino -d magazzino
-docker compose start web
+docker compose up -d
 ```
 
 Il ripristino è tutto o niente: se si interrompe con un errore il database resta com'era.
@@ -387,6 +421,20 @@ e togli l'accesso da <https://myaccount.google.com/permissions>.
 Per spostare tutto su un altro server: `scripts/esporta-dati.sh` e `scripts/importa-dati.sh`
 (vedi [docs/MANUTENZIONE.md](docs/MANUTENZIONE.md)).
 
+## Pannello del sistema e copia remota
+
+*Magazzino → Sistema* (`/sistema/`, solo staff) mostra come sta tutto e si aggiorna da solo:
+schema animato, servizi, stampanti, dispositivi collegati, ultime attività, errori ed eccezioni
+con la traccia completa, versione, backup e la guida del programmatore. Vedi
+[docs/MANUTENZIONE.md](docs/MANUTENZIONE.md#pannello-del-sistema).
+
+Un altro server, per esempio un Raspberry a casa raggiungibile con Tailscale, può tenere una
+**copia di sola lettura** della sagra, aggiornata da sola ogni pochi minuti quando la sagra ha
+internet (servizio `copia`, `COPIA_DI` e `COPIA_CHIAVE` nel `.env`): la sagra resta il server
+vero e lavora anche senza internet; a casa si guardano i dati da fuori. Si aggiorna prima casa,
+poi la sagra: casa non carica copie di un programma più nuovo del suo. Vedi
+[docs/MANUTENZIONE.md](docs/MANUTENZIONE.md#copia-remota-server-di-casa).
+
 ## In cloud
 
 La stessa installazione gira su un server in cloud (una VPS con Docker), così report e
@@ -403,13 +451,15 @@ e avvia con il file per il cloud, che aggiunge l'HTTPS automatico (Caddy, certif
 docker compose -f docker-compose.yml -f docker-compose.cloud.yml up -d --build
 ```
 
-Backup, Google Drive e comandi utili sono gli stessi (aggiungendo sempre i due `-f`).
+Backup, Google Drive e comandi utili sono gli stessi (aggiungendo sempre i due `-f`). Il servizio
+di stampa invece è spento: dal cloud le stampanti della sagra non si raggiungono, serve il
+programma di stampa (vedi [Stampanti e comande](#stampanti-e-comande)).
 
 **Attenzione alla connessione della sagra**: con l'app in cloud, se internet cade la cassa non
 può registrare ordini finché non torna (le comande già registrate e non ancora stampate escono
 appena torna). Serve una connessione affidabile, meglio con un router 4G/5G di riserva. Dove
 internet è incerto conviene installare l'app su un computer della sagra, come descritto sopra:
-funziona allo stesso modo, anche il programma di stampa.
+funziona allo stesso modo e stampa da solo, senza programma di stampa.
 
 Se invece pubblichi l'app dietro un tuo proxy HTTPS, aggiungi al file `.env`:
 
@@ -430,7 +480,7 @@ Punti ancora aperti negli appunti, segnati nelle note dei piatti:
 - paella: le teste sono le stesse della frittura? Quante bustine di zafferano?
 - pranzo paesano: antipasti uguali a quelli degli anniversari?
 - dolce e caffè: ingredienti da inserire;
-- dolce in fetta: nel listino 2026 è nel reparto *Bar* (esce sulla copia del bar), da spostare in *Cucina* se serve;
+- dolce in fetta: nel listino 2026 è nel reparto *Bar* (esce sulla comanda del bar), da spostare in *Cucina* se serve;
 - bar: litri e tara (peso da vuoto) dei tipi di fusto, per ora provvisori (*Bar → Bevande e fusti*).
 
 ## Collegare Claude (MCP)
@@ -526,5 +576,6 @@ Test:
 docker compose exec web python manage.py test     # PostgreSQL: tutti i test
 ```
 
-I test della cassa comprendono anche un giro completo del programma di stampa: ordine, server,
-programma di stampa e una finta stampante di rete.
+I test della cassa comprendono anche un giro completo della stampa: ordine, servizio di stampa
+del server o programma di stampa, e finte stampanti di rete (IPP e termica). Per provare con una
+stampante IPP vera ma finta c'è `ippeveprinter` di CUPS (vedi il manuale tecnico, «Stampa»).

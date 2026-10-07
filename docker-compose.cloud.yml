@@ -6,6 +6,8 @@
 # dominio che punta al suo indirizzo (DOMINIO nel file .env). L'app non è più
 # raggiungibile direttamente sulla porta 8000: si passa solo da HTTPS.
 # Backup e Google Drive funzionano come nell'installazione locale.
+# Dal cloud le stampanti della sagra non si raggiungono: il servizio di stampa è spento
+# e le comande le stampa il programma di stampa (Cassa → Stampanti).
 
 services:
   web:
@@ -15,6 +17,9 @@ services:
       DJANGO_COOKIE_SICURI: "1"
       DJANGO_DIETRO_PROXY_HTTPS: "1"
     ports: !reset []
+
+  stampa:
+    profiles: ["mai"]
 
   caddy:
     image: caddy:2-alpine

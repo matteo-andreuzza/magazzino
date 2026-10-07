@@ -43,9 +43,16 @@ def _controlli_preparazione(imp):
         avvisi.append(("Nessuna bevanda (articolo del bar) in vendita.", reverse("cassa:articolo_nuovo")))
     if imp.stampante_cucina is None:
         avvisi.append(("Non è impostata la stampante delle comande della cucina.", reverse("cassa:impostazioni")))
+    if imp.stampante_bar is None:
+        avvisi.append((
+            "Non è impostata la stampante della comanda del bar: le bevande ordinate all'ingresso non escono su carta.",
+            reverse("cassa:impostazioni"),
+        ))
+    if imp.ricevuta_cliente and imp.stampante_ricevute is None:
+        avvisi.append(("La ricevuta per il cliente è attiva ma manca la stampante delle ricevute.", reverse("cassa:impostazioni")))
     stato = stampa.stato_stampa()
-    if stato["servono_agenti"] and not stato["collegato"]:
-        avvisi.append(("Il programma di stampa non è collegato: le comande non escono.", reverse("cassa:stampanti")))
+    if stato["avviso"]:
+        avvisi.append((stato["avviso"], reverse("cassa:stampanti")))
     return avvisi
 
 
@@ -239,7 +246,7 @@ def stato(request, servizio_pk):
         "versione": versione_listino(articoli_in_vendita(servizio, postazione)),
         "chiuso": servizio.chiuso or servizio.cassa_chiusa,
         "stampa": {
-            "avviso": stato_stampa["servono_agenti"] and not stato_stampa["collegato"],
+            "avviso": stato_stampa["avviso"],
             "errori": stato_stampa["errori"],
         },
         "ordini": [_ordine_json(o) for o in ultimi],

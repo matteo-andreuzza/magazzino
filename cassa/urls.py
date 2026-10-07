@@ -45,6 +45,7 @@ urlpatterns = [
     path("stampanti/nuova/", views.stampante_nuova, name="stampante_nuova"),
     path("stampanti/<int:pk>/", views.stampante_modifica, name="stampante_modifica"),
     path("stampanti/<int:pk>/prova/", views.stampante_prova, name="stampante_prova"),
+    path("stampanti/<int:pk>/controlla/", views.stampante_controlla, name="stampante_controlla"),
     path("stampanti/agente_stampa.py", views.agente_scarica, name="agente_scarica"),
     path("stampanti/nuova-chiave/", views.token_rigenera, name="token_rigenera"),
 ]

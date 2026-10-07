@@ -36,10 +36,47 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       APP_NOME: ${APP_NOME:-Magazzino Sagra}
+      BACKUP_OGNI_MINUTI: ${BACKUP_OGNI_MINUTI:-30}
+      # Copia remota (vedi docs/MANUTENZIONE.md, «Copia remota»): COPIA_CHIAVE su tutti e
+      # due i server, COPIA_DI solo su quello di casa.
+      COPIA_CHIAVE: ${COPIA_CHIAVE:-}
+      COPIA_DI: ${COPIA_DI:-}
+      COPIA_OGNI_MINUTI: ${COPIA_OGNI_MINUTI:-5}
     ports:
       - "${PORTA:-8000}:8000"
     volumes:
       - app_dati:/app/dati
+      # Per il pannello del sistema (/sistema/): i backup e lo stato di backup e drive.
+      - ./backup:/backup:ro
+      - stato:/stato:ro
+
+  # Manda comande e ricevute alle stampanti di rete della sagra (cassa/servizio_stampa.py).
+  # Parte da solo con il resto: sui computer e sui tablet della cassa non c'è niente da avviare.
+  # Le stampanti devono essere nella stessa rete del computer su cui gira l'app.
+  stampa:
+    build: .
+    image: magazzino-sagra:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *db-env
+      POSTGRES_HOST: db
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
+      APP_NOME: ${APP_NOME:-Magazzino Sagra}
+      COPIA_DI: ${COPIA_DI:-}
+    # Niente migrazioni qui (le fa «web»): finché il database non è pronto il servizio aspetta da solo.
+    entrypoint: ["python", "manage.py"]
+    command: ["servizio_stampa", "--file-vivo", "/tmp/servizio-stampa-vivo"]
+    volumes:
+      - app_dati:/app/dati
+    healthcheck:
+      test: ["CMD-SHELL", "test -n \"$$(find /tmp/servizio-stampa-vivo -mmin -1 2>/dev/null)\""]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
 
   # Ogni 30 minuti copia database e allegati in ./backup. Le copie del database
   # restano 10 giorni; i nomi iniziano con il nome del progetto (magazzino-sagra),
@@ -63,18 +100,29 @@ services:
     volumes:
       - ./backup:/backup
       - app_dati:/dati:ro
+      - stato:/stato
     entrypoint: ["/bin/sh", "-c"]
+    # Lo stato (per il pannello del sistema) va in /stato/backup, righe chiave=valore.
     command:
       - |
         set -o pipefail
+        avviato=$$(date -Iseconds); ultimo_ok=""; ultimo_file=""; ultimo_errore=""; errore_il=""
+        scrivi_stato() {
+          printf 'avviato=%s\nultimo_ok=%s\nultimo_file=%s\nultimo_errore=%s\nerrore_il=%s\nprossimo=%s\n' \
+            "$$avviato" "$$ultimo_ok" "$$ultimo_file" "$$ultimo_errore" "$$errore_il" \
+            "$$(date -Iseconds -d @$$(( $$(date +%s) + OGNI_MINUTI * 60 )))" > /stato/backup.tmp \
+            && mv /stato/backup.tmp /stato/backup
+        }
         while true; do
           nome="/backup/$$PROGETTO-$$(date +%Y%m%d-%H%M).sql.gz"
-          if pg_dump --no-owner --clean --if-exists | gzip > "$$nome.tmp"; then
+          if pg_dump --no-owner --clean --if-exists 2>/tmp/errore | gzip > "$$nome.tmp"; then
             mv "$$nome.tmp" "$$nome"
             echo "Backup salvato: $$nome"
+            ultimo_ok=$$(date -Iseconds); ultimo_file=$$(basename "$$nome")
           else
             rm -f "$$nome.tmp"
             echo "ATTENZIONE: backup non riuscito"
+            ultimo_errore=$$(head -c 200 /tmp/errore | tr '\n' ' '); errore_il=$$(date -Iseconds)
           fi
           # Un allegato non cambia più dopo il caricamento: si copiano solo quelli nuovi,
           # saltando quelli dell'ultimo minuto che potrebbero essere ancora in scrittura.
@@ -90,6 +138,7 @@ services:
             done
           fi
           find /backup -maxdepth 1 -name "$$PROGETTO-*.sql.gz" -mtime +$$GIORNI -delete
+          scrivi_stato
           sleep $$((OGNI_MINUTI * 60))
         done
 
@@ -107,11 +156,13 @@ services:
     volumes:
       - ./backup:/backup:ro
       - ./rclone:/config/rclone
+      - stato:/stato
     entrypoint: ["/bin/sh", "-c"]
+    # Lo stato (per il pannello del sistema) va in /stato/drive: spento, ok o errore.
     command:
       - |
         set -o pipefail
-        stato=""
+        stato=""; avviato=$$(date -Iseconds); ultimo_ok=""
         while true; do
           if ! rclone listremotes 2>/dev/null | grep -qx "drive:"; then
             [ "$$stato" = "spento" ] || echo "Google Drive non configurato: i backup restano solo in ./backup."
@@ -130,9 +181,42 @@ services:
             [ "$$stato" = "errore" ] || echo "ATTENZIONE: copia su Google Drive non riuscita (manca internet?). Riprovo ogni 10 minuti."
             stato="errore"
           fi
+          [ "$$stato" = "ok" ] && ultimo_ok=$$(date -Iseconds)
+          printf 'stato=%s\navviato=%s\nultimo_ok=%s\ntentativo_il=%s\ncartella=%s\n' \
+            "$$stato" "$$avviato" "$$ultimo_ok" "$$(date -Iseconds)" "$$DRIVE_CARTELLA" > /stato/drive.tmp \
+            && mv /stato/drive.tmp /stato/drive
           sleep 600
         done
+
+  # Solo sul server di casa (es. il Raspberry): prende ogni pochi minuti la copia dei dati
+  # dalla sagra e la carica; quel server diventa una copia di sola lettura. Si accende con
+  # COMPOSE_PROFILES=copia nel file .env, insieme a COPIA_DI e COPIA_CHIAVE
+  # (vedi docs/MANUTENZIONE.md, «Copia remota»).
+  copia:
+    profiles: ["copia"]
+    build: .
+    image: magazzino-sagra:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *db-env
+      POSTGRES_HOST: db
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
+      APP_NOME: ${APP_NOME:-Magazzino Sagra}
+      COPIA_DI: ${COPIA_DI:-}
+      COPIA_CHIAVE: ${COPIA_CHIAVE:-}
+      COPIA_OGNI_MINUTI: ${COPIA_OGNI_MINUTI:-5}
+    entrypoint: ["python", "manage.py"]
+    command: ["sincronizza"]
+    volumes:
+      - app_dati:/app/dati
+    healthcheck:
+      disable: true
 
 volumes:
   db_dati:
   app_dati:
+  # Stato dei servizi backup e drive, letto dal pannello del sistema.
+  stato:

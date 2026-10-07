@@ -14,7 +14,7 @@ ADESSO="backup/$(progetto)-prima-del-ripristino-$(date +%Y%m%d-%H%M%S).sql.gz"
 backup_database "$ADESSO"
 echo "Copia di com'era: $ADESSO"
 
-$COMPOSE stop web
+$COMPOSE stop web stampa
 ripristina_database "$FILE"
-$COMPOSE start web
+$COMPOSE up -d
 attendi_app && echo "Fatto: il database è quello di $FILE." || { echo "L'app non risponde: guarda «$COMPOSE logs web»." >&2; exit 1; }

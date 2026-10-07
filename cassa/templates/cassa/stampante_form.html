@@ -3,7 +3,7 @@
 {% block contenuto %}
   <p class="tenue piccolo"><a href="{% url 'cassa:stampanti' %}">Stampanti</a></p>
   <h1>{{ titolo }}</h1>
-  <form method="post" class="scheda">
+  <form method="post" class="scheda" data-stampante>
     {% csrf_token %}
     {% if form.non_field_errors %}<div class="box-errori" role="alert">{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
     {% for campo in form %}{% include "magazzino/_campo.html" %}{% endfor %}
@@ -12,4 +12,27 @@
       <a class="pulsante secondario" href="{% url 'cassa:stampanti' %}">Annulla</a>
     </div>
   </form>
+  <script>
+    /* Si vedono solo i campi che servono per il tipo di stampante scelto. */
+    (function () {
+      var modulo = document.querySelector("[data-stampante]");
+      var campi = {
+        ipp: ["indirizzo", "carta", "colonne"],
+        rete: ["indirizzo", "colonne", "accenti"],
+        computer: ["indirizzo", "agente", "colonne", "accenti"],
+        browser: []
+      };
+      var tutti = ["indirizzo", "carta", "colonne", "accenti", "agente"];
+      function aggiorna() {
+        var scelta = modulo.querySelector("input[name=connessione]:checked");
+        var visibili = campi[scelta ? scelta.value : "ipp"] || tutti;
+        tutti.forEach(function (nome) {
+          var campo = modulo.querySelector("[name=" + nome + "]");
+          if (campo) campo.closest(".campo").hidden = visibili.indexOf(nome) < 0;
+        });
+      }
+      modulo.addEventListener("change", function (e) { if (e.target.name === "connessione") aggiorna(); });
+      aggiorna();
+    })();
+  </script>
 {% endblock %}
