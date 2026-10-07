@@ -1,19 +1,11 @@
-"""Middleware del sistema.
-
-- MonitoraggioMiddleware: segna i dispositivi collegati (per il pannello) e salva gli
-  errori delle pagine, a risposta finita;
-- SolaLetturaMiddleware: sulla copia remota (COPIA_DI) non si modifica niente.
-"""
+"""Middleware del sistema: MonitoraggioMiddleware segna i dispositivi collegati (per il pannello)
+e salva gli errori delle pagine, a risposta finita."""
 
 import hashlib
 import logging
 import time
 from datetime import timedelta
 
-from django.conf import settings
-from django.db import connection, transaction
-from django.http import JsonResponse
-from django.shortcuts import render
 from django.utils import timezone
 
 from . import errori
@@ -105,51 +97,3 @@ class MonitoraggioMiddleware:
         if len(self.scritti) > 500:
             self.scritti.clear()
 
-
-def _e_sola_lettura(errore):
-    while errore is not None:
-        if getattr(errore, "sqlstate", None) == "25006":  # read_only_sql_transaction
-            return True
-        errore = errore.__cause__
-    return False
-
-
-class SolaLetturaMiddleware:
-    """Sulla copia remota si guarda e basta: i dati arrivano dalla sagra e verrebbero sovrascritti.
-
-    Le richieste che modificano ricevono una pagina che lo spiega (tranne entrare e uscire);
-    le altre girano in una transazione di sola lettura (PostgreSQL), così anche una pagina
-    che provasse a scrivere viene fermata dal database.
-    """
-
-    # Entrare, uscire e il pannello del sistema (scrive solo nelle sue tabelle, che sono di questo server).
-    PERMESSE = ("/accounts/login/", "/accounts/logout/", "/sistema/")
-    SICURI = ("GET", "HEAD", "OPTIONS")
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        if not settings.COPIA_DI or request.path.startswith(self.PERMESSE):
-            return self.get_response(request)
-        if request.method not in self.SICURI and not request.path.startswith("/mcp"):
-            return self.rifiuta(request)
-        if connection.vendor != "postgresql":
-            return self.get_response(request)
-        with transaction.atomic():
-            with connection.cursor() as cursore:
-                cursore.execute("SET TRANSACTION READ ONLY")
-            return self.get_response(request)
-
-    def process_exception(self, request, exception):
-        if settings.COPIA_DI and _e_sola_lettura(exception):
-            transaction.set_rollback(True)
-            return self.rifiuta(request)
-        return None
-
-    @staticmethod
-    def rifiuta(request):
-        testo = "Questa è la copia di sola lettura dei dati della sagra: le modifiche si fanno sul programma della sagra."
-        if request.path.startswith(("/cassa/serate/", "/cassa/api/", "/mcp")) or "json" in request.headers.get("Accept", ""):
-            return JsonResponse({"ok": False, "errori": [testo]}, status=403)
-        return render(request, "sistema/sola_lettura.html", {"testo": testo}, status=403)

@@ -144,6 +144,9 @@ def stampante_modifica(request, pk):
 @solo_staff
 def stampante_prova(request, pk):
     s = get_object_or_404(Stampante, pk=pk)
+    if not stampa.stampa_qui():
+        messages.error(request, stampa.DA_CASA)
+        return redirect("cassa:stampanti")
     lavoro = stampa.accoda_prova(s, impostazioni())
     if s.dal_browser:
         return redirect(reverse("cassa:stampe_browser") + f"?id={lavoro.pk}&torna={reverse('cassa:stampanti')}")

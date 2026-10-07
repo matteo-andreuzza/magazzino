@@ -1,4 +1,4 @@
-"""Pannello del sistema (/sistema/, solo staff) e API della copia remota."""
+"""Pannello del sistema (/sistema/, solo staff) e API tra i due server (sincronia e copie)."""
 
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
@@ -10,15 +10,17 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.db import connection
-from django.http import FileResponse, Http404, JsonResponse
-from django.shortcuts import redirect, render
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from markdown.extensions.toc import slugify_unicode
 
-from . import copia, copia_remota, monitor
-from .models import Battito, Dispositivo, Errore
-from .services import e_copia, segnala
+from . import copia, copia_remota, monitor, sincronia
+from .models import Battito, Conflitto, Dispositivo, Errore
+from .services import segnala
 
 GUIDA = Path(settings.BASE_DIR) / "docs" / "MANUTENZIONE.md"
 
@@ -58,7 +60,8 @@ def pannello(request):
     html, indice = guida_programmatore()
     return render(request, "sistema/pannello.html", {
         "stato": monitor.stato(request), "guida": html, "indice": indice,
-        "copia": e_copia(), "copia_di": settings.COPIA_DI,
+        "server": settings.SERVER_NOME, "sincronia_con": settings.SINCRONIA_CON,
+        "ogni_secondi": settings.SINCRONIA_OGNI_SECONDI, "conflitti": monitor.conflitti(),
     })
 
 
@@ -117,34 +120,60 @@ def stampanti_controlla(request):
 
 @require_POST
 @solo_staff
-def copia_adesso(request):
-    if not e_copia():
+def sincronia_adesso(request):
+    riallinea = request.POST.get("riallinea") == "1"
+    if not settings.SINCRONIA_CON:
         raise Http404
-    battito = Battito.objects.filter(nome=copia_remota.NOME).first()
-    if battito is None:
-        messages.error(request, "Il servizio «copia» non è acceso su questo server.")
+    if riallinea and request.POST.get("conferma") != "1":
+        messages.error(request, "Per riallineare spunta la conferma: i dati di qui vengono sostituiti da quelli di casa.")
+    elif not sincronia.chiedi_giro(riallinea_=riallinea):
+        messages.error(request, "Il servizio «sincronia» non è acceso su questo server (COMPOSE_PROFILES=sincronia).")
+    elif riallinea:
+        messages.success(request, "Riallineamento chiesto: parte entro pochi secondi (prima si salva una copia di qui).")
     else:
-        battito.dettagli = {**battito.dettagli, "adesso": True, "forza": request.POST.get("forza") == "1"}
-        battito.save(update_fields=["dettagli"])
-        messages.success(request, "Copia chiesta: parte entro 10 secondi.")
-    return _torna("#schema")
+        messages.success(request, "Giro chiesto: parte entro pochi secondi.")
+    return _torna("#sincronia")
+
+
+@require_POST
+@solo_staff
+def conflitto_risolvi(request, pk):
+    conflitto = get_object_or_404(Conflitto, pk=pk)
+    altro = sincronia.altro(settings.SERVER_NOME)
+    if request.POST.get("tieni") == "altro":
+        try:
+            sincronia.unisci(conflitto)
+        except sincronia.SincroniaFerma as e:
+            messages.error(request, str(e))
+        else:
+            messages.success(request, f"Unite: resta quella {'di casa' if altro == 'casa' else 'della sagra'}; "
+                                      "le righe collegate passano a lei al prossimo giro.")
+    else:
+        sincronia.chiedi_all_altro(conflitto)
+        messages.success(request, f"Chiesto {'a casa' if altro == 'casa' else 'alla sagra'} di tenere questa: "
+                                  "succede al prossimo giro.")
+    return _torna("#sincronia")
 
 
 # ---------------------------------------------------------------------------
-# API della copia remota (le chiama il server di casa, con COPIA_CHIAVE)
+# API tra i due server (con COPIA_CHIAVE): sincronia, copia completa per riallinearsi, file
 # ---------------------------------------------------------------------------
 
 
-def _con_chiave(vista):
+def _con_chiave(vista, metodo=require_GET):
     @wraps(vista)
     def controlla(request, *args, **kwargs):
         if not settings.COPIA_CHIAVE:
-            raise Http404("Copia remota non configurata.")
+            raise Http404("Sincronia non configurata.")
         if not copia_remota.chiave_valida(request):
             return JsonResponse({"ok": False, "errori": ["Chiave non valida."]}, status=401)
         return vista(request, *args, **kwargs)
 
-    return login_not_required(require_GET(controlla))
+    return csrf_exempt(login_not_required(metodo(controlla)))
+
+
+def _con_chiave_post(vista):
+    return _con_chiave(vista, require_POST)
 
 
 @_con_chiave
@@ -172,3 +201,44 @@ def api_copia_allegato(request):
     if file is None:
         raise Http404
     return FileResponse(file.open("rb"))
+
+
+@_con_chiave_post
+def api_sincronia(request):
+    """La sagra manda le sue modifiche e riceve quelle di qui (vedi sincronia.scambio)."""
+    try:
+        richiesta = sincronia.leggi_messaggio(request.read())
+    except (OSError, ValueError, EOFError):
+        return JsonResponse({"ok": False, "errori": ["Messaggio non valido."]}, status=400)
+    try:
+        risposta, esito = sincronia.scambio(richiesta)
+    except sincronia.SincroniaFerma as e:
+        segnala(sincronia.NOME, stato="errore", messaggio=str(e)[:300], dettagli={
+            **(Battito.objects.filter(nome=sincronia.NOME).values_list("dettagli", flat=True).first() or {}),
+            "ultimo_contatto": timezone.now().isoformat()})
+        return JsonResponse({"ok": False, "errori": [str(e)]}, status=409)
+    precedenti = Battito.objects.filter(nome=sincronia.NOME).values_list("dettagli", flat=True).first() or {}
+    adesso = timezone.now()
+    dettagli = {
+        **precedenti, "ultimo_contatto": adesso.isoformat(), "ip": request.META.get("REMOTE_ADDR", ""),
+        "ricevute": len(richiesta.get("modifiche") or []), "inviate": len(risposta["modifiche"]),
+        "in_coda_altro": richiesta.get("in_coda", 0), "conflitti_altro": richiesta.get("conflitti") or [],
+        "conflitti": Conflitto.objects.count(), "in_coda": risposta["in_coda"],
+        "esiti_richieste": risposta["esiti_richieste"] or precedenti.get("esiti_richieste", []),
+    }
+    if sincronia._pulizia_dovuta(precedenti):
+        sincronia.pulisci_file()
+        dettagli["pulizia_file_il"] = adesso.isoformat()
+    problemi = dettagli["conflitti"] or dettagli["conflitti_altro"]
+    segnala(sincronia.NOME, stato="avviso" if problemi else "ok",
+            messaggio=f"La sagra si è fatta sentire alle {timezone.localtime(adesso):%H:%M}"
+                      + (": ci sono conflitti, vedi sotto." if problemi else "."), dettagli=dettagli)
+    return HttpResponse(sincronia.scrivi_messaggio(risposta), content_type=sincronia.TIPO_MESSAGGIO)
+
+
+@_con_chiave_post
+def api_sincronia_allegato(request):
+    """Un file che una riga di qui usa e che c'è solo dall'altra parte."""
+    if not sincronia.ricevi_file(request.GET.get("percorso", ""), request):
+        raise Http404
+    return JsonResponse({"ok": True})

@@ -1,7 +1,7 @@
 ## Progetto
 
 Gestionale della sagra (Django + PostgreSQL in Docker): app `magazzino`, `cassa`, `bar`, `assistente` (server MCP),
-`sistema` (pannello `/sistema/` con schema animato, errori, dispositivi, copia remota verso il server di casa).
+`sistema` (pannello `/sistema/` con schema animato, errori, dispositivi, sincronia nei due sensi con il server di casa).
 Manuale tecnico: `docs/MANUTENZIONE.md` (si legge anche in fondo a `/sistema/`); guida per chi lo usa:
 `magazzino/templates/magazzino/guida.html` (`/guida/`). Quando cambia qualcosa, aggiornare tutti e due.
 
@@ -10,6 +10,9 @@ Manuale tecnico: `docs/MANUTENZIONE.md` (si legge anche in fondo a `/sistema/`);
 - Le migrazioni già applicate non si modificano: se ne scrive una nuova.
 - La logica sta nei `services.py`: viste e strumenti MCP li chiamano. Test: `python manage.py test` (anche su PostgreSQL nel server di prova).
 - Tabelle che riguardano solo un server (battiti, sessioni, `sistema_*`) vanno in `TABELLE_LOCALI` (`sistema/copia.py`), senza chiavi esterne.
+- Tutte le altre tabelle si sincronizzano da sole tra sagra e casa (`sistema/sincronia.py`: trigger, id pari alla sagra e
+  dispari a casa, vince la modifica più recente). Colonne che cambiano a ogni uso → `COLONNE_LOCALI`. Test della sincronia:
+  solo su PostgreSQL (database `altro` nei test del server di prova).
 
 ## graphify
 

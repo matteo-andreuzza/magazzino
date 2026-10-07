@@ -5,10 +5,21 @@ x-db-env: &db-env
   POSTGRES_USER: magazzino
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-magazzino}
 
+# Sincronia tra la sagra e il server di casa (vedi docs/MANUTENZIONE.md, «Sincronia con casa»):
+# SERVER_NOME sagra o casa, la stessa COPIA_CHIAVE sui due server, SINCRONIA_CON solo sulla sagra.
+x-sincronia-env: &sincronia-env
+  SERVER_NOME: ${SERVER_NOME:-sagra}
+  COPIA_CHIAVE: ${COPIA_CHIAVE:-}
+  SINCRONIA_CON: ${SINCRONIA_CON:-}
+  SINCRONIA_OGNI_SECONDI: ${SINCRONIA_OGNI_SECONDI:-30}
+
+# «always»: quando torna la corrente (o si riaccende il computer) ripartono da soli, anche se
+# prima qualcuno li aveva fermati con «docker compose stop».
+
 services:
   db:
     image: postgres:17-alpine
-    restart: unless-stopped
+    restart: always
     environment:
       <<: *db-env
       TZ: Europe/Rome
@@ -23,12 +34,12 @@ services:
   web:
     build: .
     image: magazzino-sagra:latest
-    restart: unless-stopped
+    restart: always
     depends_on:
       db:
         condition: service_healthy
     environment:
-      <<: *db-env
+      <<: [*db-env, *sincronia-env]
       POSTGRES_HOST: db
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
@@ -37,11 +48,6 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       APP_NOME: ${APP_NOME:-Magazzino Sagra}
       BACKUP_OGNI_MINUTI: ${BACKUP_OGNI_MINUTI:-30}
-      # Copia remota (vedi docs/MANUTENZIONE.md, «Copia remota»): COPIA_CHIAVE su tutti e
-      # due i server, COPIA_DI solo su quello di casa.
-      COPIA_CHIAVE: ${COPIA_CHIAVE:-}
-      COPIA_DI: ${COPIA_DI:-}
-      COPIA_OGNI_MINUTI: ${COPIA_OGNI_MINUTI:-5}
     ports:
       - "${PORTA:-8000}:8000"
     volumes:
@@ -56,7 +62,7 @@ services:
   stampa:
     build: .
     image: magazzino-sagra:latest
-    restart: unless-stopped
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -65,7 +71,8 @@ services:
       POSTGRES_HOST: db
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
       APP_NOME: ${APP_NOME:-Magazzino Sagra}
-      COPIA_DI: ${COPIA_DI:-}
+      # A casa (SERVER_NOME=casa) il servizio resta acceso ma non stampa.
+      SERVER_NOME: ${SERVER_NOME:-sagra}
     # Niente migrazioni qui (le fa «web»): finché il database non è pronto il servizio aspetta da solo.
     entrypoint: ["python", "manage.py"]
     command: ["servizio_stampa", "--file-vivo", "/tmp/servizio-stampa-vivo"]
@@ -84,7 +91,7 @@ services:
   # Ogni quanto e per quanti giorni si cambiano nel file .env (BACKUP_OGNI_MINUTI, BACKUP_GIORNI).
   backup:
     image: postgres:17-alpine
-    restart: unless-stopped
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -147,7 +154,7 @@ services:
   # Senza internet riprova da solo e recupera i file rimasti indietro.
   drive:
     image: rclone/rclone:1.75.1
-    restart: unless-stopped
+    restart: always
     environment:
       PROGETTO: ${COMPOSE_PROJECT_NAME}
       DRIVE_CARTELLA: ${DRIVE_CARTELLA:-Backup magazzino sagra}
@@ -188,30 +195,30 @@ services:
           sleep 600
         done
 
-  # Solo sul server di casa (es. il Raspberry): prende ogni pochi minuti la copia dei dati
-  # dalla sagra e la carica; quel server diventa una copia di sola lettura. Si accende con
-  # COMPOSE_PROFILES=copia nel file .env, insieme a COPIA_DI e COPIA_CHIAVE
-  # (vedi docs/MANUTENZIONE.md, «Copia remota»).
-  copia:
-    profiles: ["copia"]
+  # Solo sulla sagra: ogni 30 secondi, quando c'è internet, manda a casa le modifiche di qui e
+  # prende quelle di casa (sistema/sincronia.py). Si accende con COMPOSE_PROFILES=sincronia nel
+  # file .env, insieme a SINCRONIA_CON e COPIA_CHIAVE. Allo spegnimento fa un ultimo giro.
+  sincronia:
+    profiles: ["sincronia"]
     build: .
     image: magazzino-sagra:latest
-    restart: unless-stopped
+    restart: always
     depends_on:
       db:
         condition: service_healthy
+    stop_grace_period: 60s
     environment:
-      <<: *db-env
+      <<: [*db-env, *sincronia-env]
       POSTGRES_HOST: db
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
       APP_NOME: ${APP_NOME:-Magazzino Sagra}
-      COPIA_DI: ${COPIA_DI:-}
-      COPIA_CHIAVE: ${COPIA_CHIAVE:-}
-      COPIA_OGNI_MINUTI: ${COPIA_OGNI_MINUTI:-5}
+    # Niente migrazioni qui (le fa «web»): finché il database non è pronto il servizio aspetta da solo.
     entrypoint: ["python", "manage.py"]
-    command: ["sincronizza"]
+    command: ["sincronia"]
     volumes:
       - app_dati:/app/dati
+      # Prima di riallinearsi da casa salva qui una copia di sicurezza dei dati della sagra.
+      - ./backup:/backup
     healthcheck:
       disable: true
 

@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal as D
 
+from django.test import override_settings
 from django.utils import timezone
 
 from cassa import services
@@ -267,6 +268,14 @@ class RistampaTest(BaseCassa):
         ordine.refresh_from_db()
         with self.assertRaisesMessage(ErroreCassa, "annullato"):
             services.ristampa(ordine=ordine, cosa=Reparto.BAR)
+
+    def test_a_casa_non_si_stampa(self):
+        """Sul server di casa l'ordine si registra (e arriva in sagra con la sincronia), ma senza stampe."""
+        with override_settings(SERVER_NOME="casa"):
+            ordine, _ = self.ordina([(self.grigliata, 1)])
+            self.assertFalse(ordine.stampe.exists())
+            with self.assertRaisesMessage(ErroreCassa, "Dal server di casa non si stampa"):
+                services.ristampa(ordine=ordine, cosa=Reparto.CUCINA)
 
 
 class ComandaTest(BaseCassa):

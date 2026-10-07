@@ -35,8 +35,9 @@ services:
     volumes:
       - .:/app
 
-  # Per provare la copia remota: un secondo progetto (-p) con COPIA_DI e COMPOSE_PROFILES=copia.
-  copia:
+  # Per provare la sincronia: questo progetto fa la sagra (SINCRONIA_CON, COMPOSE_PROFILES=sincronia)
+  # e un secondo progetto (-p magazzino-casa-prova, SERVER_NOME=casa) fa casa.
+  sincronia:
     build:
       target: debug
     image: magazzino-sagra:debug

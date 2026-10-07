@@ -24,7 +24,7 @@ from django.utils import timezone
 
 from sistema.errori import registra_errore
 from sistema.models import Battito
-from sistema.services import e_copia, segnala
+from sistema.services import e_casa, segnala
 
 from . import fogli, ipp, stampa
 from .models import CONNESSIONI_SERVER, Connessione, Stampante
@@ -235,23 +235,24 @@ class ServizioStampa:
             self.controlla_stampanti(occupate | set(self.lavoratori))
 
     def riposa(self):
-        """Sulla copia remota non si stampa: il servizio dice solo che è acceso (e spento di proposito)."""
-        segnala("stampa", stato="spento", messaggio="Copia di sola lettura: qui non si stampa.", avviato_il=self.avviato_il)
+        """A casa non si stampa (le stampanti sono in sagra): il servizio dice solo che è acceso, e spento di proposito."""
+        segnala("stampa", stato="spento", messaggio="Server di casa: qui non si stampa, le stampanti sono in sagra.",
+                avviato_il=self.avviato_il)
         if self.file_vivo:
             self.file_vivo.touch()
 
     def gira(self):
         """Ciclo principale: non finisce mai (si ferma con Ctrl+C o con lo stop del container)."""
-        copia = e_copia()
-        if copia:
-            self.scrivi("Copia di sola lettura (COPIA_DI): il servizio di stampa resta fermo.")
+        a_casa = e_casa()
+        if a_casa:
+            self.scrivi("Server di casa (SERVER_NOME=casa): il servizio di stampa resta fermo.")
         else:
             self.scrivi(f"Servizio di stampa {VERSIONE} acceso: manda le stampe alle stampanti di rete.")
         guasto = False
         while True:
             try:
                 close_old_connections()
-                if copia:
+                if a_casa:
                     self.riposa()
                     time.sleep(20)
                     continue

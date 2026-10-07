@@ -2,8 +2,8 @@
 
 - pagine: il segnale di Django `got_request_exception` mette da parte l'eccezione e
   il middleware (middleware.py) la salva a risposta finita, fuori da qualsiasi
-  transazione (anche da quella di sola lettura della copia remota);
-- servizi (stampa, copia) e comandi: chiamano registra_errore() direttamente.
+  transazione;
+- servizi (stampa, sincronia) e comandi: chiamano registra_errore() direttamente.
 
 Le eccezioni uguali (stessa origine, stesso tipo, stesso punto del codice) non si
 ripetono: si conta quante volte sono successe.

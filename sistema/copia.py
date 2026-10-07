@@ -1,4 +1,5 @@
-"""Copie dei dati da portare su un altro server: chiavetta (Copia dati) e copia remota.
+"""Copie dei dati da portare su un altro server: chiavetta (Copia dati) e riallineamento
+della sincronia (vedi sincronia.py).
 
 Il database si copia con pg_dump, come i backup, ma senza le tabelle che riguardano solo
 questo server (TABELLE_LOCALI: sessioni di chi è collegato, pannello del sistema): chi
@@ -34,6 +35,12 @@ from .services import impronta_codice
 # collegato, segnali di vita del programma di stampa, pannello del sistema. Cambiano da sole
 # ogni pochi secondi e riguardano solo il server su cui stanno.
 TABELLE_LOCALI = ["django_session", "cassa_agentestampa", "sistema_*"]
+# Nelle copie sì, nella sincronia no: ogni server se le crea da solo con le migrazioni (tipi di
+# contenuto e permessi, con id che possono essere diversi) e il registro dell'admin, che li usa.
+ESCLUSE_DALLA_SINCRONIA = [
+    "django_migrations", "django_content_type", "auth_permission", "auth_group_permissions",
+    "auth_user_user_permissions", "django_admin_log",
+]
 # Nella cartella dei dati: questi non vanno nella copia.
 ESCLUSI = {"secret_key"}
 

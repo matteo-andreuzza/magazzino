@@ -26,9 +26,9 @@ from django.db.migrations.executor import MigrationExecutor
 from django.db.models import Max
 from django.utils import timezone
 
-from . import copia_remota
-from .models import Battito, Dispositivo, Errore
-from .services import e_copia, impronta_codice
+from . import sincronia as sincronia_
+from .models import Battito, Conflitto, Dispositivo, Errore, Modifica
+from .services import e_casa, impronta_codice
 
 ATTIVO = timedelta(minutes=2)  # un dispositivo visto da meno di così è «attivo»
 RECENTE = timedelta(hours=12)
@@ -127,7 +127,7 @@ def web(errori_recenti):
         dettagli=[
             ["Python", platform.python_version()], ["Django", django.get_version()],
             ["Processo", "gunicorn" if "gunicorn" in " ".join(sys.argv) else Path(sys.argv[0]).name],
-            ["Modalità", "copia di sola lettura" if e_copia() else "sagra (server principale)"],
+            ["Server", "di casa (sul web)" if e_casa() else "della sagra (rete locale)"],
         ],
         aiuto=[
             "Se le pagine non si aprono: docker compose ps (web deve essere «healthy»).",
@@ -168,9 +168,9 @@ def stampa():
     from cassa.models import AgenteStampa, Stampa, StatoStampa
     from cassa.stampa import NOME_SERVER
 
-    if e_copia():
+    if e_casa():
         return _servizio("stampa", "stampa", "Manda comande e ricevute alle stampanti di rete.", "spento",
-                         "Spento: sulla copia remota non si stampa.")
+                         "Spento: a casa non si stampa, le stampanti sono in sagra.")
     battito = Battito.objects.filter(nome="stampa").first()
     contatto = AgenteStampa.objects.filter(nome=NOME_SERVER).first()
     ultimo = battito.ultimo_il if battito else (contatto.ultimo_contatto if contatto else None)
@@ -279,42 +279,75 @@ def drive():
     )
 
 
-def copia():
-    if e_copia():
-        battito = Battito.objects.filter(nome=copia_remota.NOME).first()
-        aiuto = ["docker compose logs --tail=50 copia", "La sagra deve essere accesa, con internet e su Tailscale.",
-                 "COPIA_CHIAVE uguale sui due server; COPIA_DI = indirizzo della sagra."]
-        if battito is None:
-            return _servizio("copia", "copia", "Prende la copia dei dati dalla sagra.", "sconosciuto",
-                             "Il servizio «copia» non è mai partito (COMPOSE_PROFILES=copia nel file .env).", aiuto=aiuto)
-        vivo = battito.vivo(timedelta(minutes=2))
-        d = battito.dettagli
-        return _servizio(
-            "copia", "copia", f"Ogni {settings.COPIA_OGNI_MINUTI:g} minuti prende la copia dei dati da {settings.COPIA_DI}.",
-            battito.stato if vivo else "errore", battito.messaggio if vivo else "Il servizio «copia» è fermo.",
-            avviato_il=battito.avviato_il, ultimo_il=battito.ultimo_il,
-            dettagli=[["Dati della sagra del", d.get("copia_il", "")], ["Ultimo controllo", d.get("controllata_il", "")],
-                      ["Codice della sagra", d.get("codice_sagra", "")], ["Codice di qui", impronta_codice()],
-                      ["Allegati", d.get("allegati", "")], ["Durata ultima copia", f"{d['durata']} s" if d.get("durata") else ""]],
-            aiuto=aiuto,
-        )
-    inviata = Battito.objects.filter(nome=copia_remota.NOME_INVIATA).first()
+def _ora(testo):
+    momento = _data(testo)
+    return f"{timezone.localtime(momento):%d/%m %H:%M}" if momento else ""
+
+
+def sincronia():
+    """Il riquadro della sincronia: sulla sagra il servizio che chiama casa, a casa l'ultimo contatto."""
+    cosa = ("Si scambia le modifiche con l'altro server: la sagra chiama casa ogni "
+            f"{settings.SINCRONIA_OGNI_SECONDI:g} secondi quando c'è internet.")
     if not settings.COPIA_CHIAVE:
-        return _servizio("copia", "copia remota", "Dà la copia dei dati a un altro server (es. il Raspberry di casa).",
-                         "spento", "Non configurata (COPIA_CHIAVE vuota): nessuno può prendere la copia.",
-                         aiuto=["Manuale tecnico, «Copia remota»."])
-    if inviata is None:
-        return _servizio("copia", "copia remota", "Dà la copia dei dati a un altro server (es. il Raspberry di casa).",
-                         "avviso", "Pronta, ma nessuno è ancora venuto a prenderla.",
-                         aiuto=["Sul server di casa: docker compose logs copia", "La sagra deve essere su Tailscale."])
-    return _servizio(
-        "copia", "copia remota", "Dà la copia dei dati a un altro server (es. il Raspberry di casa).",
-        "ok" if timezone.now() - inviata.ultimo_il < timedelta(hours=1) else "avviso",
-        f"Ultima copia presa alle {timezone.localtime(inviata.ultimo_il):%H:%M} del {timezone.localtime(inviata.ultimo_il):%d/%m}.",
-        ultimo_il=inviata.ultimo_il,
-        dettagli=[["Da", inviata.dettagli.get("ip", "")], ["Dimensione", _mb(inviata.dettagli.get("dimensione", 0))]],
-        aiuto=["Se smette di arrivare: internet della sagra, Tailscale, il server di casa (docker compose logs copia)."],
-    )
+        return _servizio("sincronia", "sincronia", cosa, "spento", "Non configurata (COPIA_CHIAVE vuota): questo server lavora da solo.",
+                         aiuto=["Manuale tecnico, «Sincronia con casa»."])
+    battito = Battito.objects.filter(nome=sincronia_.NOME).first()
+    d = battito.dettagli if battito else {}
+    in_coda, conflitti = Modifica.objects.count(), Conflitto.objects.count()
+    altri = d.get("conflitti_altro") or []
+    dettagli = [
+        ["Modifiche di qui in coda", in_coda], ["Conflitti di qui", conflitti],
+        ["In coda dall'altra parte", d.get("in_coda_altro", "")], ["Conflitti dall'altra parte", len(altri)],
+        ["Ultimo giro riuscito", _ora(d.get("ultimo_ok") or d.get("ultimo_contatto"))],
+        ["Ultimo giro: righe mandate", d.get("inviate", "")], ["Ultimo giro: righe ricevute", d.get("ricevute", "")],
+        ["Differenza tra gli orologi", f"{d['scarto_orologio']} s" if "scarto_orologio" in d else ""],
+        ["Codice di qui", impronta_codice()],
+    ]
+    if settings.SINCRONIA_CON:
+        aiuto = ["docker compose logs --tail=50 sincronia", "Serve internet; casa deve essere accesa e raggiungibile.",
+                 "COPIA_CHIAVE uguale sui due server; SINCRONIA_CON = indirizzo di casa."]
+        if battito is None:
+            return _servizio("sincronia", "sincronia", cosa, "sconosciuto",
+                             "Il servizio «sincronia» non è mai partito (COMPOSE_PROFILES=sincronia nel file .env).", aiuto=aiuto)
+        vivo = battito.vivo(timedelta(minutes=2))
+        return _servizio(
+            "sincronia", "sincronia", cosa + f" Casa: {settings.SINCRONIA_CON}",
+            battito.stato if vivo else "errore", battito.messaggio if vivo else "Il servizio «sincronia» è fermo.",
+            avviato_il=battito.avviato_il, ultimo_il=battito.ultimo_il, dettagli=dettagli, aiuto=aiuto,
+        )
+    aiuto = ["La sagra chiama casa: guarda il pannello della sagra (docker compose logs sincronia, lì).",
+             "Fuori dai giorni della sagra è normale che non si senta."]
+    if not e_casa():
+        return _servizio("sincronia", "sincronia", cosa, "avviso",
+                         "Manca SINCRONIA_CON: questo server della sagra non chiama casa.", dettagli=dettagli, aiuto=aiuto)
+    contatto = _data(d.get("ultimo_contatto"))
+    if contatto is None:
+        return _servizio("sincronia", "sincronia", cosa, "avviso", "Pronta: la sagra non si è ancora fatta sentire.",
+                         dettagli=dettagli, aiuto=aiuto)
+    recente = timezone.now() - contatto < timedelta(minutes=2)
+    if battito.stato == "errore" and recente:
+        stato, testo = "errore", battito.messaggio
+    elif conflitti or altri:
+        stato, testo = "avviso", "Ci sono conflitti: vedi «Sincronia» qui sotto."
+    elif recente:
+        stato, testo = "ok", f"La sagra si fa sentire (ultima volta alle {timezone.localtime(contatto):%H:%M})."
+    else:
+        stato, testo = "spento", f"La sagra non si sente dal {timezone.localtime(contatto):%d/%m alle %H:%M} (spenta o senza internet)."
+    return _servizio("sincronia", "sincronia", cosa, stato, testo, ultimo_il=contatto, dettagli=dettagli, aiuto=aiuto)
+
+
+def conflitti():
+    """Per il pannello: le righe di qui che l'altro server non accetta, e quelle dell'altro che qui non passano."""
+    battito = Battito.objects.filter(nome=sincronia_.NOME).first()
+    d = battito.dettagli if battito else {}
+    qui = [
+        {"pk": c.pk, "descrizione": sincronia_.descrivi(c.tabella, c.chiave), "motivo": c.motivo, "volte": c.volte,
+         "primo_il": c.primo_il, "doppione": bool(c.gemella and c.dati_gemella),
+         "gemella": sincronia_.descrivi(c.tabella, c.gemella, dati=c.dati_gemella) if c.gemella else ""}
+        for c in Conflitto.objects.all()[:30]
+    ]
+    return {"qui": qui, "altro": d.get("conflitti_altro") or [], "esiti": d.get("esiti_richieste") or [],
+            "richieste": d.get("richieste") or []}
 
 
 # ---------------------------------------------------------------------------
@@ -342,8 +375,8 @@ def stampanti():
             stato, testo = "spento", "Non attiva."
         elif s.connessione in (Connessione.BROWSER, Connessione.COMPUTER):
             stato, testo = ("avviso", f"{errori} stampe in errore.") if errori else ("ok", s.get_connessione_display())
-        elif e_copia():
-            stato, testo = "spento", "Dalla copia remota le stampanti della sagra non si controllano."
+        elif e_casa():
+            stato, testo = "spento", "Da casa le stampanti della sagra non si controllano."
         elif not recente:
             stato, testo = "sconosciuto", "Non controllata di recente (il servizio di stampa la controlla ogni minuto)."
         elif controllo.stato == "errore":
@@ -423,7 +456,7 @@ def attivita():
 
     backup_file = file_di_backup()
     drive_file = _stato_file("drive") or {}
-    remota = Battito.objects.filter(nome=copia_remota.NOME if e_copia() else copia_remota.NOME_INVIATA).first()
+    remota = Battito.objects.filter(nome=sincronia_.NOME).first()
     righe = [
         ("Ultimo ordine in cassa", ultimo(Ordine, "creato_il")),
         ("Ultima stampa riuscita", ultimo(Stampa, "stampata_il", stato=StatoStampa.STAMPATA)),
@@ -432,7 +465,7 @@ def attivita():
         ("Ultima pesata dei fusti", ultimo(Pesata, "registrata_il")),
         ("Ultimo backup", _data(backup_file[0]["quando"]) if backup_file else None),
         ("Ultima copia su Google Drive", _data(drive_file.get("ultimo_ok"))),
-        ("Ultima copia remota", remota.ultimo_il if remota else None),
+        ("Ultimo giro con l'altro server", _data((remota.dettagli.get("ultimo_ok") or remota.dettagli.get("ultimo_contatto")) if remota else None)),
         ("Ultimo uso di Claude", ultimo(ChiaveMCP, "ultimo_uso")),
         ("Ultimo accesso di un utente", ultimo(get_user_model(), "last_login")),
         ("Ultima migrazione applicata", ultimo(MigrationRecorder.Migration, "applied")),
@@ -482,7 +515,7 @@ def versione():
         "python": platform.python_version(),
         "django": django.get_version(),
         "debug": settings.DEBUG,
-        "modalita": "copia" if e_copia() else "sagra",
+        "modalita": settings.SERVER_NOME,
         "migrazioni": [[app, nome] for app, nome in ultime.items() if app in {"magazzino", "bar", "cassa", "assistente", "sistema"}],
         "da_applicare": mancanti,
     }
@@ -495,10 +528,10 @@ def stato(request=None):
         "generato_il": timezone.now().isoformat(),
         "programma": settings.APP_NOME,
         "indirizzo": request.get_host() if request else "",
-        "modalita": "copia" if e_copia() else "sagra",
-        "copia_di": settings.COPIA_DI,
+        "modalita": settings.SERVER_NOME,
+        "sincronia_con": settings.SINCRONIA_CON,
         "server": server(),
-        "servizi": [web(errori_recenti), database(), stampa(), backup(), drive(), copia()],
+        "servizi": [web(errori_recenti), database(), stampa(), backup(), drive(), sincronia()],
         "stampanti": stampanti(),
         "dispositivi": dispositivi(),
         "componenti": componenti(),

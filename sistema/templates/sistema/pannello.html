@@ -14,6 +14,7 @@
     <a href="#schema">Schema</a>
     <a href="#programma">Programma</a>
     <a href="#servizi">Servizi</a>
+    <a href="#sincronia">Sincronia</a>
     <a href="#stampanti">Stampanti</a>
     <a href="#dispositivi">Dispositivi</a>
     <a href="#attivita">Attività</a>
@@ -29,7 +30,7 @@
     <div>
       <h1>Sistema</h1>
       <p class="tenue">Come stanno server, servizi, stampanti e dispositivi, cosa è successo e la guida per chi mantiene il programma.
-        {% if copia %}Questo è il <strong>server di casa</strong>: copia di sola lettura di <code>{{ copia_di }}</code>.{% endif %}</p>
+        {% if server == "casa" %}Questo è il <strong>server di casa</strong>: sempre acceso, sul web; la sagra gli manda e prende le modifiche.{% else %}Questo è il <strong>server della sagra</strong>{% if sincronia_con %}: si scambia le modifiche con casa (<code>{{ sincronia_con }}</code>){% endif %}.{% endif %}</p>
     </div>
     <div class="sintesi" data-sintesi role="status" aria-live="polite">
       <span class="sintesi-luce"></span>
@@ -44,11 +45,11 @@
     <div class="sezione-titolo">
       <h2>Schema: chi parla con chi</h2>
       <div class="azioni">
-        {% if not copia %}
+        {% if server != "casa" %}
           <form method="post" action="{% url 'sistema:stampanti_controlla' %}">{% csrf_token %}<button class="pulsante secondario piccolo">Controlla le stampanti adesso</button></form>
-        {% else %}
-          <form method="post" action="{% url 'sistema:copia_adesso' %}">{% csrf_token %}<button class="pulsante secondario piccolo">Prendi la copia adesso</button></form>
-          <form method="post" action="{% url 'sistema:copia_adesso' %}">{% csrf_token %}<input type="hidden" name="forza" value="1"><button class="pulsante secondario piccolo" title="Ricarica il database anche se non è cambiato">Ricarica tutto</button></form>
+        {% endif %}
+        {% if sincronia_con %}
+          <form method="post" action="{% url 'sistema:sincronia_adesso' %}">{% csrf_token %}<button class="pulsante secondario piccolo">Sincronizza adesso</button></form>
         {% endif %}
       </div>
     </div>
@@ -90,6 +91,62 @@
     <h2>Servizi</h2>
     <div class="computer" data-computer></div>
     <div class="schede-servizi" data-servizi></div>
+  </section>
+
+  <section id="sincronia" class="pannello-sezione">
+    <h2>Sincronia con {% if server == "casa" %}la sagra{% else %}casa{% endif %}</h2>
+    <p class="tenue piccolo">Si lavora su tutti e due i server; quando c'è internet la sagra manda a casa le righe cambiate e prende quelle di casa (ogni {{ ogni_secondi|floatformat:"0" }} secondi).
+      Se una riga è cambiata da tutte e due le parti vince la modifica più recente. Una riga che l'altro server non accetta resta in coda e compare qui sotto.</p>
+    {% if conflitti.qui %}
+      <h3>Righe di qui che {% if server == "casa" %}la sagra{% else %}casa{% endif %} non accetta</h3>
+      <div class="tabella-scorre">
+        <table class="tabella-pannello">
+          <thead><tr><th>Riga</th><th>Perché</th><th>Da quando</th><th>Cosa fare</th></tr></thead>
+          <tbody>
+            {% for c in conflitti.qui %}
+              <tr>
+                <td>{{ c.descrizione }}</td>
+                <td>{{ c.motivo }}{% if c.gemella %}<br><span class="tenue piccolo">Dall'altra parte: {{ c.gemella }}</span>{% endif %}</td>
+                <td>{{ c.primo_il|date:"j/m H:i" }} <span class="tenue piccolo">({{ c.volte }} tentativi)</span></td>
+                <td>
+                  {% if c.doppione %}
+                    <div class="azioni">
+                      <form method="post" action="{% url 'sistema:conflitto_risolvi' c.pk %}">{% csrf_token %}<input type="hidden" name="tieni" value="altro"><button class="pulsante secondario piccolo" title="Questa riga sparisce: quello che la usa passa a quella dell'altro server">Tieni quella {% if server == "casa" %}della sagra{% else %}di casa{% endif %}</button></form>
+                      <form method="post" action="{% url 'sistema:conflitto_risolvi' c.pk %}">{% csrf_token %}<input type="hidden" name="tieni" value="questa"><button class="pulsante secondario piccolo" title="Al prossimo giro l'altro server unisce la sua riga a questa">Tieni questa</button></form>
+                    </div>
+                    <span class="tenue piccolo">Oppure rinomina una delle due: al prossimo giro passa da sola.</span>
+                  {% else %}
+                    <span class="tenue piccolo">Si riprova a ogni giro: di solito passa da sola quando arriva la riga collegata.</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+    {% if conflitti.altro %}
+      <h3>Righe {% if server == "casa" %}della sagra{% else %}di casa{% endif %} che qui non passano</h3>
+      <ul>
+        {% for c in conflitti.altro %}<li>{{ c.descrizione }}: {{ c.motivo }} <span class="tenue piccolo">({{ c.volte }} tentativi)</span></li>{% endfor %}
+      </ul>
+      <p class="tenue piccolo">Si risolvono dal pannello {% if server == "casa" %}della sagra{% else %}di casa{% endif %}, oppure sistemando qui la riga doppia.</p>
+    {% endif %}
+    {% for e in conflitti.esiti %}<p class="piccolo">{% if e.ok %}✓{% else %}✗{% endif %} Richiesta all'altro server: {{ e.messaggio }}</p>{% endfor %}
+    {% if conflitti.richieste %}<p class="tenue piccolo">{{ conflitti.richieste|length }} richieste in attesa del prossimo giro.</p>{% endif %}
+    {% if not conflitti.qui and not conflitti.altro %}<p>Nessun conflitto.</p>{% endif %}
+    {% if sincronia_con %}
+      <details class="piccolo">
+        <summary>Riallinea tutto da casa</summary>
+        <p>Sostituisce i dati di questo server con quelli di casa (prima salva una copia di sicurezza di qui). Serve dopo un aggiornamento,
+          o se i due server si sono separati. Le modifiche di qui non ancora arrivate a casa si perdono.</p>
+        <form method="post" action="{% url 'sistema:sincronia_adesso' %}">{% csrf_token %}
+          <input type="hidden" name="riallinea" value="1">
+          <label><input type="checkbox" name="conferma" value="1"> Ho capito: i dati di qui vengono sostituiti da quelli di casa</label>
+          <button class="pulsante pericolo piccolo">Riallinea da casa</button>
+        </form>
+      </details>
+    {% endif %}
   </section>
 
   <section id="stampanti" class="pannello-sezione">

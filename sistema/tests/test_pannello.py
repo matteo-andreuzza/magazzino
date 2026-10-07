@@ -38,16 +38,16 @@ class PannelloTest(BaseSistema):
         self.assertContains(risposta, 'id="installare-il-programma-alla-sagra"')
         self.assertContains(risposta, 'class="toc"')
 
-    @override_settings(COPIA_CHIAVE="", COPIA_DI="")
+    @override_settings(COPIA_CHIAVE="", SINCRONIA_CON="")
     def test_stato_json(self):
         self.client.force_login(self.staff)
         self.client.get(reverse("sistema:pannello"))  # il dispositivo si segna a risposta finita
         dati = self.client.get(reverse("sistema:stato_json")).json()
-        self.assertEqual([s["id"] for s in dati["servizi"]], ["web", "db", "stampa", "backup", "drive", "copia"])
+        self.assertEqual([s["id"] for s in dati["servizi"]], ["web", "db", "stampa", "backup", "drive", "sincronia"])
         servizi = {s["id"]: s for s in dati["servizi"]}
         self.assertEqual(servizi["db"]["stato"], "ok")
         self.assertEqual(servizi["stampa"]["stato"], "sconosciuto")  # il servizio di stampa non è mai partito
-        self.assertEqual(servizi["copia"]["stato"], "spento")  # copia remota non configurata
+        self.assertEqual(servizi["sincronia"]["stato"], "spento")  # sincronia non configurata
         self.assertEqual(dati["modalita"], "sagra")
         self.assertIn("migrazioni", dati["versione"])
         self.assertTrue(any(a["cosa"] == "Ultimo ordine in cassa" for a in dati["attivita"]))
@@ -132,22 +132,66 @@ class DispositiviTest(BaseSistema):
         self.assertEqual(Dispositivo.objects.count(), 1)
 
 
-@override_settings(COPIA_DI="http://sagra:8000/")
-class SolaLetturaTest(BaseSistema):
-    def test_niente_modifiche_sulla_copia(self):
-        self.client.force_login(self.staff)
-        self.assertEqual(self.client.get(reverse("giacenze")).status_code, 200)
-        risposta = self.client.post(reverse("servizio_nuovo"), {"data": "2026-10-09"})
-        self.assertContains(risposta, "copia di sola lettura", status_code=403)
-        risposta = self.client.post("/cassa/serate/1/ordina/", "{}", content_type="application/json")
-        self.assertEqual(risposta.status_code, 403)
-        self.assertIn("sola lettura", risposta.json()["errori"][0])
-        # Il pannello del sistema sì (scrive solo nelle sue tabelle), e si entra e si esce.
-        self.client.post(reverse("sistema:dispositivi_dimentica"))
-        self.client.post(reverse("logout"))
-        risposta = self.client.post(reverse("login"), {"username": "capo", "password": "segreta-123"})
-        self.assertEqual(risposta.status_code, 302)
+@override_settings(COPIA_CHIAVE="chiave", SERVER_NOME="casa", SINCRONIA_CON="")
+class CasaTest(BaseSistema):
+    """Il server di casa: si fa tutto come in sagra, tranne stampare."""
 
-    def test_striscia_in_cima(self):
+    def test_si_registra_ma_non_si_stampa(self):
+        self.client.force_login(self.staff)
+        risposta = self.client.post(reverse("servizio_nuovo"), {"data": "2026-10-09", "tipo": "sera"})
+        self.assertEqual(risposta.status_code, 302)
+        from cassa import stampa
+
+        self.assertFalse(stampa.stampa_qui())
+
+    def test_pannello_di_casa(self):
+        self.client.force_login(self.staff)
+        risposta = self.client.get(reverse("sistema:pannello"))
+        self.assertContains(risposta, "server di casa")
+        self.assertNotContains(risposta, f'action="{reverse("sistema:stampanti_controlla")}"')
+        self.assertNotContains(risposta, 'name="riallinea"')  # si riallinea solo la sagra, da casa
+        servizi = {s["id"]: s for s in monitor.stato()["servizi"]}
+        self.assertEqual(servizi["stampa"]["stato"], "spento")
+        self.assertIn("non si è ancora fatta sentire", servizi["sincronia"]["testo"])
+
+    def test_striscia_se_la_sagra_non_si_sente(self):
         self.client.force_login(self.utente)
-        self.assertContains(self.client.get(reverse("guida")), "Copia di sola lettura dei dati della sagra")
+        segnala("sincronia", dettagli={"ultimo_contatto": (timezone.now() - timedelta(minutes=20)).isoformat()})
+        self.assertContains(self.client.get(reverse("guida")), "La sagra non si sente dalle")
+        Battito.objects.filter(nome="sincronia").update(dettagli={"ultimo_contatto": timezone.now().isoformat()})
+        self.assertNotContains(self.client.get(reverse("guida")), "striscia-sincronia")
+
+
+@override_settings(COPIA_CHIAVE="chiave", SERVER_NOME="sagra", SINCRONIA_CON="http://casa:8000/")
+class SagraTest(BaseSistema):
+    def test_striscia_finche_non_arriva_il_primo_giro(self):
+        self.client.force_login(self.utente)
+        self.assertNotContains(self.client.get(reverse("guida")), "striscia-sincronia")  # servizio mai partito
+        segnala("sincronia", stato="avviso", dettagli={"primo_ok": False})
+        self.assertContains(self.client.get(reverse("guida")), "Non ho ancora ricevuto le modifiche fatte da casa")
+        segnala("sincronia", dettagli={"primo_ok": True})
+        self.assertNotContains(self.client.get(reverse("guida")), "striscia-sincronia")
+
+    def test_sincronizza_adesso_e_riallinea(self):
+        self.client.force_login(self.staff)
+        risposta = self.client.post(reverse("sistema:sincronia_adesso"), follow=True)
+        self.assertContains(risposta, "non è acceso su questo server")
+        segnala("sincronia", dettagli={})
+        self.client.post(reverse("sistema:sincronia_adesso"))
+        self.assertTrue(Battito.objects.get(nome="sincronia").dettagli["adesso"])
+        risposta = self.client.post(reverse("sistema:sincronia_adesso"), {"riallinea": "1"}, follow=True)
+        self.assertContains(risposta, "spunta la conferma")
+        self.client.post(reverse("sistema:sincronia_adesso"), {"riallinea": "1", "conferma": "1"})
+        self.assertTrue(Battito.objects.get(nome="sincronia").dettagli["riallinea"])
+
+    def test_pannello_con_conflitti(self):
+        from sistema.models import Conflitto
+
+        self.client.force_login(self.staff)
+        Conflitto.objects.create(tabella="magazzino_prodotto", chiave="2", motivo="C'è già una riga con lo stesso valore.",
+                                 gemella="3", dati_gemella='{"id": 3, "nome": "Pasta", "unita": "pz"}')
+        risposta = self.client.get(reverse("sistema:pannello"))
+        self.assertContains(risposta, "Righe di qui che casa non accetta")
+        self.assertContains(risposta, "Tieni quella di casa")
+        self.assertContains(risposta, "Dall'altra parte: Prodotto «Pasta»")
+        self.assertContains(risposta, 'name="riallinea"')

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Cassa della sagra
+Comment=Aspetta che il server della sagra sia acceso e apre la cassa
+# Il percorso dello script avvia-cassa.sh copiato su questo computer (vedi LEGGIMI.txt).
+Exec=/home/cassa/avvia-cassa.sh
+Icon=accessories-calculator
+Terminal=false
+Categories=Office;

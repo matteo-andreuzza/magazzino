@@ -218,7 +218,7 @@
 
   function modelloRete(s) {
     var servizi = perId(s.servizi);
-    var copia = s.modalita === "copia";
+    var casa = s.modalita === "casa";
     var nodi = [], fili = [];
     var attivi = s.dispositivi.filter(function (d) { return d.attivo; });
 
@@ -247,7 +247,7 @@
 
     // Server e container
     var web = servizi.web || {}, db = servizi.db || {}, stampa = servizi.stampa || {};
-    var backup = servizi.backup || {}, drive = servizi.drive || {}, servizioCopia = servizi.copia || {};
+    var backup = servizi.backup || {}, drive = servizi.drive || {}, sinc = servizi.sincronia || {};
     fili.push({ id: "rete-web", tipo: "richieste", attivo: attivi.length > 0, stato: statoFilo(web.stato, attivi.length ? "ok" : "spento"),
       d: "M414 345 C446 345 444 170 478 170", etichetta: ["HTTP :8000", 446, 250] });
     nodi.push({ id: "web", x: 478, y: 70, w: 414, h: 200, icona: "web", titolo: "web · l'app Django", sotto: web.testo, stato: web.stato || "sconosciuto", tipo: "servizio", chip: true });
@@ -255,7 +255,7 @@
     nodi.push({ id: "db", x: 478, y: 400, w: 414, h: 92, icona: "database", titolo: "db · PostgreSQL", sotto: db.testo, stato: db.stato || "sconosciuto", tipo: "servizio" });
     nodi.push({ id: "backup", x: 478, y: 532, w: 130, h: 92, icona: "backup", titolo: "backup", sotto: breve(backup), stato: backup.stato || "sconosciuto", tipo: "servizio" });
     nodi.push({ id: "drive", x: 620, y: 532, w: 130, h: 92, icona: "nuvola", titolo: "drive", sotto: breve(drive), stato: drive.stato || "sconosciuto", tipo: "servizio" });
-    nodi.push({ id: "copia", x: 762, y: 532, w: 130, h: 92, icona: "copia", titolo: "copia", sotto: breve(servizioCopia), stato: servizioCopia.stato || "sconosciuto", tipo: "servizio" });
+    nodi.push({ id: "sincronia", x: 762, y: 532, w: 130, h: 92, icona: "copia", titolo: "sincronia", sotto: breve(sinc), stato: sinc.stato || "sconosciuto", tipo: "servizio" });
 
     fili.push({ id: "web-db", tipo: "dati", attivo: true, stato: statoFilo(web.stato, db.stato), d: "M540 270 L540 400", etichetta: ["SQL", 548, 340, "start"] });
     var coda = (s.componenti.coda || {}).in_coda || 0;
@@ -263,11 +263,11 @@
       d: "M756 370 L756 400", veloce: coda > 0, etichetta: ["coda", 764, 390, "start"] });
     fili.push({ id: "db-backup", tipo: "dati", attivo: backup.stato === "ok", stato: statoFilo(backup.stato, db.stato), d: "M543 492 L543 532", etichetta: ["pg_dump", 551, 516, "start"] });
     fili.push({ id: "backup-drive", tipo: "dati", attivo: drive.stato === "ok", stato: statoFilo(backup.stato, drive.stato), d: "M608 578 L620 578" });
-    fili.push({ id: "copia-db", tipo: "dati", attivo: servizioCopia.stato === "ok", stato: statoFilo(servizioCopia.stato, db.stato), d: "M827 492 L827 532" });
+    fili.push({ id: "sincronia-db", tipo: "dati", attivo: sinc.stato === "ok", stato: statoFilo(sinc.stato, db.stato), d: "M827 492 L827 532", etichetta: ["trigger", 835, 516, "start"] });
 
     // Stampanti (a destra in alto)
     var stampanti = s.stampanti.slice(0, 5);
-    if (!stampanti.length && !copia) {
+    if (!stampanti.length && !casa) {
       nodi.push({ id: "nessuna-stampante", x: DX.x, y: 160, w: DX.w, h: 56, icona: "stampante", titolo: "Nessuna stampante", sotto: "aggiungile da Cassa → Stampanti", stato: "spento", tipo: "vuoto" });
     }
     stampanti.forEach(function (p, i) {
@@ -277,27 +277,28 @@
       var yc = y + 28;
       var serve = p.connessione === "ipp" || p.connessione === "rete";
       fili.push({
-        id: "stamp-" + p.id, tipo: "stampe", attivo: serve && !copia && (stampa.stato === "ok" || stampa.stato === "avviso"),
-        stato: serve && !copia ? statoFilo(stampa.stato, p.stato) : "spento", veloce: p.in_coda > 0,
+        id: "stamp-" + p.id, tipo: "stampe", attivo: serve && !casa && (stampa.stato === "ok" || stampa.stato === "avviso"),
+        stato: serve && !casa ? statoFilo(stampa.stato, p.stato) : "spento", veloce: p.in_coda > 0,
         d: "M892 335 C930 335 925 " + yc + " 960 " + yc,
         etichetta: i === 0 ? ["IPP · 9100", 928, 322] : null,
       });
     });
 
     // Internet, Google Drive e l'altro server
-    var internet = peggiore(drive.stato === "ok" || servizioCopia.stato === "ok" ? "ok" : "spento");
-    nodi.push({ id: "internet", x: DX.x, y: 410, w: DX.w, h: 60, icona: "internet", titolo: "Internet", sotto: "solo per Drive e copia remota", stato: internet, tipo: "internet" });
+    var internet = peggiore(drive.stato === "ok" || sinc.stato === "ok" ? "ok" : "spento");
+    nodi.push({ id: "internet", x: DX.x, y: 410, w: DX.w, h: 60, icona: "internet", titolo: "Internet",
+      sotto: casa ? "chi usa l'app da fuori, la sagra" : "solo per Drive e la sincronia con casa", stato: internet, tipo: "internet" });
     nodi.push({ id: "gdrive", x: DX.x, y: 500, w: DX.w, h: 58, icona: "nuvola", titolo: "Google Drive", sotto: drive.testo, stato: drive.stato || "sconosciuto", tipo: "servizio-esterno", servizio: "drive" });
-    nodi.push({ id: "altro", x: DX.x, y: 588, w: DX.w, h: 64, icona: copia ? "web" : "casa",
-      titolo: copia ? "Server della sagra" : "Server di casa (copia)", sotto: copia ? s.copia_di : servizioCopia.testo,
-      stato: servizioCopia.stato || "sconosciuto", tipo: "servizio-esterno", servizio: "copia" });
+    nodi.push({ id: "altro", x: DX.x, y: 588, w: DX.w, h: 64, icona: casa ? "web" : "casa",
+      titolo: casa ? "Server della sagra" : "Server di casa", sotto: casa ? sinc.testo : (s.sincronia_con || sinc.testo),
+      stato: sinc.stato || "sconosciuto", tipo: "servizio-esterno", servizio: "sincronia" });
     fili.push({ id: "drive-internet", tipo: "dati", attivo: drive.stato === "ok", stato: drive.stato === "ok" ? "ok" : "spento",
       d: "M685 624 L685 646 Q685 666 705 666 L918 666 Q936 666 936 648 L936 456 Q936 440 952 440 L960 440", etichetta: ["rclone", 800, 680] });
-    fili.push({ id: "copia-internet", tipo: "dati", attivo: servizioCopia.stato === "ok", stato: servizioCopia.stato === "ok" ? "ok" : "spento",
-      d: "M892 578 C924 578 922 455 960 455", inverso: copia, etichetta: ["Tailscale", 902, 520, "start"] });
+    fili.push({ id: "sincronia-internet", tipo: "dati", attivo: sinc.stato === "ok", stato: sinc.stato === "ok" ? "ok" : "spento",
+      d: "M892 578 C924 578 922 455 960 455", inverso: casa, etichetta: ["modifiche", 902, 520, "start"] });
     fili.push({ id: "internet-gdrive", tipo: "dati", attivo: drive.stato === "ok", stato: drive.stato === "ok" ? "ok" : "spento", d: "M1010 470 L1010 500" });
-    fili.push({ id: "internet-altro", tipo: "dati", attivo: servizioCopia.stato === "ok", stato: servizioCopia.stato === "ok" ? "ok" : "spento",
-      d: "M1182 440 C1199 440 1199 620 1182 620", inverso: copia });
+    fili.push({ id: "internet-altro", tipo: "dati", attivo: sinc.stato === "ok", stato: sinc.stato === "ok" ? "ok" : "spento",
+      d: "M1182 440 C1199 440 1199 620 1182 620", inverso: casa });
 
     return { nodi: nodi, fili: fili };
   }
@@ -311,7 +312,7 @@
       var strati = preparaTela(tela);
       var cornice = svg("g", { class: "nodo stato-ok", tabindex: "0", role: "button", "data-id": "server", "aria-label": "Server" }, strati.fili);
       svg("rect", { class: "cornice", x: 452, y: 14, width: 466, height: 674, rx: 16 }, cornice);
-      svg("text", { class: "cornice-titolo", x: 470, y: 40 }, cornice).textContent = stato.modalita === "copia" ? "SERVER DI CASA (copia)" : "SERVER DELLA SAGRA";
+      svg("text", { class: "cornice-titolo", x: 470, y: 40 }, cornice).textContent = stato.modalita === "casa" ? "SERVER DI CASA" : "SERVER DELLA SAGRA";
       svg("text", { class: "cornice-sotto", x: 470, y: 58, "data-server": "1" }, cornice);
       cornice.addEventListener("click", function () { sceltaRete.fai("server"); });
       cornice.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sceltaRete.fai("server"); } });
@@ -420,7 +421,7 @@
     var server = stato.server || {};
     if (id === "server") {
       dettaglio(contenitore, {
-        titolo: stato.modalita === "copia" ? "Server di casa" : "Server della sagra", stato: peggiore.apply(null, stato.servizi.map(function (s) { return s.stato === "sconosciuto" ? "ok" : s.stato; })),
+        titolo: stato.modalita === "casa" ? "Server di casa" : "Server della sagra", stato: peggiore.apply(null, stato.servizi.map(function (s) { return s.stato === "sconosciuto" ? "ok" : s.stato; })),
         testo: "Il computer su cui girano i container del programma (Docker Compose).",
         righe: [
           ["Indirizzo dell'app", stato.indirizzo], ["Acceso da", server.acceso_da ? durata(server.acceso_da) : null],
@@ -432,7 +433,7 @@
           ["Architettura", server.architettura],
         ],
         aiuto: ["Stato dei container: docker compose ps (tutti «Up», web e stampa «healthy»).",
-          "Tutto si riaccende da solo all'avvio del computer (restart: unless-stopped).",
+          "Tutto si riaccende da solo all'avvio del computer (restart: always): nel BIOS «accendi quando torna la corrente».",
           "Disco quasi pieno: docker system prune toglie le immagini vecchie; i backup vecchi si cancellano da soli."],
       });
       return;
@@ -476,8 +477,11 @@
       });
     } else if (n.tipo === "internet") {
       dettaglio(contenitore, {
-        titolo: "Internet", stato: n.stato, testo: "Alla sagra non serve: cassa, stampa, magazzino e bar funzionano senza. Serve solo per Google Drive e per la copia remota.",
-        aiuto: ["Senza internet i backup su Drive e la copia remota aspettano e recuperano da soli."],
+        titolo: "Internet", stato: n.stato,
+        testo: stato.modalita === "casa"
+          ? "Da qui arrivano chi usa l'app da fuori (Funnel) e la sagra, che ogni 30 secondi manda e prende le modifiche."
+          : "Alla sagra non serve: cassa, stampa, magazzino e bar funzionano senza. Serve per Google Drive e per scambiare le modifiche con casa.",
+        aiuto: ["Senza internet i backup su Drive e la sincronia aspettano e recuperano da soli: le modifiche restano in coda."],
       });
     } else {
       dettaglio(contenitore, { titolo: n.titolo, stato: n.stato, testo: n.sotto });
@@ -500,7 +504,7 @@
     { id: "p-pannello", x: 20, y: 430, w: 190, h: 64, icona: "ingranaggio", titolo: "Pannello sistema", file: "sistema/static/sistema/pannello.js",
       cosa: "Questa pagina: legge /sistema/stato.json ogni 5 secondi." },
     { id: "p-django", x: 250, y: 30, w: 150, h: 464, icona: "codice", titolo: "Django", file: "config/urls.py, config/settings.py",
-      cosa: "Riceve ogni richiesta: login obbligatorio, middleware (sistema: dispositivi, errori, sola lettura sulla copia), poi la vista giusta." },
+      cosa: "Riceve ogni richiesta: login obbligatorio, middleware (sistema: dispositivi ed errori), poi la vista giusta." },
     { id: "p-cassa", x: 440, y: 30, w: 210, h: 64, icona: "codice", titolo: "cassa.services", file: "cassa/services.py, cassa/views/",
       cosa: "Ordini (crea, annulla, ristampa), chiusura cassa, listino. Nella stessa transazione dell'ordine mette in coda le stampe." },
     { id: "p-magazzino", x: 440, y: 120, w: 210, h: 64, icona: "codice", titolo: "magazzino.services", file: "magazzino/services.py",
@@ -512,13 +516,13 @@
     { id: "p-api", x: 440, y: 390, w: 210, h: 50, icona: "codice", titolo: "API stampa", file: "cassa/views/stampe.py",
       cosa: "/cassa/api/agente/: il programma di stampa prende i lavori e dice com'è andata." },
     { id: "p-monitor", x: 440, y: 450, w: 210, h: 50, icona: "codice", titolo: "sistema.monitor", file: "sistema/monitor.py, sistema/views.py",
-      cosa: "Raccoglie lo stato di tutto per questo pannello; API della copia remota." },
+      cosa: "Raccoglie lo stato di tutto per questo pannello; API della sincronia con l'altro server." },
     { id: "p-coda", x: 700, y: 30, w: 190, h: 64, icona: "coda", titolo: "Coda delle stampe", file: "cassa/stampa.py · tabella Stampa",
       cosa: "Ogni comanda o ricevuta è una riga con il contenuto già pronto: in coda, in stampa, stampata o in errore. Si ritenta da sola." },
     { id: "p-db", x: 700, y: 150, w: 190, h: 250, icona: "database", titolo: "PostgreSQL", file: "container db",
-      cosa: "Tutti i dati. Le tabelle sistema_* e le sessioni sono solo di questo server: non vanno nelle copie." },
-    { id: "p-copia", x: 700, y: 430, w: 190, h: 64, icona: "copia", titolo: "Copie dei dati", file: "sistema/copia.py, carica.py, copia_remota.py",
-      cosa: "Copia per la chiavetta, copia remota per il server di casa, caricamento con controllo della versione." },
+      cosa: "Tutti i dati. Un trigger su ogni tabella annota le righe cambiate (coda della sincronia). Le tabelle sistema_* e le sessioni sono solo di questo server." },
+    { id: "p-copia", x: 700, y: 430, w: 190, h: 64, icona: "copia", titolo: "Sincronia e copie", file: "sistema/sincronia.py, copia.py, carica.py",
+      cosa: "Scambio delle righe cambiate con l'altro server (vince la modifica più recente), copia per la chiavetta, riallineamento con controllo della versione." },
     { id: "p-servizio", x: 950, y: 30, w: 230, h: 64, icona: "stampante", titolo: "servizio_stampa", file: "cassa/servizio_stampa.py",
       cosa: "Il container «stampa»: un thread per stampante, stampa in ordine, controlla le stampanti ogni minuto." },
     { id: "p-fogli", x: 950, y: 130, w: 230, h: 64, icona: "codice", titolo: "fogli.py → ipp.py", file: "cassa/fogli.py, cassa/ipp.py",
@@ -527,8 +531,8 @@
       cosa: "Laser e getto d'inchiostro (IPP, porta 631), termiche (porta 9100)." },
     { id: "p-backup", x: 950, y: 330, w: 230, h: 64, icona: "backup", titolo: "backup · drive", file: "docker-compose.yml",
       cosa: "Container shell: pg_dump ogni 30 minuti nella cartella backup/, rclone verso Google Drive." },
-    { id: "p-casa", x: 950, y: 430, w: 230, h: 64, icona: "casa", titolo: "Server di casa", file: "COPIA_DI, COPIA_CHIAVE",
-      cosa: "La copia di sola lettura (es. Raspberry su Tailscale): prende la copia dalla sagra ogni pochi minuti." },
+    { id: "p-casa", x: 950, y: 430, w: 230, h: 64, icona: "casa", titolo: "L'altro server", file: "SERVER_NOME, SINCRONIA_CON, COPIA_CHIAVE",
+      cosa: "Casa (sempre acceso, sul web) e sagra (rete locale, casse e stampanti): si lavora su tutti e due, la sagra chiama casa ogni 30 secondi." },
   ];
 
   var COLLEGAMENTI = [
@@ -570,7 +574,7 @@
     function attivo(ruoli) { return dispositivi.some(function (d) { return d.attivo && ruoli.indexOf(d.ruolo) >= 0; }); }
     var stampanti = stato.stampanti || [];
     var statoStampanti = stampanti.length ? peggiore.apply(null, stampanti.map(function (p) { return p.stato === "sconosciuto" ? "ok" : p.stato; })) : "spento";
-    var copia = servizi.copia || {};
+    var sinc = servizi.sincronia || {};
     return {
       "p-cassa-browser": attivo(["Cassa ingresso", "Cassa bar", "Cassa"]) ? "ok" : "spento",
       "p-pagine": attivo(["Magazzino", "Bar", "Amministrazione", "Monitor cucina"]) ? "ok" : "spento",
@@ -582,12 +586,12 @@
       "p-monitor": (c.sistema || {}).errori_da_vedere ? "avviso" : "ok",
       "p-coda": (c.coda || {}).errori ? "avviso" : "ok",
       "p-db": (servizi.db || {}).stato || "sconosciuto",
-      "p-copia": copia.stato === "spento" ? "ok" : (copia.stato || "ok"),
+      "p-copia": sinc.stato === "spento" ? "ok" : (sinc.stato || "ok"),
       "p-servizio": (servizi.stampa || {}).stato || "sconosciuto",
       "p-fogli": (servizi.stampa || {}).stato === "spento" ? "spento" : "ok",
-      "p-stampanti": stato.modalita === "copia" ? "spento" : statoStampanti,
+      "p-stampanti": stato.modalita === "casa" ? "spento" : statoStampanti,
       "p-backup": peggiore((servizi.backup || {}).stato === "sconosciuto" ? "ok" : (servizi.backup || {}).stato, (servizi.drive || {}).stato === "avviso" ? "avviso" : "ok"),
-      "p-casa": copia.stato || "spento",
+      "p-casa": sinc.stato || "spento",
     };
   }
 
@@ -603,7 +607,7 @@
       "p-db": ((perId(stato.servizi).db || {}).testo || ""),
       "p-servizio": (perId(stato.servizi).stampa || {}).testo || "",
       "p-stampanti": (stato.stampanti || []).length + " stampanti",
-      "p-casa": (perId(stato.servizi).copia || {}).testo || "",
+      "p-casa": (perId(stato.servizi).sincronia || {}).testo || "",
     };
     return mappa[id] || "";
   }
@@ -770,7 +774,7 @@
     contenitore.textContent = "";
     el("h3", null, "Programma", contenitore);
     var dl = el("dl", "attivita", null, contenitore);
-    [["Impronta del codice", v.codice], ["Modalità", v.modalita === "copia" ? "copia di sola lettura" : "sagra"], ["Python", v.python], ["Django", v.django],
+    [["Impronta del codice", v.codice], ["Server", v.modalita === "casa" ? "di casa (sul web)" : "della sagra (rete locale)"], ["Python", v.python], ["Django", v.django],
       ["DEBUG", v.debug ? "acceso (solo per prove!)" : "spento"]].forEach(function (r) {
       var d = el("div", null, null, dl); el("dt", null, r[0], d); el("dd", null, r[1], d);
     });

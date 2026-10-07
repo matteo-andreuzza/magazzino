@@ -23,7 +23,7 @@ prima della sagra, ogni serata, cassa, bar, pesata dei fusti, domande frequenti.
 schema animato di chi parla con chi (dispositivi, server e container, stampanti, internet, server
 di casa) con la salute e da quanto è acceso ogni pezzo, gli errori con la traccia, le ultime
 attività e, in fondo, la guida del programmatore: [docs/MANUTENZIONE.md](docs/MANUTENZIONE.md)
-(architettura, aggiornamenti sicuri, backup, copia remota, trasloco, Kubernetes, problemi comuni).
+(architettura, aggiornamenti sicuri, backup, sincronia con il server di casa, trasloco, Kubernetes, problemi comuni).
 
 Le giacenze non si scrivono a mano: sono sempre la somma dei movimenti registrati
 (carichi, prelievi, rientri, spostamenti, scarti, correzioni), quindi non possono
@@ -57,7 +57,9 @@ non è pratico sono nella guida dell'app (`/guida/#computer`) e nel [manuale tec
    fisso (impostazioni di rete o prenotazione nel router), così l'indirizzo non cambia.
 
    Da qui in poi parte da solo a ogni accensione del computer (app, stampa e backup): non c'è
-   niente da avviare.
+   niente da avviare. Perché si accenda da solo quando si dà la corrente alla sagra, nel BIOS
+   metti *Restore on AC Power Loss* (o *After Power Failure*) su **Power On**. Sui computer delle
+   casse basta il file *Avvia cassa* sul desktop (`scripts/cassa/`): aspetta il server e apre la cassa.
 
 4. Crea gli utenti per i volontari da **Amministrazione → Utenti → Aggiungi**
    (senza "staff": così non vedono l'amministrazione). Va bene anche un utente unico
@@ -421,19 +423,20 @@ e togli l'accesso da <https://myaccount.google.com/permissions>.
 Per spostare tutto su un altro server: `scripts/esporta-dati.sh` e `scripts/importa-dati.sh`
 (vedi [docs/MANUTENZIONE.md](docs/MANUTENZIONE.md)).
 
-## Pannello del sistema e copia remota
+## Pannello del sistema e server di casa
 
 *Magazzino → Sistema* (`/sistema/`, solo staff) mostra come sta tutto e si aggiorna da solo:
 schema animato, servizi, stampanti, dispositivi collegati, ultime attività, errori ed eccezioni
 con la traccia completa, versione, backup e la guida del programmatore. Vedi
 [docs/MANUTENZIONE.md](docs/MANUTENZIONE.md#pannello-del-sistema).
 
-Un altro server, per esempio un Raspberry a casa raggiungibile con Tailscale, può tenere una
-**copia di sola lettura** della sagra, aggiornata da sola ogni pochi minuti quando la sagra ha
-internet (servizio `copia`, `COPIA_DI` e `COPIA_CHIAVE` nel `.env`): la sagra resta il server
-vero e lavora anche senza internet; a casa si guardano i dati da fuori. Si aggiorna prima casa,
-poi la sagra: casa non carica copie di un programma più nuovo del suo. Vedi
-[docs/MANUTENZIONE.md](docs/MANUTENZIONE.md#copia-remota-server-di-casa).
+Lo stesso programma può girare anche su un **server di casa** (per esempio un Raspberry, sempre
+acceso e pubblicato sul web con Tailscale Funnel), e **si lavora su tutti e due**: a casa tutto
+l'anno e da fuori (es. i carichi dopo la spesa), in sagra con casse e stampanti anche senza
+internet. Quando la sagra ha internet, ogni 30 secondi si scambiano le modifiche (servizio
+`sincronia` sulla sagra; `SERVER_NOME`, `COPIA_CHIAVE`, `SINCRONIA_CON` nel `.env`). Utenti e
+password sono gli stessi. Si aggiorna prima casa, poi la sagra. Vedi
+[docs/MANUTENZIONE.md](docs/MANUTENZIONE.md#sincronia-con-casa).
 
 ## In cloud
 

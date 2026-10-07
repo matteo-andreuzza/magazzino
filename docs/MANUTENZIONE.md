@@ -9,7 +9,7 @@ sagra ha la **guida per i volontari** (il pulsante **?** in alto, pagina `/guida
 - [Pannello del sistema](#pannello-del-sistema)
 - [Installare il programma alla sagra](#installare-il-programma-alla-sagra)
 - [Stampa](#stampa)
-- [Copia remota (server di casa)](#copia-remota-server-di-casa)
+- [Sincronia con casa](#sincronia-con-casa)
 - [Variabili d'ambiente](#variabili-dambiente)
 - [Comandi di tutti i giorni](#comandi-di-tutti-i-giorni)
 - [Aggiornare senza rompere i dati](#aggiornare-senza-rompere-i-dati)
@@ -26,14 +26,20 @@ Un'applicazione **Django** con **PostgreSQL**, in **Docker Compose**, su un comp
 collegato alla rete locale (switch) insieme alle stampanti e al Wi-Fi. Telefoni, tablet e
 computer della cassa sono solo browser: non c'è niente da installare su di loro.
 
+Lo stesso programma gira anche sul **server di casa** (es. un Raspberry, sempre acceso e
+pubblicato sul web): lì si lavora tutto l'anno, per esempio si registrano i carichi dopo la spesa.
+I due server si scambiano le modifiche quando la sagra ha internet (vedi
+[Sincronia con casa](#sincronia-con-casa)); le casse parlano sempre e solo con il server della sagra.
+
 ```
  telefoni, tablet,          ┌──────────────── server della sagra (Docker Compose) ───────────────┐
  computer della cassa  ──── │  web (Django) ── db (PostgreSQL) ── stampa ──────────────────────── │ ── stampanti di rete
  (browser, Wi-Fi)    HTTP   │       │               │    │                            IPP · 9100   │    (laser, getto, termiche)
-                            │   Claude (MCP)     backup   copia (solo sul server di casa)          │
-                            │                       │                                             │
-                            │                     drive ─────────── internet ──── Google Drive     │
-                            └─────────────────────────────────────── Tailscale ── server di casa ──┘
+                            │   Claude (MCP)     backup   sincronia                               │
+                            │                       │         │                                   │
+                            │                     drive ──────┼──── internet ──── Google Drive     │
+                            └───────────────────────────────── └─ HTTPS/Tailscale ── server di casa ┘
+                                                                                     (sul web, tutto l'anno)
 ```
 
 ### Container
@@ -45,7 +51,7 @@ computer della cassa sono solo browser: non c'è niente da installare su di loro
 | `stampa` | Il servizio di stampa: manda comande e ricevute alle stampanti di rete e le controlla ogni minuto (`manage.py servizio_stampa`). Stessa immagine di `web`. |
 | `backup` | Ogni 30 minuti salva il database (e fatture e foto nuove) nella cartella `backup/`; scrive il suo stato nel volume `stato`. |
 | `drive` | Se configurato, copia `backup/` su Google Drive; scrive il suo stato nel volume `stato`. |
-| `copia` | Solo sul **server di casa** (profilo `copia`): prende la copia dei dati dalla sagra ogni pochi minuti. Vedi [Copia remota](#copia-remota-server-di-casa). |
+| `sincronia` | Solo sulla **sagra** (profilo `sincronia`): ogni 30 secondi manda a casa le modifiche di qui e prende quelle di casa (`manage.py sincronia`). Vedi [Sincronia con casa](#sincronia-con-casa). |
 | `caddy` | Solo in cloud (`docker-compose.cloud.yml`): HTTPS automatico. |
 
 Volumi: `db_dati` (database), `app_dati` (`/app/dati`: fatture, foto, chiave segreta generata al
@@ -60,7 +66,7 @@ computer, accanto al programma.
 | `bar` | Bevande, carichi, fusti: spinatrici, spine, pesate, litri usciti. Le bevande vendute in cassa escono da sole: si calcolano dalle righe degli ordini. | `services.py`, `views/`, `static/bar/` |
 | `cassa` | Listino, ordini (anche da asporto), comande, stampe, monitor cucina, report e statistiche. | `services.py` (ordini), `stampa.py` (contenuti e coda), `servizio_stampa.py`, `fogli.py`, `ipp.py`, `views/`, `static/cassa/pos.js`, `agente/agente_stampa.py` |
 | `assistente` | Il server MCP per Claude (`/mcp/` via HTTP, `manage.py server_mcp` via stdin) e le chiavi. | `protocollo.py`, `strumenti.py`, `strumenti_bar.py`, `views.py` |
-| `sistema` | Salute del sistema: segnali di vita dei servizi, errori ed eccezioni, dispositivi collegati, pannello (`/sistema/`), copie dei dati (chiavetta e copia remota), modalità di sola lettura. | `monitor.py`, `middleware.py`, `errori.py`, `copia.py`, `carica.py`, `copia_remota.py`, `views.py`, `static/sistema/pannello.js` |
+| `sistema` | Salute del sistema: segnali di vita dei servizi, errori ed eccezioni, dispositivi collegati, pannello (`/sistema/`), sincronia con l'altro server, copie dei dati (chiavetta, riallineamento). | `monitor.py`, `middleware.py`, `errori.py`, `sincronia.py`, `copia.py`, `carica.py`, `copia_remota.py`, `views.py`, `static/sistema/pannello.js` |
 
 Configurazione: `config/settings.py` (tutto da variabili d'ambiente, vedi
 [Variabili d'ambiente](#variabili-dambiente)), `config/urls.py`. Docker: `Dockerfile`,
@@ -98,6 +104,11 @@ cloud). Script per la manutenzione: `scripts/`. Esempi per Kubernetes: `deploy/k
   programma di stampa, tabelle `sistema_*`) non vanno nelle copie verso altri server
   (`sistema/copia.py`, `TABELLE_LOCALI`): non devono avere chiavi esterne verso le altre tabelle,
   e quello che cambia da solo ogni pochi secondi va lì, non nelle tabelle dei dati.
+- Tutte le altre tabelle **si sincronizzano da sole** con l'altro server (un trigger per tabella,
+  messo da `migrate`): una tabella nuova non ha bisogno di niente. Una colonna che cambia a ogni
+  uso (come `last_login`) va in `COLONNE_LOCALI` (`sistema/sincronia.py`), se no fa «vincere» tutta
+  la riga. Le migrazioni di dati non vanno in coda: ogni server applica le sue, e la sagra dopo
+  l'aggiornamento si riallinea da casa.
 
 ## Pannello del sistema
 
@@ -159,7 +170,7 @@ per uno script di controllo.
 L'app gira su un computer della sagra (va bene un mini PC), collegato con il cavo allo **switch**
 della rete locale insieme alle stampanti e al punto di accesso Wi-Fi dei telefoni. Tutto resta
 nella rete della sagra: internet serve solo per installare (immagini Docker e pacchetti), per
-mandare i backup su Google Drive e per la copia remota.
+mandare i backup su Google Drive e per scambiare le modifiche con il server di casa.
 
 ```
              switch della sagra
@@ -177,21 +188,42 @@ mandare i backup su Google Drive e per la copia remota.
 2. **Il programma**: `git clone INDIRIZZO-DEL-REPOSITORY magazzino && cd magazzino` (o la cartella
    copiata da una chiavetta).
 3. **Impostazioni**: `cp .env.example .env`; cambia `ADMIN_PASSWORD`, `POSTGRES_PASSWORD` (prima
-   del primo avvio: dopo non ha effetto) e `APP_NOME`. Per la copia remota anche `COPIA_CHIAVE`
-   (vedi [Copia remota](#copia-remota-server-di-casa)).
+   del primo avvio: dopo non ha effetto) e `APP_NOME`. Per la sincronia con casa anche
+   `COPIA_CHIAVE`, `SINCRONIA_CON` e `COMPOSE_PROFILES=sincronia` (vedi [Sincronia con casa](#sincronia-con-casa)).
 4. **Avvio**: `docker compose up -d --build` (la prima volta con internet: scarica le immagini e
    costruisce quella dell'app). `docker compose ps` deve dire `healthy` per `web` e `stampa`.
 5. **Indirizzo fisso** per il server e per le stampanti, es. 192.168.1.10 il server, .50 e .51
-   le stampanti: nelle impostazioni di rete (IPv4 manuale) o prenotandolo nel DHCP del router.
-   Se nella rete non c'è un router (solo lo switch) nessuno dà gli indirizzi: vanno messi a mano
-   su tutti, server, stampanti, punto di accesso e telefoni, oppure serve un router come DHCP.
-6. **Prova di accensione**: riavvia il computer e, dopo un minuto, apri `http://localhost:8000`;
-   da un telefono sul Wi-Fi della sagra `http://192.168.1.10:8000`. Nel pannello del sistema
-   tutto verde (Google Drive grigio se non è configurato).
+   le stampanti. Sul server mettilo **nelle impostazioni di rete del server stesso** (IPv4 manuale:
+   indirizzo, maschera 255.255.255.0, gateway e DNS = il router): quando si dà la corrente il
+   router può accendersi dopo il server, e così l'indirizzo c'è subito. Per le stampanti va bene
+   anche la prenotazione nel DHCP del router. Se nella rete non c'è un router (solo lo switch)
+   nessuno dà gli indirizzi: vanno messi a mano su tutti, server, stampanti, punto di accesso e
+   telefoni, oppure serve un router come DHCP.
+6. **Accensione quando arriva la corrente**: nel BIOS/UEFI del server (all'avvio *Canc*, *F2* o
+   *F10*) cerca l'opzione che dice cosa fare quando torna la corrente, di solito in *Power* o
+   *Advanced → Power Management*: *Restore on AC Power Loss*, *After Power Failure*, *AC Recovery*,
+   *AC Back*, *Power On after Power Fail*. Mettila su **Power On** (non *Last State*: se il PC era
+   stato spento con il pulsante resterebbe spento). Così basta dare la corrente alla sagra: si
+   accendono router, server e casse, e il programma parte da solo.
+7. **Prova di accensione**: stacca la spina del server e ridagli corrente, senza toccare
+   altro. Dopo un minuto o due `http://192.168.1.10:8000/salute/` da un altro computer risponde
+   `ok`; da un telefono sul Wi-Fi della sagra si apre `http://192.168.1.10:8000`. Nel pannello del
+   sistema tutto verde (Google Drive grigio se non è configurato).
+8. **Il programma della cassa** sui computer delle casse: un file sul desktop, senza installare
+   niente (`scripts/cassa/`, istruzioni in `LEGGIMI.txt`). *Avvia cassa.bat* (Windows) o
+   *avvia-cassa.sh* con *cassa-sagra.desktop* (Linux): aspetta che il server risponda a
+   `/salute/` (anche se il PC della cassa si è acceso prima del server) e poi apre la cassa in una
+   finestra pulita di Chrome o Edge (`--app`, senza barra degli indirizzi). Nel file va scritto
+   solo l'indirizzo del server; se il server è lo stesso PC, `localhost:8000`.
 
-Tutti i servizi hanno `restart: unless-stopped`: ripartono da soli all'accensione e dopo un
-errore. Il computer non deve andare in sospensione durante la sagra (impostazioni di
-risparmio energetico).
+Tutti i servizi hanno `restart: always`: ripartono da soli all'accensione e dopo un errore, anche
+se prima qualcuno li aveva fermati con `docker compose stop` (`docker compose down` invece li
+toglie: si rimettono con `docker compose up -d`). Su Linux Docker parte con il sistema, senza bisogno
+di entrare nell'utente; su Windows Docker Desktop parte solo dopo l'accesso, quindi serve l'accesso
+automatico. Il computer non deve andare in sospensione durante la sagra (impostazioni di risparmio
+energetico). Casse e stampa non aspettano internet: la sincronia con casa riprova ogni 30 secondi
+finché il router non è collegato, e una stampante che si accende dopo il server va bene lo stesso
+(ogni stampa si riprova per 10 minuti, le stampanti si controllano ogni minuto).
 
 L'immagine va costruita prima, con internet: alla sagra `docker compose up -d` usa quella che
 c'è. Prima di portare il computer alla sagra quindi fai lì gli aggiornamenti
@@ -230,7 +262,8 @@ per il pannello): se tace per 30 secondi, in cassa compare l'avviso rosso. Ogni 
 rispondono sulla porta) e salva il risultato nei battiti `stampante-N`: se una stampante non
 risponde o non può stampare (carta finita, inceppata, sportello aperto…) lo dice anche la cassa.
 Il controllo di salute di Docker guarda il file `/tmp/servizio-stampa-vivo`. Sul server di casa
-(copia di sola lettura) il servizio resta acceso ma non stampa.
+(`SERVER_NOME=casa`) il servizio resta acceso ma non stampa, e da casa non si mettono in coda
+stampe: ristampe e stampe di prova dicono di farle dalla sagra.
 
 **Stampanti normali** (`cassa/ipp.py`, `cassa/fogli.py`): niente driver né CUPS. Il servizio
 chiede alla stampante cosa sa fare (*Get-Printer-Attributes*, ricordato per un minuto) e prepara
@@ -271,93 +304,138 @@ l'app avviata con `runserver` (dai container l'host spesso è chiuso dal firewal
 sbagliato dà errore). I test automatici usano finte stampanti in Python
 (`cassa/tests/test_stampa_rete.py`).
 
-## Copia remota (server di casa)
+## Sincronia con casa
 
-La sagra lavora da sola, anche senza internet. Un altro server, per esempio il Raspberry di casa
-raggiungibile con Tailscale, ne tiene una **copia di sola lettura** aggiornata ogni pochi minuti,
-quando la sagra è raggiungibile: per guardare i dati da fuori (report, giacenze, fusti) e per
-averli in un secondo posto, oltre ai backup e alla chiavetta.
+Due server con lo stesso programma, **e si lavora su tutti e due**:
+
+- **casa** (es. un Raspberry, sempre acceso, pubblicato sul web con Tailscale Funnel): è il
+  programma che si usa tutto l'anno e da fuori. Per esempio, dopo la spesa si registrano i carichi
+  dal telefono, si creano i prodotti nuovi, si cambia il listino;
+- **sagra** (il computer nella rete locale, con casse e stampanti): le casse parlano solo con lui,
+  quindi alla sagra tutto funziona anche senza internet.
+
+Quando la sagra ha internet, ogni 30 secondi **manda a casa le righe cambiate e prende quelle di
+casa**. All'accensione lo fa subito: il magazzino in sagra è aggiornato con i carichi fatti da casa.
+Senza internet le modifiche aspettano in coda, da tutte e due le parti, e partono appena torna.
+**Utenti e password sono gli stessi** sui due server: un volontario nuovo o una password cambiata
+valgono anche dall'altra parte al giro successivo. A casa non si stampa: le stampanti sono in sagra.
 
 ### Come funziona
 
-- **Un solo verso**: sagra → casa. La sagra è il server vero; casa non scrive mai (i dati verrebbero
-  sovrascritti). Niente sincronizzazione nei due sensi, quindi niente conflitti.
-- **Chi chiama**: il server di casa. Il servizio `copia` chiede alla sagra (attraverso Tailscale) lo
-  stato, la copia del database (`pg_dump`, come i backup) e gli allegati che non ha, e li carica
-  (`sistema/copia_remota.py`, `sistema/carica.py`). Se il database non è cambiato non ricarica niente;
-  degli allegati scarica solo quelli nuovi o cambiati.
-- **Chiave**: la sagra risponde (`/sistema/api/copia/…`) solo a chi manda `COPIA_CHIAVE`; senza
-  chiave nel suo `.env` non risponde a nessuno. Il database copiato si esegue sul server di casa:
-  la chiave è come una password del database.
-- **Sola lettura vera**: con `COPIA_DI` impostato, l'app di casa rifiuta ogni modifica (pagina
-  «copia di sola lettura», tranne entrare e uscire) e fa girare tutte le pagine in transazioni di
-  sola lettura di PostgreSQL: anche una pagina che provasse a scrivere viene fermata dal database.
-  Claude lì può solo leggere. In cima a ogni pagina una striscia dice di quando sono i dati.
-- **Cosa non si copia**: le sessioni di chi è collegato, i segnali di vita e il pannello del
-  sistema (ogni server ha i suoi), la chiave segreta e il file `.env`.
-- **Versioni**: la copia porta l'elenco delle migrazioni della sagra. Il server di casa la carica
-  solo se il suo codice le conosce tutte; se casa è più aggiornata, dopo il caricamento applica le
-  sue migrazioni in più. Quindi: **si aggiorna prima casa, poi la sagra**. Se la sagra è più nuova,
-  casa non carica niente e lo dice nel pannello (riquadro «copia» rosso) e nei log.
-- **Sicurezza contro gli errori**: casa non carica mai una copia più vecchia dei dati che ha
-  (succederebbe se `COPIA_DI` fosse impostato per sbaglio sul server della sagra). Per forzare
-  (es. per ripartire da una sagra nuova): `docker compose exec copia python manage.py sincronizza --sovrascrivi`.
+- **La coda** (`sistema/sincronia.py`): ogni tabella da sincronizzare ha un trigger di PostgreSQL
+  che annota la riga cambiata in `sistema_modifica` (una voce per riga, con un numero che sale e
+  l'ora). Così si vede tutto: pagine, admin, Claude, comandi, script. I trigger e le sequenze li
+  rimette a posto ogni `migrate` (segnale `post_migrate`, cioè a ogni avvio di `web`) e ogni
+  caricamento completo. I trigger ci sono solo con `COPIA_CHIAVE` impostata: un server da solo non
+  accumula una coda che nessuno prende.
+- **Chi chiama: la sagra** (`SINCRONIA_CON`, servizio `sincronia`). Manda a casa le righe in coda,
+  lette come sono in quel momento, e le conferme di quelle ricevute; casa applica e risponde con le
+  sue (`POST /sistema/api/sincronia/`, JSON compresso, con `COPIA_CHIAVE`). Casa non chiama mai:
+  alla sagra basta poter uscire su internet. Un giro fa più messaggi, finché le code non si svuotano.
+- **Conferme**: una voce esce dalla coda solo quando l'altro conferma quel numero. Se la riga è
+  cambiata mentre viaggiava, il numero è salito e riparte. Applicare due volte la stessa riga non
+  fa danni (upsert), quindi un messaggio perso per strada non crea doppioni.
+- **Applicare**: upsert (`jsonb_populate_record … ON CONFLICT (id) DO UPDATE`) o cancellazione, una
+  riga per volta in un savepoint, con i padri prima delle figlie (chiavi esterne dal catalogo).
+  Una riga che non passa non blocca le altre: torna indietro a chi l'ha mandata, che la tiene in
+  coda e la mostra nel pannello come **conflitto**.
+- **Vince l'ultima modifica**: se la stessa riga è cambiata da tutte e due le parti prima di
+  arrivare, vince quella con l'ora più recente (a parità la sagra). Vale per la riga intera: se
+  mentre non c'era internet a casa si cambia il prezzo di un articolo e in sagra il suo nome, resta
+  solo la modifica più recente. Carichi, prelievi, ordini e pesate invece non si perdono mai:
+  sono righe nuove, e le giacenze sono la somma dei movimenti.
+- **Colonne di un solo server** (`COLONNE_LOCALI`): `last_login` degli utenti e `ultimo_uso` delle
+  chiavi di Claude cambiano a ogni uso. Da sole non fanno partire la riga e non sovrascrivono quelle
+  dell'altro: un accesso in sagra non «vince» su una password cambiata a casa.
+- **Gli id non si scontrano**: le sequenze vanno a passi di 2, **casa usa gli id dispari, la sagra
+  i pari**. Due righe nuove create insieme dalle due parti non prendono mai lo stesso numero.
+- **Cosa non si sincronizza**: le tabelle di un solo server (`TABELLE_LOCALI` in `sistema/copia.py`:
+  sessioni, pannello del sistema, programmi di stampa) e quelle che ognuno si crea da sé con le
+  migrazioni (`ESCLUSE_DALLA_SINCRONIA`: tipi di contenuto, permessi, registro dell'admin). Quando
+  arriva la cancellazione di un utente, le sue righe in queste tabelle si tolgono come farebbe Django.
+- **File** (fatture, foto): ognuno chiede all'altro quelli che le sue righe usano e non ha. Un file
+  che nessuna riga usa più da un giorno si toglie (es. la foto di un prodotto cancellato dall'altra parte).
+- **Versioni**: si sincronizza solo tra programmi con le **stesse migrazioni**; se sono diverse il
+  giro si ferma e il pannello dice chi aggiornare, mentre ognuno lavora per conto suo. Le righe
+  create dalle migrazioni non vanno in coda: ogni server applica le sue. Per questo, dopo un
+  aggiornamento con migrazioni, la sagra si riallinea da casa (lo fa `scripts/aggiorna.sh`).
+- **Una cancellazione di una riga che dall'altra parte serve ancora** (casa cancella un prodotto,
+  intanto la sagra lo carica) non si fa: la riga si rimanda e torna anche dove era stata cancellata.
+  Così non si perde il carico.
 
-**Perché non una replica di PostgreSQL**: la replica in streaming o logica tiene due database
-identici in tempo reale, ma vuole una connessione stabile, non copia le modifiche alla struttura
-(le migrazioni) e lascia il database di casa in sola lettura anche per le cose di Django che
-devono scrivere (sessioni, accessi). Con una sagra che ha internet a tratti e due server che si
-aggiornano in momenti diversi è più fragile della copia fatta ogni pochi minuti, che per un
-database di pochi MB costa niente e ha il controllo delle versioni.
+**Perché non la replica di PostgreSQL**: la replica logica nei due sensi (PostgreSQL 16+) vuole i
+due database collegati direttamente, non copia le migrazioni e si ferma al primo conflitto finché
+qualcuno non interviene a mano sul database. Con una sagra che ha internet a tratti e due server
+che si aggiornano in momenti diversi è più fragile della coda dell'app, che ha il controllo delle
+versioni e mostra i conflitti nel pannello.
 
-### Sulla sagra
+### Conflitti
 
-1. Una chiave lunga e casuale: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`.
-2. Nel `.env` della sagra: `COPIA_CHIAVE=la-chiave`, poi `docker compose up -d`.
-3. **Tailscale** sul computer della sagra: `curl -fsSL https://tailscale.com/install.sh | sh` e
-   `sudo tailscale up`. L'indirizzo per casa è quello di `tailscale ip -4` (es. `100.101.102.103`).
-   La sagra resta raggiungibile solo dalla rete locale e dalla tua rete Tailscale: niente Funnel qui.
+Nel pannello, sezione *Sincronia*: le righe di qui che l'altro server non accetta (e un riassunto di
+quelle dell'altro che qui non passano). Si riprovano a ogni giro.
 
-Nel pannello della sagra il riquadro «copia remota» dice quando casa ha preso l'ultima copia.
+| Cosa dice | Perché | Cosa fare |
+| --- | --- | --- |
+| «C'è già una riga con lo stesso valore» | Lo stesso nome creato dalle due parti prima che si sentissero (es. il prodotto «Pasta»). | **Tieni quella di casa/della sagra**: le due diventano una, e quello che usava l'altra passa a lei. Oppure **Tieni questa** (lo fa l'altro server al giro dopo), oppure rinomina una delle due: al giro dopo passa da sola. |
+| «Manca una riga collegata» | Di solito la riga collegata arriva al giro dopo, e allora passa da sola. | Niente; se resta, guarda se la riga collegata è stata cancellata dall'altra parte. |
+| «Non la cancello: qui la usano ancora altre righe» | La cancellazione arriva prima delle righe che la usavano. | Niente: passa quando arrivano anche le loro cancellazioni. |
 
-### Sul server di casa (es. Raspberry)
+Se i due server si sono separati davvero (es. un ripristino da backup su uno dei due), **Riallinea
+da casa** (pannello della sagra, o `manage.py sincronia --riallinea`): i dati della sagra diventano
+una copia di quelli di casa. Prima salva una copia di sicurezza della sagra (in `backup/`). Le
+modifiche della sagra non ancora arrivate a casa si perdono: se ce ne sono si ferma, salvo `--forza`.
+**Dopo un ripristino da backup** su uno dei due server, riallinea la sagra da casa (o, se il
+ripristino era a casa, rimetti a casa i dati della sagra con la chiavetta e poi riallinea la sagra).
 
-1. Docker e il programma, come alla sagra (`git clone`, stessa versione o più nuova).
-2. Nel `.env` di casa, oltre alle solite:
+### Messa in funzione
+
+1. **Una chiave** lunga e casuale, la stessa per i due server:
+   `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`.
+2. **La sagra con il programma aggiornato** (`scripts/aggiorna.sh`). Nel suo `.env`:
+   `SERVER_NOME=sagra` e `COPIA_CHIAVE=la-chiave`, poi `docker compose up -d`: da qui in poi i
+   trigger annotano ogni modifica (la sagra usa gli id pari).
+3. **Casa**: Docker e il programma alla stessa versione. Nel `.env`:
 
    ```sh
-   COPIA_DI=http://100.101.102.103:8000/    # la sagra, con l'indirizzo Tailscale
+   SERVER_NOME=casa
    COPIA_CHIAVE=la-stessa-chiave
-   COPIA_OGNI_MINUTI=5
-   COMPOSE_PROFILES=copia                   # accende il servizio «copia»
+   DJANGO_CSRF_TRUSTED_ORIGINS=https://raspberry.tuo-tailnet.ts.net   # se pubblicato con Funnel
    ```
 
-3. `docker compose up -d --build`. In un minuto: `docker compose logs copia` dice «Database
-   caricato», il pannello di casa mostra «copia» verde e la data dei dati. I container possono
-   raggiungere gli indirizzi Tailscale (`100.x`) attraverso il computer; se usi un nome
-   (MagicDNS), prova prima che si risolva da un container.
-4. **Accesso da fuori con Funnel**: `sudo tailscale funnel --bg 8000` pubblica l'app di casa su
-   `https://raspberry.tuo-tailnet.ts.net`. Aggiungi al `.env` di casa
-   `DJANGO_CSRF_TRUSTED_ORIGINS=https://raspberry.tuo-tailnet.ts.net` (altrimenti l'accesso dà
-   «verifica CSRF non riuscita») e riavvia. Con Funnel la pagina di accesso è su internet: gli
-   utenti e le password sono quelli della sagra, quindi password vere. Se l'accesso serve solo a
-   te, `tailscale serve` (solo dentro la tua rete Tailscale) è più prudente di Funnel.
-5. Google Drive sul server di casa: non configurarlo, oppure con un'altra cartella
-   (`DRIVE_CARTELLA`), altrimenti i due server scrivono file con lo stesso nome.
+   `docker compose up -d --build`, poi **i dati della sagra a casa**, una volta: con i due computer
+   nella stessa rete (o la sagra su Tailscale)
+   `docker compose exec web python manage.py sincronia --riallinea --da http://192.168.1.10:8000/`,
+   oppure con la chiavetta (*Copia dati* in sagra, `scripts/importa-dati.sh` a casa). Google Drive a
+   casa: non configurarlo, oppure con un'altra cartella (`DRIVE_CARTELLA`).
+4. **Casa sul web**: `sudo tailscale funnel --bg 8000` pubblica l'app su
+   `https://raspberry.tuo-tailnet.ts.net` (da mettere in `DJANGO_CSRF_TRUSTED_ORIGINS`, poi
+   `docker compose up -d`). La pagina di accesso è su internet: password vere per tutti gli utenti.
+5. **La sagra chiama casa**: nel `.env` della sagra
 
-**Comandi utili** (sul server di casa):
+   ```sh
+   SINCRONIA_CON=https://raspberry.tuo-tailnet.ts.net/   # oppure http://100.x.y.z:8000/ con Tailscale
+   COMPOSE_PROFILES=sincronia                             # accende il servizio «sincronia»
+   ```
+
+   e `docker compose up -d`. Entro un minuto il pannello della sagra mostra «sincronia» verde e
+   quello di casa «la sagra si fa sentire». Con l'indirizzo Funnel alla sagra non serve Tailscale:
+   basta internet; anche l'API `/sistema/api/…` di casa però è su internet, protetta solo dalla
+   chiave. Con Tailscale anche sulla sagra (`curl -fsSL https://tailscale.com/install.sh | sh`,
+   `sudo tailscale up`) e `SINCRONIA_CON=http://100.x.y.z:8000/` (l'IP Tailscale di casa) i due
+   server si parlano solo dentro la tua rete Tailscale.
+
+I container raggiungono gli indirizzi Tailscale (`100.x`) attraverso il computer; se usi un nome
+(MagicDNS), prova prima che si risolva da un container.
+
+### Comandi
 
 | Cosa | Comando |
 | --- | --- |
-| Come va | `docker compose logs -f copia` (o il pannello) |
-| Una copia adesso | pannello → *Prendi la copia adesso*, o `docker compose exec copia python manage.py sincronizza --una-volta` |
-| Ricaricare tutto | pannello → *Ricarica tutto*, o `… sincronizza --forza` |
-| Ripartire da una sagra nuova | `… sincronizza --sovrascrivi` |
-
-Quando la sagra è accesa e su Tailscale, la puoi anche usare direttamente da fuori
-(`http://100.101.102.103:8000`) per cambiare qualcosa; la copia di casa serve quando la sagra è
-spenta o senza internet. La chiavetta ([Backup](#copia-su-chiavetta-e-server-di-casa)) resta la
-strada che funziona sempre.
+| Come va | il pannello (sezione *Sincronia*), o in sagra `docker compose logs -f sincronia` |
+| Un giro adesso | pannello della sagra → *Sincronizza adesso*, o `docker compose exec sincronia python manage.py sincronia --una-volta` |
+| La sagra riprende tutto da casa | pannello della sagra → *Riallinea da casa*, o `… sincronia --riallinea` (`--forza` se ha ancora modifiche in coda) |
+| Copiare tutto da un altro server | `… sincronia --riallinea --da http://INDIRIZZO:8000/` |
+| Quante modifiche aspettano | pannello, oppure `docker compose exec web python manage.py shell -c "from sistema.models import Modifica; print(Modifica.objects.count())"` |
 
 ## Variabili d'ambiente
 
@@ -376,10 +454,11 @@ Nel file `.env` (vedi `.env.example`); dopo una modifica `docker compose up -d`.
 | `DJANGO_DEBUG`, `DJANGO_LOG_LEVEL`, `DJANGO_LOG_SQL` | Solo per lo sviluppo e il server di prova. |
 | `BACKUP_OGNI_MINUTI`, `BACKUP_GIORNI` | Backup automatici: ogni quanto e per quanti giorni (30, 10). |
 | `DRIVE_CARTELLA`, `DRIVE_GIORNI` | Google Drive: cartella e giorni di conservazione. |
-| `COPIA_CHIAVE` | Copia remota: la chiave (uguale sulla sagra e a casa). |
-| `COPIA_DI` | Solo a casa: indirizzo della sagra; rende il server una copia di sola lettura. |
-| `COPIA_OGNI_MINUTI` | Solo a casa: ogni quanti minuti prendere la copia (5). |
-| `COMPOSE_PROFILES` | `copia` sul server di casa, per accendere il servizio `copia`. |
+| `SERVER_NOME` | `sagra` (predefinito: rete locale, casse e stampanti) o `casa` (sul web; non stampa). Decide anche gli id: pari la sagra, dispari casa. |
+| `COPIA_CHIAVE` | Sincronia e copie tra i due server: la chiave, uguale sulla sagra e a casa. Vuota: nessuno può sincronizzare. |
+| `SINCRONIA_CON` | Solo sulla sagra: l'indirizzo di casa (Funnel `https://…ts.net/` o Tailscale `http://100.x.y.z:8000/`). |
+| `SINCRONIA_OGNI_SECONDI` | Ogni quanto la sagra fa un giro con casa (30). |
+| `COMPOSE_PROFILES` | `sincronia` sulla sagra, per accendere il servizio `sincronia`. |
 | `DOMINIO` | Solo in cloud: il dominio per l'HTTPS. |
 | `PORTA_DEBUG`, `PORTA_DEBUGPY` | Solo per il server di prova. |
 | `CARTELLA_BACKUP`, `CARTELLA_STATO` | Dove il pannello trova backup e stato dei servizi (`/backup`, `/stato`). |
@@ -395,7 +474,7 @@ Nella cartella del programma (in cloud aggiungi sempre `-f docker-compose.yml -f
 | Log dell'app | `docker compose logs -f web` |
 | Log della stampa | `docker compose logs -f stampa` |
 | Log di backup e Drive | `docker compose logs -f backup drive` |
-| Log della copia remota (a casa) | `docker compose logs -f copia` |
+| Log della sincronia (sulla sagra) | `docker compose logs -f sincronia` |
 | Riavviare l'app | `docker compose restart web` |
 | Fermare / riavviare tutto | `docker compose down` / `docker compose up -d` |
 | Shell di Django | `docker compose exec web python manage.py shell` |
@@ -424,8 +503,11 @@ codice nuovo), applicate all'avvio. Per questo un aggiornamento si fa così:
    Il server di prova (progetto `magazzino-debug`, database suo) prende la copia dei dati veri,
    applica le migrazioni del codice della cartella e controlla che l'app risponda. Aprilo
    (`http://localhost:8002`) e prova le cose cambiate: cassa, fusti, report, pannello del sistema.
-2. **Con la copia remota, aggiorna prima il server di casa**, poi la sagra: casa accetta copie
-   da una sagra uguale o più vecchia, non più nuova.
+2. **Con la sincronia, aggiorna prima il server di casa, poi la sagra**. Finché i due programmi
+   non sono alla stessa versione la sincronia aspetta (ognuno lavora per conto suo, le modifiche
+   restano in coda). Sulla sagra `scripts/aggiorna.sh`, se sono arrivate migrazioni, alla fine
+   manda a casa quello che è in coda e poi si riallinea da casa: così le righe create dalle
+   migrazioni sono le stesse, con gli stessi id, sui due server.
 3. **Aggiorna** l'installazione vera, fuori dalle serate:
 
    ```sh
@@ -478,7 +560,7 @@ Altre copie:
 - **Google Drive**: vedi il README, «Backup su Google Drive» (copie del database tenute 30 giorni,
   `DRIVE_GIORNI`);
 - **a mano**: `scripts/backup-ora.sh` (es. prima di un aggiornamento o a fine sagra);
-- **chiavetta e server di casa**: vedi sotto, e la [copia remota](#copia-remota-server-di-casa).
+- **chiavetta e server di casa**: vedi sotto, e la [sincronia con casa](#sincronia-con-casa).
 
 ### Copia su chiavetta e server di casa
 
@@ -496,9 +578,11 @@ scripts/importa-dati.sh /run/media/$USER/CHIAVETTA/copia-magazzino-sagra-AAAAMMG
 Lo script prima controlla che la copia vada bene per la versione del programma di casa (se viene
 da un programma più nuovo si ferma senza toccare niente: aggiorna casa e riprova), poi chiede
 conferma (`SI=1` per non chiederla), ferma app e stampa, sostituisce database, fatture e foto con
-quelli della copia (con lo stesso caricamento della copia remota: `manage.py carica_copia`) e
-riavvia. La copia di casa va usata solo per guardare: chi registra lì perde tutto alla copia
-successiva. Con la [copia remota](#copia-remota-server-di-casa) questo succede da solo.
+quelli della copia (con lo stesso caricamento del riallineamento: `manage.py carica_copia`) e
+riavvia. Con la [sincronia](#sincronia-con-casa) accesa non serve: la chiavetta resta la strada che
+funziona sempre, per la prima messa in funzione o se la sagra resta senza internet per giorni.
+Attenzione: caricarla sostituisce tutti i dati di casa, anche quelli registrati lì e non ancora
+arrivati in sagra; dopo, riallinea la sagra da casa.
 
 **Ripristino** (tutto quello registrato dopo l'ora del backup va perso; prima lo script fa comunque
 una copia di com'è adesso):
@@ -613,16 +697,20 @@ DJANGO_DEBUG=1 .venv/bin/python manage.py runserver
   terminale `.venv/bin/python manage.py servizio_stampa` le manda alle stampanti (o a
   `ippeveprinter`, vedi [Stampa](#stampa)). Nel server di prova il servizio `stampa` c'è già, ma
   non si ricarica da solo: dopo una modifica `docker compose -f docker-compose.yml -f docker-compose.debug.yml restart stampa`.
-- **Copia remota in prova**: un secondo progetto con un suo file di impostazioni fa da server di
-  casa (porta 8004) e prende la copia dal server di prova:
+- **Sincronia in prova**: il server di prova fa la sagra, un secondo progetto con un suo file di
+  impostazioni fa casa (porta 8004). I test automatici della sincronia usano invece due database
+  dello stesso PostgreSQL (`default` = sagra, `altro` = casa: `config/settings.py` aggiunge
+  `altro` quando si lanciano i test), quindi girano solo nel server di prova.
 
   ```sh
-  # nel server di prova: COPIA_CHIAVE=… docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d web
-  # casa.env: PORTA_DEBUG=8004, PORTA_DEBUGPY=5679, POSTGRES_PASSWORD, ADMIN_*, COPIA_CHIAVE (uguale),
-  #           COPIA_DI=http://magazzino-debug-web-1:8000/, COMPOSE_PROFILES=copia, COPIA_OGNI_MINUTI=1
-  docker compose -p magazzino-casa-prova --env-file casa.env -f docker-compose.yml -f docker-compose.debug.yml up -d
-  docker network connect magazzino-debug_default magazzino-casa-prova-copia-1
-  # per toglierlo: … -p magazzino-casa-prova … down -v   (solo quel progetto!)
+  # casa.env: PORTA_DEBUG=8004, PORTA_DEBUGPY=5679, POSTGRES_PASSWORD, ADMIN_*, SERVER_NOME=casa, COPIA_CHIAVE
+  docker compose -p magazzino-casa-prova --env-file casa.env -f docker-compose.yml -f docker-compose.debug.yml up -d web stampa
+  docker network connect magazzino-debug_default magazzino-casa-prova-web-1   # la «sagra» vede «casa»
+  # la sagra (server di prova), con la stessa chiave:
+  COPIA_CHIAVE=… SINCRONIA_CON=http://magazzino-casa-prova-web-1:8000/ COMPOSE_PROFILES=sincronia \
+    docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d web stampa sincronia
+  # senza internet: docker network disconnect magazzino-debug_default magazzino-casa-prova-web-1
+  # per togliere casa: … -p magazzino-casa-prova … down -v   (solo quel progetto!)
   ```
 
 - **Pannello del sistema**: i dati in `sistema/monitor.py`, il disegno in
@@ -655,8 +743,13 @@ sempre cosa fare; *Errori* ha la traccia completa.
 | «Errore del server» | Pannello → *Errori* (traccia completa), oppure `docker compose logs --tail=200 web`. |
 | Pannello: backup rosso | `docker compose logs --tail=50 backup`: di solito disco pieno o database fermo. |
 | Pannello: «migrazioni non ancora applicate» | Il codice è più nuovo del database: `docker compose restart web` (le applica all'avvio) o `scripts/aggiorna.sh`. |
-| Server di casa: «copia» rosso, «aggiorna prima questo server» | La sagra ha un codice più nuovo: aggiorna casa (`scripts/aggiorna.sh --pull`), la copia riparte da sola. |
-| Server di casa: «la sagra non è raggiungibile» | Normale se la sagra è spenta o senza internet; altrimenti Tailscale sulla sagra (`tailscale status`) e `COPIA_DI`. |
-| Server di casa: «la sagra rifiuta la richiesta» | `COPIA_CHIAVE` diversa sui due server, o sulla sagra manca. |
+| Sincronia: «… ha il programma più aggiornato di …: aggiorna …» | Aggiorna quello indicato (prima casa, poi la sagra: `scripts/aggiorna.sh --pull`). Intanto ognuno lavora per conto suo e le modifiche restano in coda: partono da sole dopo. |
+| Sagra: «l'altro server non è raggiungibile» | Normale senza internet: le modifiche aspettano in coda. Altrimenti casa è accesa? `SINCRONIA_CON` giusto? Con Tailscale: `tailscale status` sui due computer. |
+| Sincronia: «l'altro server rifiuta la richiesta» | `COPIA_CHIAVE` diversa sui due server, o manca su uno dei due. |
+| «Tutti e due i server si chiamano sagra» | Nel `.env` di casa manca `SERVER_NOME=casa` (poi `docker compose up -d`). |
+| Sincronia: conflitti | Pannello → *Sincronia*: per i doppioni «Tieni quella di casa/della sagra» o rinomina; gli altri di solito passano da soli al giro dopo. Vedi [Conflitti](#conflitti). |
+| Sincronia: «gli orologi dei due server sono distanti» | Vince la modifica più recente: gli orologi devono essere giusti. Su Linux `timedatectl` (deve dire *System clock synchronized: yes*). |
+| Striscia in sagra «non ho ancora ricevuto le modifiche fatte da casa» | Dopo l'accensione la sagra non è ancora riuscita a sentire casa (internet?). Le cose registrate da casa arrivano appena si collega. |
+| Dato la corrente ma il programma non risponde | Il server si è acceso? Se no: BIOS, «accendi quando torna la corrente» (vedi [Installare](#installare-il-programma-alla-sagra)). Se sì, dopo 2 minuti `docker compose ps` (su Windows: si è entrati nell'utente?). |
 | Disco pieno | I backup locali si tengono `BACKUP_GIORNI` giorni; le foto in `backup/…-allegati` non si cancellano da sole. `docker system prune` toglie le immagini vecchie (non i volumi). |
 | Ho perso la password dell'amministratore | `docker compose exec web python manage.py changepassword admin` |

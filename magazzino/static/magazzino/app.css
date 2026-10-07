@@ -571,8 +571,8 @@ details.scheda summary { cursor: pointer; }
   .marchio { color: #000; }
 }
 
-/* Copia remota di sola lettura (server di casa): striscia sotto la testata. */
-.striscia-copia {
+/* Sincronia con l'altro server ferma (vedi sistema/context_processors.py): striscia sotto la testata. */
+.striscia-sincronia {
   background: var(--avviso-chiaro); color: var(--avviso-testo); border-bottom: 1px solid var(--avviso-bordo);
   padding: .45rem 1rem; font-size: .9rem; text-align: center;
 }

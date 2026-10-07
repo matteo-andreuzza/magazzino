@@ -1,6 +1,7 @@
-"""Dati di funzionamento del server: chi è acceso, quali errori ci sono stati, chi è collegato.
+"""Dati di funzionamento del server: chi è acceso, quali errori ci sono stati, chi è collegato,
+cosa deve ancora partire verso l'altro server (sincronia).
 
-Sono dati di QUESTO server: non vanno nelle copie verso altri server (vedi copia.py,
+Sono dati di QUESTO server: non vanno nelle copie né nella sincronia (vedi copia.py,
 TABELLE_LOCALI). Per questo nessuna tabella qui ha chiavi esterne verso le altre app:
 l'utente si salva come nome, così una copia caricata non le tocca.
 """
@@ -77,3 +78,53 @@ class Dispositivo(models.Model):
 
     def __str__(self):
         return f"{self.ruolo or self.tipo} ({self.utente or self.indirizzo_ip})"
+
+
+class Modifica(models.Model):
+    """Una riga cambiata su questo server che l'altro non ha ancora confermato: la coda della sincronia.
+
+    La scrive un trigger di PostgreSQL (vedi sincronia.py), una voce sola per riga: se la riga
+    cambia di nuovo, `numero` sale. L'altro server conferma un numero preciso, così una riga
+    cambiata mentre viaggiava resta in coda e riparte.
+    """
+
+    tabella = models.CharField(max_length=100)
+    chiave = models.CharField(max_length=100)
+    numero = models.BigIntegerField()
+    quando = models.DateTimeField()
+
+    class Meta:
+        ordering = ["numero"]
+        verbose_name = "modifica da mandare"
+        verbose_name_plural = "modifiche da mandare"
+        constraints = [models.UniqueConstraint(fields=["tabella", "chiave"], name="modifica_unica_per_riga")]
+
+    def __str__(self):
+        return f"{self.tabella} {self.chiave}"
+
+
+class Conflitto(models.Model):
+    """Una riga di qui (ancora in coda) che l'altro server non riesce ad applicare.
+
+    Resta in coda e si rimanda a ogni giro: quando passa, o quando esce dalla coda, il conflitto
+    sparisce. `gemella`: se il motivo è un nome (o un altro valore unico) già usato là, la chiave
+    della riga dell'altro server con quel nome; `dati_gemella` è quella riga, per poter unire le due.
+    """
+
+    tabella = models.CharField(max_length=100)
+    chiave = models.CharField(max_length=100)
+    motivo = models.TextField()
+    gemella = models.CharField(max_length=100, blank=True)
+    dati_gemella = models.TextField(blank=True)  # JSON così com'è arrivato
+    primo_il = models.DateTimeField(default=timezone.now)
+    ultimo_il = models.DateTimeField(default=timezone.now)
+    volte = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ["primo_il"]
+        verbose_name = "conflitto della sincronia"
+        verbose_name_plural = "conflitti della sincronia"
+        constraints = [models.UniqueConstraint(fields=["tabella", "chiave"], name="conflitto_unico_per_riga")]
+
+    def __str__(self):
+        return f"{self.tabella} {self.chiave}: {self.motivo[:60]}"

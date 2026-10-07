@@ -57,8 +57,8 @@
       {% if user.is_staff %}<a href="{% url 'sistema:pannello' %}"{% attiva "sistema:*" %}>Sistema</a><a href="{% url 'copia_dati' %}"{% attiva "copia_dati" %}>Copia dati</a><a href="{% url 'assistente:chiavi' %}"{% attiva "assistente:*" %}>Claude</a><a href="{% url 'admin:index' %}">Amministrazione</a>{% endif %}
     </nav>
   {% endblock %}{% endif %}
-  {% if COPIA_SOLA_LETTURA %}
-    <div class="striscia-copia" role="status">Copia di sola lettura dei dati della sagra{% if COPIA_AGGIORNATA_IL %}, aggiornata al {{ COPIA_AGGIORNATA_IL|date:"j/m H:i" }}{% endif %}: si guarda, le modifiche si fanno alla sagra.</div>
+  {% if STRISCIA_SINCRONIA %}
+    <div class="striscia-sincronia" role="status">{{ STRISCIA_SINCRONIA }}</div>
   {% endif %}
   <main class="contenuto{% block classe_contenuto %}{% endblock %}">
     {% if messages %}

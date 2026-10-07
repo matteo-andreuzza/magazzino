@@ -1,0 +1,23 @@
+IL PROGRAMMA DELLA CASSA (sui computer delle casse, da fare una volta)
+
+Sui computer delle casse non si installa niente: basta un file sul desktop. Quando lo apri
+aspetta che il server della sagra risponda (anche se è appena stata data la corrente) e apre la
+cassa in una finestra pulita, senza barra degli indirizzi.
+
+In tutti e due i casi cambia solo l'indirizzo del server (SERVER=…), quello fisso del computer
+del programma, es. 192.168.1.10:8000. Se la cassa è lo stesso computer del programma: localhost:8000.
+
+Windows
+  1. Copia «Avvia cassa.bat» sul desktop.
+  2. Tasto destro → Modifica: cambia la riga «set SERVER=…» e salva.
+  3. Doppio clic per aprire la cassa. Usa Chrome se c'è, altrimenti Edge.
+  Facoltativo, per aprirla da sola all'accensione: Win+R, scrivi «shell:startup», copia lì il file.
+
+Linux
+  1. Copia avvia-cassa.sh nella cartella dell'utente (es. /home/cassa/) e cambia la riga SERVER=….
+  2. Copia cassa-sagra.desktop sul desktop (e in ~/.local/share/applications/ per averlo nel menu);
+     cambia Exec= con il percorso dello script. Se il desktop lo chiede: «Consenti l'avvio».
+  Facoltativo, all'accensione: copia cassa-sagra.desktop anche in ~/.config/autostart/.
+
+Se la finestra resta su «Aspetto il server…» per più di 3 minuti: il computer del programma è
+acceso? Questo computer è sulla rete della sagra (cavo o Wi-Fi giusto)? L'indirizzo è giusto?

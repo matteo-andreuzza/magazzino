@@ -228,8 +228,19 @@ def porta_il_cliente(ordine, imp):
     )
 
 
+def stampa_qui():
+    """A casa non si stampa: le stampanti sono in sagra, e una stampa fatta da casa uscirebbe
+    in sagra solo alla prossima accensione (vedi sistema/sincronia.py)."""
+    return settings.SERVER_NOME != "casa"
+
+
+DA_CASA = "Dal server di casa non si stampa: le stampanti sono in sagra. Ristampa dal programma della sagra."
+
+
 def accoda_ordine(ordine, righe, imp, *, solo=None, copia=False):
     """Crea le stampe di un ordine (da chiamare dentro la transazione che lo registra)."""
+    if not stampa_qui():
+        return []
     stampe = []
     adesso = timezone.now()
     al_cliente = porta_il_cliente(ordine, imp)
@@ -263,6 +274,8 @@ def accoda_annullo(ordine, righe, imp):
         if s.documento == Documento.COMANDA and s.pk not in da_fermare:
             uscite.setdefault(s.reparto, s.stampante)
     adesso = timezone.now()
+    if not stampa_qui():
+        return []
     nuove = [
         Stampa(
             stampante=stampante, ordine=ordine, documento=Documento.ANNULLO, reparto=reparto, creata_il=adesso,

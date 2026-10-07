@@ -2,7 +2,6 @@ import gzip
 import io
 import tempfile
 import urllib.error
-from datetime import timedelta
 from pathlib import Path
 from unittest import mock
 from urllib.parse import urlsplit
@@ -13,8 +12,8 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from sistema import carica, copia, copia_remota
-from sistema.models import Battito
+from sistema import carica, copia, copia_remota, sincronia
+from sistema.models import Battito, Modifica
 
 CHIAVE = "chiave-di-prova-molto-lunga"
 
@@ -94,7 +93,8 @@ class ApiCopiaTest(TestCase):
         self.assertEqual(self.client.get(reverse("sistema:api_copia")).status_code, 401)
         with override_settings(COPIA_CHIAVE=""):
             self.assertEqual(self.chiedi("sistema:api_copia").status_code, 404)
-        dati = self.chiedi("sistema:api_copia").json()
+        with tempfile.TemporaryDirectory() as vuota, override_settings(MEDIA_ROOT=vuota):
+            dati = self.chiedi("sistema:api_copia").json()
         self.assertIn(["cassa", "0001_iniziale"], dati["migrazioni"])
         self.assertEqual(dati["allegati"], [])
 
@@ -112,23 +112,26 @@ class ApiCopiaTest(TestCase):
         self.assertTrue(Battito.objects.filter(nome=copia_remota.NOME_INVIATA).exists())
 
 
-@override_settings(COPIA_CHIAVE=CHIAVE, COPIA_DI="http://sagra:8000/")
-class SincronizzaTest(TestCase):
+@override_settings(COPIA_CHIAVE=CHIAVE, SINCRONIA_CON="http://casa:8000/")
+class RiallineaTest(TestCase):
+    """Riallinearsi dall'altro server: copia completa (qui finta: niente pg_dump e psql)."""
+
     def setUp(self):
-        self.sagra = tempfile.TemporaryDirectory()
-        self.casa = tempfile.TemporaryDirectory()
-        self.addCleanup(self.sagra.cleanup)
-        self.addCleanup(self.casa.cleanup)
-        (Path(self.sagra.name) / "foto").mkdir()
-        (Path(self.sagra.name) / "foto" / "birra.jpg").write_bytes(b"JPEG")
-        (Path(self.casa.name) / "vecchia.jpg").write_bytes(b"via")  # alla sagra non c'è più
+        self.altro = tempfile.TemporaryDirectory()
+        self.qui = tempfile.TemporaryDirectory()
+        self.addCleanup(self.altro.cleanup)
+        self.addCleanup(self.qui.cleanup)
+        (Path(self.altro.name) / "foto").mkdir()
+        (Path(self.altro.name) / "foto" / "birra.jpg").write_bytes(b"JPEG")
         self.instradatore = Instradatore(self.client)
-        sagra = Path(self.sagra.name)
+        altro = Path(self.altro.name)
         for bersaglio, sostituto in (
             ("urllib.request.urlopen", self.instradatore),
             ("sistema.copia.copia_database", scrivi_dump),
-            ("sistema.copia_remota.elenco_allegati", lambda: [["foto/birra.jpg", 4]]),
-            ("sistema.copia_remota.file_allegato", lambda percorso: sagra / percorso),
+            ("sistema.copia_remota.file_allegato", lambda percorso: altro / percorso),
+            ("sistema.sincronia.copia_di_sicurezza", lambda *a, **k: None),
+            ("sistema.sincronia.prepara", lambda *a, **k: None),
+            ("sistema.sincronia.file_mancanti", lambda *a, **k: ["foto/birra.jpg"]),
         ):
             patcher = mock.patch(bersaglio, sostituto)
             patcher.start()
@@ -136,44 +139,73 @@ class SincronizzaTest(TestCase):
         self.carica = mock.patch("sistema.carica.carica_database", return_value="x").start()
         self.addCleanup(mock.patch.stopall)
 
-    def test_copia_completa_poi_solo_quello_che_cambia(self):
-        with override_settings(MEDIA_ROOT=Path(self.casa.name)):
-            primo = copia_remota.sincronizza(scrivi=lambda *_: None)
-            Battito.objects.create(nome="copia", ultimo_il=timezone.now(), dettagli=primo)
-            secondo = copia_remota.sincronizza(scrivi=lambda *_: None)
-        self.assertTrue(primo["cambiato"])
-        self.assertFalse(secondo["cambiato"])  # stesso database: non si ricarica
-        self.assertEqual(self.carica.call_count, 1)
-        self.assertEqual((Path(self.casa.name) / "foto" / "birra.jpg").read_bytes(), b"JPEG")
-        self.assertFalse((Path(self.casa.name) / "vecchia.jpg").exists())
-        self.assertEqual((primo["allegati_scaricati"], primo["allegati_tolti"]), (1, 1))
-
-    def test_mai_sovrascrivere_dati_piu_nuovi(self):
-        with mock.patch("sistema.copia_remota.ultimo_dato", return_value=timezone.now()), \
-                mock.patch("sistema.copia.ultimo_dato", return_value=timezone.now() - timedelta(days=1)):
-            with self.assertRaisesMessage(copia_remota.DirezioneSbagliata, "mai su quello della sagra"):
-                copia_remota.sincronizza(scrivi=lambda *_: None)
+    def test_copia_completa_e_file(self):
+        Modifica.objects.create(tabella="magazzino_prodotto", chiave="2", numero=1, quando=timezone.now())
+        with self.assertRaisesMessage(sincronia.SincroniaFerma, "si perderebbero"):
+            sincronia.riallinea(scrivi=lambda *_: None)
         self.carica.assert_not_called()
+        with override_settings(MEDIA_ROOT=Path(self.qui.name)):
+            esito = sincronia.riallinea(scrivi=lambda *_: None, forza=True)
+        self.assertEqual(self.carica.call_count, 1)
+        self.assertEqual(esito["file"], 1)
+        self.assertEqual((Path(self.qui.name) / "foto" / "birra.jpg").read_bytes(), b"JPEG")
+        self.assertFalse(Modifica.objects.exists())  # la coda di prima non vale più
 
-    def test_ciclo_una_volta(self):
-        with override_settings(MEDIA_ROOT=Path(self.casa.name)):
-            copia_remota.ciclo(ogni_minuti=5, scrivi=lambda *_: None, una_volta=True)
-        battito = Battito.objects.get(nome="copia")
-        self.assertEqual(battito.stato, "ok")
-        self.assertIn("Copia aggiornata", battito.messaggio)
-
-    def test_sagra_spenta(self):
-        with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timed out")):
-            copia_remota.ciclo(ogni_minuti=5, scrivi=lambda *_: None, una_volta=True)
-        battito = Battito.objects.get(nome="copia")
-        self.assertEqual(battito.stato, "avviso")
-        self.assertIn("non è raggiungibile", battito.messaggio)
-
-    def test_versione_piu_nuova_alla_sagra(self):
+    def test_versione_piu_nuova_dall_altra_parte(self):
         futuro = sorted(MigrationRecorder(connection).applied_migrations()) + [("bar", "9999_futuro")]
         with mock.patch("sistema.copia.migrazioni_applicate", return_value=futuro):
-            copia_remota.ciclo(ogni_minuti=5, scrivi=lambda *_: None, una_volta=True)
-        battito = Battito.objects.get(nome="copia")
-        self.assertEqual(battito.stato, "errore")
-        self.assertIn("Aggiorna prima questo server", battito.messaggio)
+            with self.assertRaisesMessage(carica.VersioneIncompatibile, "Aggiorna prima questo server"):
+                sincronia.riallinea(scrivi=lambda *_: None)
         self.carica.assert_not_called()
+
+    def test_senza_indirizzo(self):
+        with override_settings(SINCRONIA_CON=""), self.assertRaisesMessage(sincronia.SincroniaFerma, "--da"):
+            sincronia.riallinea(scrivi=lambda *_: None)
+
+
+@override_settings(COPIA_CHIAVE=CHIAVE, SINCRONIA_CON="http://casa:8000/")
+class CicloTest(TestCase):
+    """Il servizio «sincronia» della sagra, con il giro finto."""
+
+    def setUp(self):
+        cartella = tempfile.TemporaryDirectory()  # la pulizia dei file non deve toccare quelli veri
+        self.addCleanup(cartella.cleanup)
+        impostazioni = override_settings(MEDIA_ROOT=cartella.name)
+        impostazioni.enable()
+        self.addCleanup(impostazioni.disable)
+
+    def esito(self, **altro):
+        return {"inviate": 2, "ricevute": 3, "applicate": 3, "tenute": 0, "rifiutate_qui": 0, "in_coda": 0,
+                "in_coda_altro": 0, "conflitti": 0, "conflitti_altro": [], "esiti_richieste": [],
+                "scarto_orologio": 0.4, "file_presi": 0, "file_mandati": 0, "durata": 0.2, **altro}
+
+    def test_giro_riuscito(self):
+        with mock.patch("sistema.sincronia.giro", return_value=self.esito()):
+            sincronia.ciclo(ogni_secondi=30, scrivi=lambda *_: None, una_volta=True)
+        battito = Battito.objects.get(nome=sincronia.NOME)
+        self.assertEqual(battito.stato, "ok")
+        self.assertIn("Allineata con casa", battito.messaggio)
+        self.assertTrue(battito.dettagli["primo_ok"])
+
+    def test_conflitti_e_orologi(self):
+        with mock.patch("sistema.sincronia.giro", return_value=self.esito(conflitti=1, scarto_orologio=95.0)):
+            sincronia.ciclo(ogni_secondi=30, scrivi=lambda *_: None, una_volta=True)
+        battito = Battito.objects.get(nome=sincronia.NOME)
+        self.assertEqual(battito.stato, "avviso")
+        self.assertIn("orologi", battito.messaggio)
+
+    def test_casa_non_raggiungibile(self):
+        with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timed out")), \
+                mock.patch("sistema.sincronia.attiva", return_value=True), \
+                mock.patch("sistema.sincronia.schema", return_value={}):
+            sincronia.ciclo(ogni_secondi=30, scrivi=lambda *_: None, una_volta=True)
+        battito = Battito.objects.get(nome=sincronia.NOME)
+        self.assertEqual(battito.stato, "avviso")
+        self.assertIn("non è raggiungibile", battito.messaggio)
+        self.assertFalse(battito.dettagli["primo_ok"])
+
+    def test_versioni_diverse(self):
+        with mock.patch("sistema.sincronia.giro", side_effect=sincronia.SincroniaFerma("Aggiorna la sagra.")):
+            sincronia.ciclo(ogni_secondi=30, scrivi=lambda *_: None, una_volta=True)
+        battito = Battito.objects.get(nome=sincronia.NOME)
+        self.assertEqual((battito.stato, battito.messaggio), ("errore", "Aggiorna la sagra."))

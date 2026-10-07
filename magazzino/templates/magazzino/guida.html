@@ -38,7 +38,7 @@
     <a href="#menu-listino"><strong>Menu e listino</strong><span>Cambiare piatti e prezzi</span></a>
     <a href="#stampanti"><strong>Stampanti</strong><span>Comande in cucina e al bar</span></a>
     <a href="#domande"><strong>Domande frequenti</strong><span>Le risposte veloci</span></a>
-    <a href="#computer"><strong>Il computer del programma</strong><span>Installarlo, accenderlo, pannello, copie dei dati</span></a>
+    <a href="#computer"><strong>Il computer del programma</strong><span>Installarlo, accenderlo, le casse, il server di casa, il pannello</span></a>
   </nav>
 
   <section id="come-funziona" class="guida-capitolo">
@@ -54,6 +54,9 @@
       <li>Le quantità non si scrivono mai a mano: <strong>le giacenze sono la somma di quello che si registra</strong> (carichi, prelievi, rientri, vendite). Per questo è importante registrare tutto.</li>
       <li>Ogni errore si può correggere: <span class="percorso">Storico → apri l'operazione → annulla</span>.</li>
       <li>Il pulsante con la luna in alto mette la <strong>modalità scura</strong> (utile la sera all'aperto).</li>
+      <li>Il programma è in <strong>due posti</strong>: <strong>in sagra</strong> (il computer delle casse e delle stampanti: funziona anche senza internet)
+        e <strong>a casa, sul web</strong> (sempre acceso, tutto l'anno). Si usa quello che si ha sotto mano, <strong>con lo stesso utente e la stessa password</strong>:
+        per esempio dopo la spesa si registrano i carichi dal telefono, da casa. Quando la sagra ha internet i due si scambiano da soli le modifiche (vedi <a href="#casa">il server di casa</a>).</li>
     </ul>
   </section>
 
@@ -61,7 +64,8 @@
     <h2>Prima della sagra</h2>
     <p>Da fare una volta sola, qualche giorno prima. Conviene farlo da un computer.</p>
     <ol class="guida-passi">
-      <li><strong>Il computer del programma</strong>: installalo e dagli un indirizzo fisso nella rete della sagra, vedi <a href="#installazione">Il computer del programma</a>.</li>
+      <li><strong>Il computer del programma</strong>: installalo, dagli un indirizzo fisso nella rete della sagra e fallo accendere da solo quando arriva la corrente, vedi <a href="#installazione">Il computer del programma</a>.</li>
+      <li><strong>I computer delle casse</strong>: sul desktop il file <em>Avvia cassa</em> (vedi <a href="#avvia-cassa">sotto</a>).</li>
       <li><strong>Utenti dei volontari</strong> <span class="solo-staff">amministrazione</span><br>
         <span class="percorso">Magazzino → Amministrazione → Utenti → Aggiungi</span>. Senza «staff» il volontario non vede le pagine di configurazione.
         Va bene anche un utente unico per tutti, ma con utenti diversi lo storico dice chi ha fatto cosa
@@ -96,7 +100,9 @@
         Nella stessa pagina spunta i <strong>piatti serviti</strong> stasera: quelli del menu della sagra e quello speciale della sera (es. la tagliata il sabato).
         In cassa compaiono solo gli articoli dei piatti spuntati, più quelli non legati a un piatto (bevande, caffè, dolci).
         Se non spunti niente, compare tutto il listino. Si cambia quando vuoi da <span class="percorso">Serate → la serata → Modifica servizio</span>.</li>
-      <li><strong>Accendi il computer del programma e le stampanti.</strong> Il programma parte da solo in un minuto circa, stampa compresa: non c'è niente da avviare.
+      <li><strong>Dai la corrente</strong>: si accendono router, computer del programma, stampanti e casse. Il programma parte da solo in un minuto o due, stampa compresa: non c'è niente da avviare.
+        Sui computer delle casse basta un doppio clic su <em>Avvia cassa</em>: aspetta il programma e apre la cassa.
+        Se in sagra c'è internet, nel giro di pochi secondi arriva anche quello che è stato registrato da casa (es. i carichi della spesa).
         Se in cassa compare un avviso rosso sulla stampa, vedi <a href="#stampanti">Stampanti</a>.
         Chi gestisce può dare un'occhiata a <span class="percorso">Magazzino → Sistema</span> <span class="solo-staff">amministrazione</span>: se è tutto verde si parte (vedi <a href="#pannello">il pannello</a>).</li>
       <li><strong>Metti a cucinare</strong><br>
@@ -267,9 +273,15 @@
       <dt>Il telefono non apre il programma</dt>
       <dd>Deve essere sul Wi-Fi della sagra, quello collegato allo switch del computer del programma. L'indirizzo è quello che vi ha dato chi gestisce, es. http://192.168.1.10:8000.</dd>
       <dt>Serve internet?</dt>
-      <dd><strong>No.</strong> Cassa, stampa, magazzino e bar funzionano nella rete della sagra anche senza internet. Internet serve solo a mandare i backup su Google Drive e la copia al server di casa: quando torna, recuperano da soli.</dd>
-      <dt>C'è una striscia gialla «Copia di sola lettura»</dt>
-      <dd>Sei sul <strong>server di casa</strong>, la copia dei dati della sagra (vedi <a href="#copia-remota">copia remota</a>): lì si guarda e basta. Per registrare usa il programma della sagra.</dd>
+      <dd><strong>No.</strong> Cassa, stampa, magazzino e bar funzionano nella rete della sagra anche senza internet. Internet serve per mandare i backup su Google Drive e per scambiare le modifiche con il server di casa: quando torna, recuperano da soli.</dd>
+      <dt>Ho fatto la spesa: la registro da casa?</dt>
+      <dd>Sì: apri il programma di casa dal telefono (l'indirizzo web che vi ha dato chi gestisce), entra con il tuo utente e registra il carico, anche con la foto dello scontrino.
+        In sagra arriva da solo appena il computer della sagra è acceso e ha internet.</dd>
+      <dt>C'è una striscia gialla in cima</dt>
+      <dd>In sagra, «Non ho ancora ricevuto le modifiche fatte da casa»: dopo l'accensione il programma non è ancora riuscito a sentire casa (manca internet?). Si lavora lo stesso; quello registrato da casa arriva appena c'è collegamento.
+        A casa, «La sagra non si sente»: la sagra è spenta o senza internet; quello che registrano lì arriva qui quando torna.</dd>
+      <dt>Da casa si può stampare?</dt>
+      <dd>No: le stampanti sono in sagra. Ristampe e stampe di prova si fanno dal programma della sagra.</dd>
       <dt>Posso usarlo con Claude?</dt>
       <dd>Sì: <span class="percorso">Magazzino → Claude</span> <span class="solo-staff">amministrazione</span> crea la chiave. Poi si chiede in italiano: «cosa è sotto scorta?», «registra 20 kg di patate in dispensa», «per quante serate basta la bionda?».</dd>
     </dl>
@@ -291,8 +303,21 @@
       <li><strong>Indirizzo fisso</strong> nella rete della sagra, es. 192.168.1.10: nelle impostazioni di rete del computer (IPv4 manuale) oppure prenotandolo nel router.
         I volontari aprono <code>http://192.168.1.10:8000</code>: salvalo tra i preferiti di ogni tablet o mettilo in un codice QR.</li>
     </ol>
-    <p>Da quel momento <strong>non c'è niente da avviare</strong>: quando si accende il computer, dopo un minuto circa il programma risponde e stampa da solo (anche dopo un riavvio o una mancanza di corrente).
+    <p>Da quel momento <strong>non c'è niente da avviare</strong>: quando si accende il computer, dopo un minuto o due il programma risponde e stampa da solo (anche dopo un riavvio o una mancanza di corrente).
       Su Windows parte quando si entra nell'utente: imposta l'accesso automatico o entra appena acceso.</p>
+    <ol class="guida-passi" start="6">
+      <li><strong>Acceso quando arriva la corrente.</strong> Perché il computer si accenda da solo quando si dà la corrente alla sagra, nel suo BIOS
+        (all'accensione il tasto <em>Canc</em>, <em>F2</em> o <em>F10</em>) cerca l'opzione su cosa fare quando torna la corrente:
+        <em>Restore on AC Power Loss</em>, <em>After Power Failure</em> o <em>AC Recovery</em>, di solito sotto <em>Power</em>. Mettila su <strong>Power On</strong>.</li>
+      <li><strong>Indirizzo fisso sul computer stesso</strong> (non solo nel router): quando arriva la corrente il router può accendersi dopo il computer, e così l'indirizzo c'è subito.</li>
+      <li><strong>Prova</strong>: stacca la spina, riattaccala e non toccare altro. Dopo un paio di minuti, da un telefono sul Wi-Fi della sagra, il programma si deve aprire.</li>
+    </ol>
+
+    <h3 id="avvia-cassa">Il programma della cassa (sui computer delle casse)</h3>
+    <p>Sui computer delle casse non si installa niente: basta un file sul desktop, nella cartella <code>scripts/cassa</code> del programma
+      (<em>Avvia cassa.bat</em> per Windows, <em>avvia-cassa.sh</em> per Linux; istruzioni in <code>LEGGIMI.txt</code>). Dentro va scritto solo l'indirizzo del computer del programma, es. 192.168.1.10:8000.
+      Con un doppio clic aspetta che il programma sia acceso (anche se la cassa si è accesa prima) e poi apre la cassa in una finestra pulita, senza barra degli indirizzi.
+      Si può anche mettere in esecuzione automatica, così si apre da solo all'accensione.</p>
 
     <h3 id="pannello">Il pannello del sistema: se qualcosa non va</h3>
     <p><span class="percorso">Magazzino → Sistema</span> <span class="solo-staff">amministrazione</span> mostra in una pagina come sta tutto, e si aggiorna da solo:</p>
@@ -308,23 +333,29 @@
 
     <h3 id="copia">Copia dei dati su chiavetta</h3>
     <p>A fine serata <span class="percorso">Magazzino → Copia dati → Scarica la copia</span> <span class="solo-staff">amministrazione</span> e salva il file sulla chiavetta: c'è tutto (database, fatture e foto).
-      A casa, nella cartella del programma sul tuo server: <code>scripts/importa-dati.sh /percorso/della/chiavetta/copia-….tar</code>. I dati del server di casa vengono sostituiti da quelli della copia:
-      lì si guarda, non si registra niente.</p>
+      Con il <a href="#casa">server di casa</a> non serve: è una copia in più, e la strada che funziona sempre (per esempio la prima volta, o se la sagra resta senza internet per giorni).
+      Per caricarla su un server: <code>scripts/importa-dati.sh /percorso/della/chiavetta/copia-….tar</code> nella sua cartella; i dati di quel server vengono sostituiti da quelli della copia.</p>
 
-    <h3 id="copia-remota">Copia sul server di casa</h3>
-    <p>Se è configurata (<code>docs/MANUTENZIONE.md</code>, «Copia remota»), un server a casa, per esempio un Raspberry, prende da solo ogni pochi minuti la copia dei dati della sagra,
-      quando la sagra ha internet: così si possono guardare report e giacenze anche da fuori. È di sola lettura: si registra sempre e solo sul programma della sagra.
-      Se alla sagra internet non c'è, la copia aspetta e recupera da sola. La chiavetta resta la strada che funziona sempre.</p>
+    <h3 id="casa">Il server di casa</h3>
+    <p>Se è configurato (<code>docs/MANUTENZIONE.md</code>, «Sincronia con casa»), un server a casa, per esempio un Raspberry, è sempre acceso e si apre dal web:
+      lì si può fare <strong>tutto</strong> come in sagra (carichi, prodotti nuovi, listino, report, utenti), tranne stampare. Gli utenti e le password sono gli stessi.</p>
+    <ul>
+      <li>Quando la sagra ha internet, ogni 30 secondi le due parti si scambiano le modifiche. Senza internet ognuno lavora per conto suo e le modifiche aspettano: partono appena torna.</li>
+      <li>Se la stessa cosa (es. la scorta minima di un prodotto) viene cambiata da tutte e due le parti mentre non c'è internet, resta la modifica fatta per ultima.
+        Carichi, prelievi, ordini e pesate invece non si perdono mai.</li>
+      <li>Se da tutte e due le parti si crea un prodotto con lo stesso nome prima che si sentano, nel <a href="#pannello">pannello</a> (sezione <em>Sincronia</em>) compare un conflitto:
+        <em>Tieni quella di casa</em> (o <em>della sagra</em>) le unisce, oppure si rinomina una delle due.</li>
+    </ul>
 
     <h3>Backup automatici</h3>
     <p>Ogni 30 minuti il programma salva da solo una copia del database e delle foto nella cartella <code>backup</code> del computer, e se configurato anche su Google Drive (quando c'è internet).
-      Così i dati sono in tre posti: il computer della sagra, la chiavetta (e il server di casa) e Google Drive.
+      Così i dati sono in più posti: il computer della sagra, il server di casa (o la chiavetta) e Google Drive.
       Nel <a href="#pannello">pannello</a> il riquadro «backup» diventa rosso se un backup non riesce.</p>
 
     <h3 id="gestione">Altre cose</h3>
     <ul>
       <li><strong>Listino 2026</strong>: si carica con <code>docker compose exec web python manage.py carica_listino cassa/listini/listino_2026.json</code>.</li>
-      <li><strong>Aggiornare il programma</strong>, spostarlo su un altro server, ripristinare un backup, la copia remota, i problemi più comuni: è tutto nel manuale tecnico,
+      <li><strong>Aggiornare il programma</strong>, spostarlo su un altro server, ripristinare un backup, la sincronia con casa, i problemi più comuni: è tutto nel manuale tecnico,
         che si legge in fondo al <a href="#pannello">pannello del sistema</a> (o nel file <code>docs/MANUTENZIONE.md</code> del programma).
         Con il server di casa: si aggiorna prima quello, poi la sagra.</li>
     </ul>

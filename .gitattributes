@@ -1,0 +1,2 @@
+# Gli script per Windows hanno bisogno dei ritorni a capo di Windows.
+*.bat text eol=crlf

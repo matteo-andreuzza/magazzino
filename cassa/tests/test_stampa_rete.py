@@ -388,7 +388,7 @@ class ServizioStampaTest(BaseCassa):
         Battito.objects.filter(nome__startswith="stampante-").update(ultimo_il=timezone.now() - timedelta(minutes=10))
         self.assertEqual(stampa.stato_stampa()["avviso"], "")
 
-    def test_battito_nel_pannello_e_copia_che_non_stampa(self):
+    def test_battito_nel_pannello_e_casa_che_non_stampa(self):
         from django.test import override_settings
 
         from sistema.models import Battito
@@ -397,7 +397,7 @@ class ServizioStampaTest(BaseCassa):
         servizio.giro()
         battito = Battito.objects.get(nome="stampa")
         self.assertEqual((battito.stato, battito.dettagli["versione"]), ("ok", servizio_stampa.VERSIONE))
-        with override_settings(COPIA_DI="http://sagra:8000/"):
+        with override_settings(SERVER_NOME="casa"):
             servizio.riposa()
         self.assertEqual(Battito.objects.get(nome="stampa").stato, "spento")
 

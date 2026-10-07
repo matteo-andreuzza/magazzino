@@ -257,6 +257,8 @@ def ristampa(*, ordine, cosa):
     """Stampa di nuovo la comanda di un reparto ("cucina", "bar") o la ricevuta ("ricevuta")."""
     if ordine.annullato:
         raise ErroreCassa("L'ordine è annullato: non si ristampa.")
+    if not stampa.stampa_qui():
+        raise ErroreCassa(stampa.DA_CASA)
     imp = impostazioni()
     if stampa.stampanti_ordine(ordine, imp, cosa) is None:
         raise ErroreCassa("Non c'è una stampante attiva impostata per questo biglietto (vedi Impostazioni).")

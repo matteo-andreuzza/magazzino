@@ -5,6 +5,7 @@ Tutto è configurabile tramite variabili d'ambiente (vedi .env.example).
 
 import os
 import secrets
+import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -79,10 +80,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    # Dispositivi collegati ed errori per il pannello del sistema (fuori dalla sola lettura qui sotto).
+    # Dispositivi collegati ed errori per il pannello del sistema.
     "sistema.middleware.MonitoraggioMiddleware",
-    # Solo sulla copia remota (COPIA_DI): niente modifiche.
-    "sistema.middleware.SolaLetturaMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -121,6 +120,10 @@ if os.environ.get("POSTGRES_HOST"):
             "CONN_HEALTH_CHECKS": True,
         }
     }
+    if sys.argv[1:2] == ["test"]:
+        # Solo nei test su PostgreSQL: un secondo database fa «l'altro server» della sincronia.
+        DATABASES["altro"] = {**DATABASES["default"], "NAME": DATABASES["default"]["NAME"] + "_altro", "SERVER_NOME": "casa"}
+        DATABASE_ROUTERS = ["sistema.tests.instradatore.MigrazioneSulSuoDatabase"]
 else:
     # Solo per sviluppo/test senza Docker.
     (BASE_DIR / "dati").mkdir(exist_ok=True)
@@ -174,11 +177,16 @@ if env_bool("DJANGO_DIETRO_PROXY_HTTPS"):
 
 APP_NOME = os.environ.get("APP_NOME", "Magazzino Sagra")
 
-# Copia remota (vedi sistema/copia_remota.py). Sulla sagra basta COPIA_CHIAVE; sul server di
-# casa anche COPIA_DI, l'indirizzo della sagra: quel server diventa una copia di sola lettura.
-COPIA_DI = os.environ.get("COPIA_DI", "").strip()
+# Sincronia tra la sagra e il server di casa (vedi sistema/sincronia.py).
+# SERVER_NOME: «sagra» (il server della rete locale, quello delle casse) o «casa» (sempre acceso,
+# sul web). La sagra ha anche SINCRONIA_CON, l'indirizzo di casa: è lei che chiama.
+# COPIA_CHIAVE: la stessa sui due server; senza, nessuno può sincronizzare né prendere copie.
+SERVER_NOME = os.environ.get("SERVER_NOME", "sagra").strip().lower() or "sagra"
+if SERVER_NOME not in ("sagra", "casa"):
+    raise ImproperlyConfigured("SERVER_NOME deve essere «sagra» o «casa».")
+SINCRONIA_CON = os.environ.get("SINCRONIA_CON", "").strip()
+SINCRONIA_OGNI_SECONDI = float(os.environ.get("SINCRONIA_OGNI_SECONDI", "30") or 30)
 COPIA_CHIAVE = os.environ.get("COPIA_CHIAVE", "").strip()
-COPIA_OGNI_MINUTI = float(os.environ.get("COPIA_OGNI_MINUTI", "5") or 5)
 
 # Per il pannello del sistema: i backup (cartella backup/ del computer) e lo stato che
 # scrivono i servizi backup e drive (vedi docker-compose.yml).

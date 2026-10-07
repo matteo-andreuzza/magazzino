@@ -1,4 +1,4 @@
-"""Caricare su questo server una copia del database fatta altrove (chiavetta, copia remota, trasloco).
+"""Caricare su questo server una copia del database fatta altrove (chiavetta, riallineamento, trasloco).
 
 Passi, tutti in una sola transazione (se qualcosa va storto il database resta com'era):
 1. controllo della versione: la copia non deve avere migrazioni che il codice di
@@ -10,7 +10,8 @@ Passi, tutti in una sola transazione (se qualcosa va storto il database resta co
    la copia considera locali (anche se qui il codice è un po' diverso);
 3. si carica la copia;
 4. si rimettono le migrazioni delle app locali com'erano qui.
-Poi si applicano le migrazioni che questo server ha in più (se è più aggiornato).
+Poi si applicano le migrazioni che questo server ha in più (se è più aggiornato) e si rimettono
+i trigger della sincronia con le sequenze pari o dispari di questo server (vedi sincronia.py).
 """
 
 import gzip
@@ -137,6 +138,8 @@ def carica_database(percorso_gz, *, scrivi=print, migra=True):
 
     with tempfile.NamedTemporaryFile("w", suffix=".sql", encoding="utf-8") as sql:
         sql.write("SET client_min_messages = warning;\n")
+        # I trigger della sincronia: la copia li ricrea, e alla fine si rifanno per questo server.
+        sql.write("DROP FUNCTION IF EXISTS public.sistema_registra_modifica() CASCADE;\n")
         for tabella in _tabelle_da_togliere(dump):
             sql.write(f"DROP TABLE IF EXISTS public.{_citazione(tabella)} CASCADE;\n")
         for riga in _righe(percorso_gz):
@@ -161,5 +164,15 @@ def carica_database(percorso_gz, *, scrivi=print, migra=True):
         raise CopiaNonRiuscita(f"Caricamento non riuscito, il database è rimasto com'era: {' '.join(dettaglio[-3:])[:400]}")
     if migra:
         scrivi("Copia caricata; applico le migrazioni di questo server…")
-        call_command("migrate", interactive=False, verbosity=0)
+        try:
+            call_command("migrate", interactive=False, verbosity=0)
+        finally:
+            connection.close()  # una sessione nuova, senza impostazioni rimaste dalle migrazioni
+    from . import sincronia
+    from .models import Conflitto, Modifica
+
+    # I dati di qui sono stati sostituiti: la coda della sincronia di prima non vale più.
+    Modifica.objects.all().delete()
+    Conflitto.objects.all().delete()
+    sincronia.prepara()
     return dump.impronta
