@@ -15,10 +15,13 @@ sagra ha la **guida per i volontari** (il pulsante **?** in alto, pagina `/guida
 - [Aggiornare senza rompere i dati](#aggiornare-senza-rompere-i-dati)
 - [Backup](#backup)
 - [Spostare l'app su un nuovo server](#spostare-lapp-su-un-nuovo-server)
+- [In cloud](#in-cloud)
 - [Kubernetes](#kubernetes)
 - [Monitor cucina](#monitor-cucina)
+- [Collegare Claude (MCP)](#collegare-claude-mcp)
 - [Sviluppo](#sviluppo)
 - [Problemi comuni](#problemi-comuni)
+- [Punti aperti](#punti-aperti)
 
 ## Com'è fatto
 
@@ -400,7 +403,12 @@ ripristino era a casa, rimetti a casa i dati della sagra con la chiavetta e poi 
    SERVER_NOME=casa
    COPIA_CHIAVE=la-stessa-chiave
    DJANGO_CSRF_TRUSTED_ORIGINS=https://raspberry.tuo-tailnet.ts.net   # se pubblicato con Funnel
+   DJANGO_COOKIE_SICURI=1          # con Funnel: cookie solo su HTTPS
+   DJANGO_DIETRO_PROXY_HTTPS=1
    ```
+
+   Con `DJANGO_COOKIE_SICURI=1` si entra solo dall'indirizzo `https://…ts.net`, non da
+   `http://IP:8000` nella rete di casa (la sincronia non ne risente: usa la chiave).
 
    `docker compose up -d --build`, poi **i dati della sagra a casa**, una volta: con i due computer
    nella stessa rete (o la sagra su Tailscale)
@@ -557,10 +565,47 @@ BACKUP_GIORNI=30
 ```
 
 Altre copie:
-- **Google Drive**: vedi il README, «Backup su Google Drive» (copie del database tenute 30 giorni,
-  `DRIVE_GIORNI`);
+- **Google Drive**: vedi sotto (copie del database tenute 30 giorni, `DRIVE_GIORNI`);
 - **a mano**: `scripts/backup-ora.sh` (es. prima di un aggiornamento o a fine sagra);
 - **chiavetta e server di casa**: vedi sotto, e la [sincronia con casa](#sincronia-con-casa).
+
+### Google Drive
+
+Il servizio `drive` copia su Google Drive tutto quello che il servizio `backup` mette in
+`backup/`: database, fatture e foto. Controlla ogni 10 minuti; se manca internet riprova da solo
+e recupera i file rimasti indietro. Su Drive le copie del database restano `DRIVE_GIORNI` giorni
+(30), le fatture non si cancellano. La cartella si chiama «Backup magazzino sagra» (`DRIVE_CARTELLA`).
+L'app vede e modifica **solo i file che carica lei**: il resto del Drive non lo tocca. Finché non è
+configurato il servizio non fa niente (nel pannello è grigio).
+
+Si configura una volta sola, dal computer dove gira l'app.
+
+**1. Le credenziali su Google Cloud** (gratis, con l'account Google che riceverà i backup; il client
+condiviso di rclone viene dismesso nel 2026, quindi ne serve uno proprio):
+
+1. <https://console.cloud.google.com/>: crea un progetto, per esempio «Magazzino sagra».
+2. *API e servizi → Libreria*: **Google Drive API** → *Abilita*.
+3. *Google Auth Platform* (o *Schermata consenso OAuth*): tipo **Esterno**, un nome qualsiasi e la
+   tua email. Poi in *Pubblico* **Pubblica app**: se resta «in test» l'accesso scade dopo 7 giorni.
+4. *Client → Crea client*: tipo **App desktop**. Copia l'**ID client** e il **client secret**.
+
+**2. Collega Drive** (sostituisci ID e secret):
+
+```sh
+docker run --rm -it --network host -v "$PWD/rclone:/config/rclone" rclone/rclone:1.75.1 \
+  config create drive drive scope=drive.file client_id=IL_TUO_ID client_secret=IL_TUO_SECRET
+```
+
+Alla domanda sul browser rispondi `y`, apri il link, accedi e autorizza (Google avvisa che l'app non
+è verificata: è la tua, puoi proseguire). Ai Drive condivisi rispondi `n`. L'accesso resta nella
+cartella `rclone/`: **non condividerla**, dà accesso ai backup.
+
+**3. Riavvia e controlla**: `docker compose restart drive && docker compose logs -f drive`. Deve
+comparire «Google Drive collegato» e poi l'elenco dei file copiati.
+
+Per scollegarlo cancella la cartella `rclone/` (`sudo rm -r rclone`, perché la crea Docker) e togli
+l'accesso da <https://myaccount.google.com/permissions>. Sul server di casa non configurarlo, oppure
+con un'altra `DRIVE_CARTELLA`, così le due copie non si mescolano.
 
 ### Copia su chiavetta e server di casa
 
@@ -591,8 +636,23 @@ una copia di com'è adesso):
 scripts/ripristina.sh backup/magazzino-sagra-AAAAMMGG-HHMM.sql.gz
 ```
 
-Per rimettere fatture e foto su un computer nuovo vedi il README («Backup e ripristino») oppure il
-[trasloco](#spostare-lapp-su-un-nuovo-server), che le porta con sé.
+A mano, senza lo script (il ripristino è tutto o niente: se si interrompe il database resta com'era):
+
+```sh
+docker compose stop web stampa
+gunzip -c backup/magazzino-sagra-AAAAMMGG-HHMM.sql.gz | docker compose exec -T db psql -q -v ON_ERROR_STOP=1 --single-transaction -U magazzino -d magazzino
+docker compose up -d
+```
+
+Per rimettere fatture e foto dalla cartella dei backup (es. su un computer nuovo; il
+[trasloco](#spostare-lapp-su-un-nuovo-server) invece le porta con sé):
+
+```sh
+docker compose run --rm --no-deps --user root --entrypoint sh -v ./backup/magazzino-sagra-allegati:/ripristino:ro web \
+  -c 'mkdir -p /app/dati/allegati && cp -a /ripristino/. /app/dati/allegati/ && chown -R app:app /app/dati/allegati'
+```
+
+Con la sincronia accesa, dopo un ripristino su uno dei due server vedi [Conflitti](#conflitti).
 
 **Prova i backup** ogni tanto: `scripts/prova-aggiornamento.sh backup/FILE.sql.gz` carica un backup
 nel server di prova; se l'app parte e i dati ci sono, il backup è buono.
@@ -623,6 +683,34 @@ punta il dominio al server nuovo e lancia `docker compose -f docker-compose.yml 
 
 Il file del trasloco contiene le password: copialo solo su canali sicuri e cancellalo quando hai
 finito. Durante il trasloco non registrare niente sul server vecchio (o ripeti l'esportazione).
+
+## In cloud
+
+La stessa installazione gira su una VPS con Docker, con l'HTTPS automatico (Caddy, Let's Encrypt).
+Serve un dominio che punti al server, con le porte 80 e 443 aperte. Nel `.env` `DOMINIO=sagra.esempio.it`, poi:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.cloud.yml up -d --build
+```
+
+Backup, Google Drive e comandi sono gli stessi, aggiungendo sempre i due `-f` (per gli script:
+`COMPOSE="docker compose -f docker-compose.yml -f docker-compose.cloud.yml" scripts/…`). Il servizio
+di stampa è spento: dal cloud le stampanti della sagra non si raggiungono e le comande le stampa il
+programma di stampa (*Cassa → Stampanti*). Con l'app in cloud, se cade internet la cassa non registra
+ordini: dove internet è incerto meglio il server della sagra più il server di casa.
+
+Se il server in cloud fa da **server di casa**, nel suo `.env` servono `SERVER_NOME=casa` e
+`COPIA_CHIAVE` come in [Messa in funzione](#messa-in-funzione) (senza: tutti e due si chiamano
+sagra e usano gli stessi id); sulla sagra `SINCRONIA_CON=https://sagra.esempio.it/`.
+
+Dietro un proprio proxy HTTPS (senza `docker-compose.cloud.yml`), nel `.env`:
+
+```sh
+DJANGO_ALLOWED_HOSTS=magazzino.esempio.it
+DJANGO_CSRF_TRUSTED_ORIGINS=https://magazzino.esempio.it
+DJANGO_COOKIE_SICURI=1
+DJANGO_DIETRO_PROXY_HTTPS=1
+```
 
 ## Kubernetes
 
@@ -679,6 +767,39 @@ Sì, c'è già: è una delle «funzioni smart», spente finché non servono.
 Le comande di carta continuano a uscire: il monitor si aggiunge, non sostituisce le stampanti.
 Nel pannello del sistema il monitor compare tra i dispositivi collegati.
 
+## Collegare Claude (MCP)
+
+Il server MCP (`/mcp/`) fa leggere a Claude Code giacenze, prodotti, serate, incassi, bar e fusti e,
+se la chiave lo permette, registrare carichi, prelievi e rientri, i fusti di fine serata e prodotti
+nuovi. Passa dagli stessi servizi delle pagine e risulta fatto dall'utente che ha creato la chiave.
+
+1. Da staff: *Magazzino → Claude → Nuova chiave* (*Può registrare* solo se serve). La chiave si vede
+   **una volta sola**; si revoca dalla stessa pagina.
+2. Nel terminale di Claude Code il comando mostrato, per esempio:
+
+   ```sh
+   claude mcp add --transport http magazzino-sagra http://INDIRIZZO:8000/mcp/ \
+     --header "Authorization: Bearer sagra_…"
+   ```
+
+3. `/mcp` in Claude Code dice se è collegato. Poi si chiede in italiano: «cosa è sotto scorta?»,
+   «registra 20 kg di patate in dispensa», «per quante serate basta la bionda?».
+
+Sul computer dei container si può fare a meno della chiave (`--scrittura` per registrare):
+
+```sh
+claude mcp add magazzino-sagra -- docker exec -i magazzino-sagra-web-1 python manage.py server_mcp --utente admin
+```
+
+Senza HTTPS la chiave viaggia in chiaro: va bene nel Wi-Fi della sagra; dal web usa l'indirizzo HTTPS di casa.
+
+**Fine serata al bar raccontata a Claude**, spina per spina («sabato: consumati 2 da 50 L di bionda,
+bionda 10 kg, rossa 15 kg; cambiati rosso e bianco: bianco 26 largo argento, rosso 23,9 alto nero»).
+Claude guarda la serata prima, fa una **prova** senza salvare, mostra una riga per spina e registra
+solo dopo la conferma. Se qualcosa non torna (un fusto «non cambiato» che pesa più di ieri, un tipo
+di fusto diverso da quello attaccato, una serata fuori ordine) non registra e chiede. Ripetere la
+stessa registrazione rifà da capo quella serata su quella spina: serve anche per correggere.
+
 ## Sviluppo
 
 ```sh
@@ -713,6 +834,11 @@ DJANGO_DEBUG=1 .venv/bin/python manage.py runserver
   # per togliere casa: … -p magazzino-casa-prova … down -v   (solo quel progetto!)
   ```
 
+- **VS Code** (estensione Python), pannello *Esegui e debug*: *Magazzino: avvia con debugger
+  (SQLite)* (porta 8001, breakpoint attivi), *Magazzino: test con debugger*, *Magazzino: collega a
+  Docker (debug)* (si collega al server di prova; dopo una ricarica va ricollegato).
+- **Debug**: nel server di prova pagine di errore dettagliate e log DEBUG; `DJANGO_LOG_SQL=1` stampa
+  ogni query. **Mai `DJANGO_DEBUG` sull'installazione vera**: le pagine di errore mostrano dati interni.
 - **Pannello del sistema**: i dati in `sistema/monitor.py`, il disegno in
   `sistema/static/sistema/pannello.js` (gli schemi si ricostruiscono solo quando cambiano forma).
   Un servizio nuovo: un `segnala("nome", …)` periodico e una funzione in `monitor.py`.
@@ -753,3 +879,14 @@ sempre cosa fare; *Errori* ha la traccia completa.
 | Dato la corrente ma il programma non risponde | Il server si è acceso? Se no: BIOS, «accendi quando torna la corrente» (vedi [Installare](#installare-il-programma-alla-sagra)). Se sì, dopo 2 minuti `docker compose ps` (su Windows: si è entrati nell'utente?). |
 | Disco pieno | I backup locali si tengono `BACKUP_GIORNI` giorni; le foto in `backup/…-allegati` non si cancellano da sole. `docker system prune` toglie le immagini vecchie (non i volumi). |
 | Ho perso la password dell'amministratore | `docker compose exec web python manage.py changepassword admin` |
+
+## Punti aperti
+
+Ancora da decidere negli appunti (segnati anche nelle note dei piatti):
+
+- nome del software (`APP_NOME` nel `.env`, poi `docker compose up -d`);
+- frittura: ci vanno anche le sardine? Tagliata: con la polenta?
+- paella: le teste sono le stesse della frittura? Quante bustine di zafferano?
+- pranzo paesano: antipasti uguali a quelli degli anniversari? Dolce e caffè: ingredienti da inserire;
+- dolce in fetta: nel listino 2026 è nel reparto *Bar* (esce sulla comanda del bar), da spostare in *Cucina* se serve;
+- bar: litri e tara dei tipi di fusto, per ora provvisori (*Bar → Bevande e fusti*).

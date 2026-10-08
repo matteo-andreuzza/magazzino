@@ -15,6 +15,7 @@ Windows
 
 Linux
   1. Copia avvia-cassa.sh nella cartella dell'utente (es. /home/cassa/) e cambia la riga SERVER=….
+     Rendilo eseguibile (da una chiavetta il permesso si perde): chmod +x /home/cassa/avvia-cassa.sh
   2. Copia cassa-sagra.desktop sul desktop (e in ~/.local/share/applications/ per averlo nel menu);
      cambia Exec= con il percorso dello script. Se il desktop lo chiede: «Consenti l'avvio».
   Facoltativo, all'accensione: copia cassa-sagra.desktop anche in ~/.config/autostart/.

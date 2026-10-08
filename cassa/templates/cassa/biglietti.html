@@ -12,7 +12,7 @@
   <div class="comandi">
     <button type="button" data-stampa>Stampa</button>
     {% if torna %}<a href="{{ torna }}">Torna indietro</a>{% endif %}
-    <span>Per stampare senza la finestra di conferma, avvia Chrome con <code>--kiosk-printing</code> (vedi README).</span>
+    <span>Per stampare senza la finestra di conferma, avvia Chrome con <code>--kiosk-printing</code> e imposta questa stampante come predefinita.</span>
   </div>
   {% for titolo, righe in biglietti %}
     <section class="foglio" aria-label="{{ titolo }}">{% biglietto righe %}</section>

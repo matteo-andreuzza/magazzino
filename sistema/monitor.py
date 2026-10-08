@@ -257,7 +257,7 @@ def backup():
 
 def drive():
     stato_file = _stato_file("drive")
-    aiuto = ["docker compose logs --tail=50 drive", "Configurarlo: README, «Backup su Google Drive».",
+    aiuto = ["docker compose logs --tail=50 drive", "Configurarlo: manuale tecnico, «Backup» → «Google Drive».",
              "Senza internet riprova da solo ogni 10 minuti."]
     if stato_file is None:
         return _servizio("drive", "drive", "Copia la cartella backup/ su Google Drive quando c'è internet.",

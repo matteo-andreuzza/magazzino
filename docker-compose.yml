@@ -150,7 +150,7 @@ services:
         done
 
   # Carica su Google Drive quello che c'è in ./backup. Facoltativo: finché non
-  # è configurato (vedi README, "Backup su Google Drive") non fa niente.
+  # è configurato (vedi docs/MANUTENZIONE.md, "Google Drive") non fa niente.
   # Senza internet riprova da solo e recupera i file rimasti indietro.
   drive:
     image: rclone/rclone:1.75.1

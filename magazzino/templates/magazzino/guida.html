@@ -117,6 +117,7 @@
     <ol class="guida-passi">
       <li><strong>Nome e tavolo</strong> del cliente (i coperti sono facoltativi).</li>
       <li><strong>Tocca gli articoli</strong>: ogni tocco ne aggiunge uno. <em>−</em> e <em>+</em> cambiano la quantità, <em>Nota</em> aggiunge una richiesta alla riga («senza cipolla»): va sulla comanda.
+        Con la tastiera: <em>F2</em> cerca, <em>Invio</em> aggiunge il primo articolo trovato, <em>F9</em> (o <em>Ctrl</em>+<em>Invio</em>) conferma.
         I bottoni colorati in alto filtrano per categoria; il colore della striscia di ogni articolo è quello della sua categoria.</li>
       <li><strong>Pagamento</strong>: con <em>Contanti</em> scrivi quanto ti danno (o tocca 10 €, 20 €…) e leggi il resto.</li>
       <li><strong>Conferma e stampa</strong>: l'ordine prende il numero della serata. In cucina esce la comanda; alla stampante della cassa escono la <strong>ricevuta</strong>
@@ -293,7 +294,7 @@
       È collegato con il cavo allo <strong>switch</strong>, insieme alle stampanti e al punto di accesso Wi-Fi; telefoni, tablet e computer della cassa aprono il programma con il browser.
       Va bene anche un mini PC; durante la sagra deve restare acceso e non andare in sospensione.</p>
 
-    <h3 id="installazione">Installarlo (una volta sola, a casa, con internet)</h3>
+    <h3 id="installazione">Installarlo (una volta sola, prima della sagra, con internet)</h3>
     <ol class="guida-passi">
       <li><strong>Docker.</strong> Su Linux (consigliato, es. Ubuntu o Debian): <code>curl -fsSL https://get.docker.com | sudo sh</code> e poi <code>sudo usermod -aG docker $USER</code> (esci e rientra).
         Su Windows: installa <em>Docker Desktop</em> e nelle sue impostazioni spunta <em>Start Docker Desktop when you sign in</em>.</li>
@@ -337,7 +338,7 @@
       Per caricarla su un server: <code>scripts/importa-dati.sh /percorso/della/chiavetta/copia-….tar</code> nella sua cartella; i dati di quel server vengono sostituiti da quelli della copia.</p>
 
     <h3 id="casa">Il server di casa</h3>
-    <p>Se è configurato (<code>docs/MANUTENZIONE.md</code>, «Sincronia con casa»), un server a casa, per esempio un Raspberry, è sempre acceso e si apre dal web:
+    <p>Se è configurato (comandi nel <code>README.md</code>, dettagli in <code>docs/MANUTENZIONE.md</code>, «Sincronia con casa»), un server a casa, per esempio un Raspberry, è sempre acceso e si apre dal web:
       lì si può fare <strong>tutto</strong> come in sagra (carichi, prodotti nuovi, listino, report, utenti), tranne stampare. Gli utenti e le password sono gli stessi.</p>
     <ul>
       <li>Quando la sagra ha internet, ogni 30 secondi le due parti si scambiano le modifiche. Senza internet ognuno lavora per conto suo e le modifiche aspettano: partono appena torna.</li>
